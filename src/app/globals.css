@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #FAF9F5;
+  --foreground: #582F0E;
+  --gold: #FFB703;
+  --green: #2D6A4F;
+  --green-dark: #1B4332;
+  --brown: #582F0E;
+  --sand: #FAF9F5;
+  --card-bg: #FFFFFF;
+}
+
+body {
+  background-color: #FAF9F5;
+  color: #582F0E;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Epilogue', Georgia, serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF9F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #D5C4AC;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7D5800;
+}
