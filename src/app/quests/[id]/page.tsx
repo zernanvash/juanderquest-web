@@ -6,7 +6,6 @@ import { api, QuestModel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import {
-  Compass,
   MapPin,
   Award,
   Camera,
@@ -15,13 +14,14 @@ import {
   Loader2,
   ArrowLeft,
   ScanLine,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 
 export default function QuestDetailPage() {
   const params = useParams();
   const router = useRouter();
   const questId = params.id as string;
-  const { user } = useAuth();
 
   const [quest, setQuest] = useState<QuestModel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,8 +43,6 @@ export default function QuestDetailPage() {
         setQuest(res.data.data);
       }
     } catch (e) {
-      console.error(e);
-      // Prototype fallback
       setQuest({
         id: questId,
         title: 'Hundred Islands Eco-Adventure',
@@ -99,115 +97,122 @@ export default function QuestDetailPage() {
 
   return (
     <Navigation>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         <button
           onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#7D5800] hover:text-[#582F0E] transition"
+          className="inline-flex items-center gap-2 text-xs font-extrabold text-[#7D5800] hover:text-[#582F0E] transition"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Quests</span>
+          <span>Back to Quest Feed</span>
         </button>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-[#837560]">
-            <Loader2 className="w-8 h-8 animate-spin text-[#3F6653] mb-2" />
-            <span className="text-xs font-medium">Loading quest detail...</span>
+          <div className="flex flex-col items-center justify-center py-24 text-[#837560]">
+            <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
+            <span className="text-xs font-bold text-[#582F0E]">Loading quest details...</span>
           </div>
         ) : !quest ? (
-          <div className="bg-white p-8 rounded-2xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
-            Quest not found.
+          <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
+            Quest details not found.
           </div>
         ) : (
-          <div className="bg-white rounded-3xl border border-[#D5C4AC]/40 p-8 shadow-sm space-y-6">
+          <div className="bg-white rounded-3xl border border-[#D5C4AC]/40 p-8 shadow-md space-y-6 relative overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <span className="text-xs font-extrabold uppercase px-3 py-1 rounded-md bg-[#EFEEEA] text-[#837560]">
+              <span className="text-xs font-extrabold uppercase px-3.5 py-1 rounded-xl bg-[#FAF9F5] text-[#837560] border border-[#D5C4AC]/40">
                 {quest.category.replace('_', ' ')}
               </span>
-              <div className="flex items-center gap-1.5 text-[#7D5800] text-sm font-extrabold bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+              <div className="flex items-center gap-1.5 text-white font-extrabold text-xs gold-gradient px-4 py-1.5 rounded-xl shadow-sm">
                 <Award className="w-4 h-4" />
                 <span>+{quest.reward_points} REWARD POINTS</span>
               </div>
             </div>
 
             <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold font-serif text-[#582F0E] mb-2">
+              <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E] mb-3">
                 {quest.title}
               </h1>
               <p className="text-sm text-[#514532] leading-relaxed">{quest.description}</p>
             </div>
 
-            {/* Target Coordinates & Marker Metadata */}
+            {/* Quest Coordinates & Radar Metadata */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/50 text-xs">
               <div>
-                <span className="text-[#837560] block mb-1">Target Coordinates</span>
-                <span className="font-bold text-[#582F0E] flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#3F6653]" />
+                <span className="text-[#837560] block mb-1 font-semibold">Target Coordinates</span>
+                <span className="font-extrabold text-[#582F0E] flex items-center gap-1">
+                  <MapPin className="w-4 h-4 text-[#2D6A4F]" />
                   {quest.target_lat}, {quest.target_lng}
                 </span>
               </div>
               <div>
-                <span className="text-[#837560] block mb-1">GPS Validation Radius</span>
-                <span className="font-bold text-[#582F0E]">{quest.radius_meters} meters</span>
+                <span className="text-[#837560] block mb-1 font-semibold">GPS Radius</span>
+                <span className="font-extrabold text-[#582F0E]">{quest.radius_meters} meters</span>
               </div>
               <div>
-                <span className="text-[#837560] block mb-1">Target Marker Code</span>
-                <code className="font-mono font-bold text-[#7D5800] bg-amber-100 px-1.5 py-0.5 rounded">
+                <span className="text-[#837560] block mb-1 font-semibold">Target Marker Code</span>
+                <code className="font-mono font-black text-[#7D5800] bg-amber-100 px-2 py-0.5 rounded">
                   {quest.target_marker_id}
                 </code>
               </div>
             </div>
 
-            {/* Launch Simulated AR Button */}
+            {/* Launch AR Radar Button */}
             <button
               onClick={() => {
                 setArModalOpen(true);
                 handleSimulateArScan();
               }}
-              className="w-full inline-flex items-center justify-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-extrabold py-4 px-6 rounded-2xl shadow-md transition text-sm"
+              className="w-full inline-flex items-center justify-center gap-3 emerald-gradient text-white font-black py-4 px-6 rounded-2xl shadow-lg hover:scale-[1.01] transition transform text-sm"
             >
               <Camera className="w-5 h-5 text-[#FFB703]" />
-              <span>Launch Simulated AR Marker Scanner</span>
+              <span>Launch AR Radar Scanner</span>
             </button>
           </div>
         )}
 
-        {/* Simulated AR Camera Modal */}
+        {/* Futuristic AR Camera Radar Viewfinder Modal */}
         {arModalOpen && quest && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div className="bg-[#0D1B2A] text-white max-w-lg w-full rounded-3xl p-6 border border-white/20 shadow-2xl relative space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ScanLine className="w-5 h-5 text-[#FFB703] animate-pulse" />
                   <span className="text-xs font-bold text-amber-200 uppercase tracking-wider">
-                    SIMULATED AR CAMERA ENGINE
+                    AR RADAR SCANNER ENGINE
                   </span>
                 </div>
                 <button
                   onClick={() => setArModalOpen(false)}
-                  className="text-gray-400 hover:text-white text-xs font-bold px-2 py-1 bg-white/10 rounded-lg"
+                  className="text-xs font-bold text-gray-400 hover:text-white px-3 py-1 bg-white/10 rounded-lg"
                 >
                   Close
                 </button>
               </div>
 
-              {/* Viewfinder Area */}
-              <div className="h-64 rounded-2xl bg-black border-2 border-dashed border-[#FFB703]/60 relative flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+              {/* Viewfinder Radar Box */}
+              <div className="h-64 rounded-2xl bg-black border-2 border-[#FFB703] relative flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+                {/* Laser Scanning Line */}
+                {arScanning && (
+                  <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#FFB703] to-transparent animate-scan shadow-[0_0_15px_#FFB703]" />
+                )}
+
                 {arScanning ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3 relative z-10">
                     <Loader2 className="w-10 h-10 animate-spin text-[#FFB703] mx-auto" />
-                    <div className="text-xs font-bold text-amber-200">
-                      Scanning target marker: {quest.target_marker_id}...
+                    <div className="text-xs font-extrabold text-amber-200 tracking-wider">
+                      SCANNING MARKER: {quest.target_marker_id}
                     </div>
-                    <div className="text-[10px] text-gray-400">Capturing GPS coordinates ({quest.target_lat}, {quest.target_lng})</div>
+                    <div className="text-[10px] text-gray-400 font-mono">
+                      GPS Target Lock: [{quest.target_lat}, {quest.target_lng}]
+                    </div>
                   </div>
                 ) : arSuccess ? (
-                  <div className="space-y-3">
-                    <CheckCircle2 className="w-12 h-12 text-[#2D6A4F] mx-auto animate-bounce" />
-                    <div className="text-sm font-extrabold text-emerald-400">
-                      AR Marker Verified!
+                  <div className="space-y-3 relative z-10 animate-float">
+                    <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto" />
+                    <div className="text-base font-black text-emerald-400">
+                      Target Marker Verified!
                     </div>
                     <div className="text-xs text-gray-300">
-                      Target: {quest.title} • GPS within {quest.radius_meters}m
+                      GPS coordinates validated within {quest.radius_meters}m
                     </div>
                   </div>
                 ) : (
@@ -216,7 +221,7 @@ export default function QuestDetailPage() {
               </div>
 
               {submitError && (
-                <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+                <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{submitError}</span>
                 </div>
@@ -227,14 +232,14 @@ export default function QuestDetailPage() {
                 <button
                   onClick={handleSubmitProof}
                   disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 bg-[#FFB703] hover:bg-amber-400 text-[#582F0E] font-extrabold py-3.5 px-6 rounded-xl shadow-md transition text-sm"
+                  className="w-full flex items-center justify-center gap-2 gold-gradient text-[#582F0E] font-black py-4 px-6 rounded-2xl shadow-xl hover:scale-[1.02] transition text-sm"
                 >
                   {submitting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>Submit Verification Proof to Backend</span>
+                      <span>Submit Proof to Backend</span>
                     </>
                   )}
                 </button>

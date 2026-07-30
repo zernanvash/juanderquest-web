@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -22,6 +22,49 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Epilogue', Georgia, serif;
+}
+
+/* Custom Animations */
+@keyframes scan-beam {
+  0% { transform: translateY(-100%); opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0.3; }
+}
+
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 183, 3, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(255, 183, 3, 0.7); }
+}
+
+.animate-scan {
+  animation: scan-beam 2.5s infinite linear;
+}
+
+.animate-float {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(213, 196, 172, 0.5);
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #FFB703 0%, #F77F00 100%);
+}
+
+.emerald-gradient {
+  background: linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%);
 }
 
 /* Custom scrollbar */

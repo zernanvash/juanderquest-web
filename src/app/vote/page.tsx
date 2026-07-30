@@ -14,8 +14,8 @@ import {
   AlertCircle,
   Loader2,
   Flame,
-  ShieldCheck,
-  Building,
+  Vault,
+  Sparkles,
 } from 'lucide-react';
 
 export default function VotePage() {
@@ -175,20 +175,21 @@ export default function VotePage() {
 
   return (
     <Navigation>
-      <div className="space-y-6">
-        {/* Banner Card */}
-        <div className="bg-white rounded-3xl p-8 border border-[#FFB703] shadow-sm relative overflow-hidden">
+      <div className="space-y-8 max-w-5xl mx-auto">
+        {/* Banner Arena Hero */}
+        <div className="bg-white rounded-3xl p-8 border-2 border-[#FFB703] shadow-md relative overflow-hidden">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold tracking-wider text-[#7D5800] uppercase">
-                  COMMUNITY GOVERNANCE
+                <Sparkles className="w-4 h-4 text-[#FFB703]" />
+                <span className="text-xs font-black tracking-wider text-[#7D5800] uppercase">
+                  COMMUNITY VOTING ARENA
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#2D6A4F]/10 text-[#2D6A4F]">
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#2D6A4F]/10 text-[#2D6A4F]">
                   POWERED BY mJDQ
                 </span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold font-serif text-[#582F0E]">
+              <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E]">
                 Govern Pangasinan Tourism Spots
               </h1>
               <p className="text-xs md:text-sm text-[#514532] max-w-xl leading-relaxed">
@@ -200,7 +201,7 @@ export default function VotePage() {
               <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 flex items-center gap-3">
                 <Wallet className="w-6 h-6 text-[#2D6A4F]" />
                 <div>
-                  <div className="text-[10px] font-bold text-[#837560] uppercase">Your Wallet</div>
+                  <div className="text-[10px] font-bold text-[#837560] uppercase">mJDQ Coin Wallet</div>
                   <div className="text-sm font-extrabold text-[#2D6A4F]">
                     {wallet ? `${wallet.balance_mjdq} mJDQ` : '1,000 mJDQ'}
                   </div>
@@ -209,7 +210,7 @@ export default function VotePage() {
 
               <button
                 onClick={() => setSuggestModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-[#FFB703] hover:bg-amber-400 text-[#582F0E] font-extrabold px-5 py-3.5 rounded-2xl shadow-md transition text-xs"
+                className="inline-flex items-center gap-2 gold-gradient text-[#582F0E] font-black px-6 py-3.5 rounded-2xl shadow-md hover:scale-105 transition transform text-xs"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>Suggest Location</span>
@@ -218,18 +219,18 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Proposals List */}
+        {/* Arena Proposals Grid */}
         <div>
-          <h2 className="text-lg font-bold font-serif text-[#582F0E] mb-4">Active Proposals</h2>
+          <h2 className="text-xl font-black font-serif text-[#582F0E] mb-4">Active Spot Proposals</h2>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-[#837560]">
-              <Loader2 className="w-8 h-8 animate-spin text-[#3F6653] mb-2" />
-              <span className="text-xs font-medium">Loading community proposals...</span>
+              <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
+              <span className="text-xs font-bold text-[#582F0E]">Loading voting arena...</span>
             </div>
           ) : proposals.length === 0 ? (
-            <div className="bg-white p-8 rounded-2xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
-              No active governance proposals available.
+            <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
+              No active spot proposals available.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -242,41 +243,47 @@ export default function VotePage() {
                 return (
                   <div
                     key={prop.id.toString()}
-                    className="bg-white rounded-2xl border border-[#D5C4AC]/40 p-6 flex flex-col justify-between shadow-sm space-y-4"
+                    className="bg-white rounded-3xl border-2 border-[#D5C4AC]/40 p-6 flex flex-col justify-between shadow-sm space-y-4 hover:border-[#FFB703] transition duration-200"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md bg-[#EFEEEA] text-[#837560]">
+                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-xl bg-[#FAF9F5] text-[#837560] border border-[#D5C4AC]/40">
                           {prop.category}
                         </span>
-                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md bg-amber-100 text-[#7D5800]">
+                        <span className="text-[10px] font-black uppercase px-3 py-1 rounded-xl bg-amber-100 text-[#7D5800]">
                           {prop.status}
                         </span>
                       </div>
 
-                      <h3 className="text-base font-bold font-serif text-[#582F0E]">
+                      <h3 className="text-lg font-bold font-serif text-[#582F0E]">
                         {prop.title}
                       </h3>
-                      <div className="text-xs text-[#837560] font-medium">{prop.location_name}</div>
+                      <div className="text-xs text-[#837560] font-bold">{prop.location_name}</div>
                       <p className="text-xs text-[#514532] leading-relaxed">{prop.description}</p>
                     </div>
 
-                    {/* Vote Tallies Bar */}
-                    <div className="p-3 bg-[#FAF9F5] rounded-xl border border-[#D5C4AC]/40 flex items-center justify-around text-xs">
-                      <div className="flex items-center gap-1.5 font-bold text-[#2D6A4F]">
-                        <ThumbsUp className="w-4 h-4" />
-                        <span>YES: {prop.yes_votes} ({yesPct}%)</span>
+                    {/* Progress Bar & Vote Breakdown */}
+                    <div className="p-4 bg-[#FAF9F5] rounded-2xl border border-[#D5C4AC]/40 space-y-2">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-[#2D6A4F] flex items-center gap-1">
+                          <ThumbsUp className="w-3.5 h-3.5" /> YES: {prop.yes_votes} ({yesPct}%)
+                        </span>
+                        <span className="text-[#BC4749] flex items-center gap-1">
+                          <ThumbsDown className="w-3.5 h-3.5" /> NO: {prop.no_votes} ({noPct}%)
+                        </span>
                       </div>
-                      <div className="w-px h-4 bg-[#D5C4AC]" />
-                      <div className="flex items-center gap-1.5 font-bold text-[#BC4749]">
-                        <ThumbsDown className="w-4 h-4" />
-                        <span>NO: {prop.no_votes} ({noPct}%)</span>
+
+                      <div className="w-full h-3 bg-red-100 rounded-full overflow-hidden flex">
+                        <div
+                          className="h-full bg-[#2D6A4F] transition-all duration-500"
+                          style={{ width: `${yesPct}%` }}
+                        />
                       </div>
                     </div>
 
-                    {/* Voting Action Buttons */}
+                    {/* Action Buttons */}
                     {userVote ? (
-                      <div className="py-2.5 bg-[#2D6A4F]/10 text-[#2D6A4F] font-bold text-xs text-center rounded-xl">
+                      <div className="py-3 bg-[#2D6A4F]/10 text-[#2D6A4F] font-black text-xs text-center rounded-2xl">
                         Vote Cast: {userVote.toUpperCase()}
                       </div>
                     ) : (
@@ -286,7 +293,7 @@ export default function VotePage() {
                             setVoteModalProposal(prop);
                             setVoteChoice('yes');
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition"
+                          className="flex-1 inline-flex items-center justify-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-extrabold py-3 px-4 rounded-2xl text-xs shadow-md transition"
                         >
                           <ThumbsUp className="w-4 h-4" />
                           <span>Vote YES</span>
@@ -296,7 +303,7 @@ export default function VotePage() {
                             setVoteModalProposal(prop);
                             setVoteChoice('no');
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#BC4749] hover:bg-red-800 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition"
+                          className="flex-1 inline-flex items-center justify-center gap-2 bg-[#BC4749] hover:bg-red-800 text-white font-extrabold py-3 px-4 rounded-2xl text-xs shadow-md transition"
                         >
                           <ThumbsDown className="w-4 h-4" />
                           <span>Vote NO</span>
@@ -310,9 +317,9 @@ export default function VotePage() {
           )}
         </div>
 
-        {/* Paid Vote Disclosure Modal */}
+        {/* Paid Vote Confirmation & Token Allocation Modal */}
         {voteModalProposal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white max-w-md w-full rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -322,7 +329,7 @@ export default function VotePage() {
                     <ThumbsDown className="w-6 h-6 text-[#BC4749]" />
                   )}
                   <h3 className="text-lg font-bold font-serif text-[#582F0E]">
-                    Confirm Paid Vote ({voteChoice.toUpperCase()})
+                    Confirm Vote ({voteChoice.toUpperCase()})
                   </h3>
                 </div>
                 <button
@@ -335,23 +342,30 @@ export default function VotePage() {
 
               <div className="text-xs font-bold text-[#582F0E]">Target: "{voteModalProposal.title}"</div>
 
-              <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 text-xs space-y-2">
-                <div className="flex justify-between">
+              {/* Visual Fee Split */}
+              <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 text-xs space-y-3">
+                <div className="flex justify-between font-bold">
                   <span className="text-[#837560]">Vote Fee:</span>
-                  <span className="font-bold text-[#7D5800]">10 mJDQ (0.01 JDQ)</span>
+                  <span className="text-[#7D5800]">10 mJDQ (0.01 JDQ)</span>
                 </div>
-                <div className="flex justify-between text-red-700">
-                  <span>Burn Allocation (20%):</span>
-                  <span className="font-bold">2 mJDQ</span>
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-red-50 text-red-700 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Flame className="w-4 h-4 text-red-600" />
+                    <span>20% Burn Furnace:</span>
+                  </span>
+                  <span>2 mJDQ</span>
                 </div>
-                <div className="flex justify-between text-emerald-800">
-                  <span>Reward Escrow (80%):</span>
-                  <span className="font-bold">8 mJDQ</span>
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Vault className="w-4 h-4 text-[#2D6A4F]" />
+                    <span>80% Reward Escrow Vault:</span>
+                  </span>
+                  <span>8 mJDQ</span>
                 </div>
               </div>
 
               {voteError && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{voteError}</span>
                 </div>
@@ -360,12 +374,12 @@ export default function VotePage() {
               <button
                 onClick={handleCastVote}
                 disabled={voting}
-                className={`w-full flex items-center justify-center gap-2 font-bold py-3 px-6 rounded-xl text-white shadow-md transition text-xs ${
+                className={`w-full flex items-center justify-center gap-2 font-black py-3.5 px-6 rounded-2xl text-white shadow-lg transition text-xs ${
                   voteChoice === 'yes' ? 'bg-[#2D6A4F] hover:bg-[#1B4332]' : 'bg-[#BC4749] hover:bg-red-800'
                 }`}
               >
                 {voting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <span>Cast {voteChoice.toUpperCase()} Vote</span>
                 )}
@@ -376,7 +390,7 @@ export default function VotePage() {
 
         {/* Suggest Location Modal */}
         {suggestModalOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <form onSubmit={handleSuggestLocation} className="bg-white max-w-lg w-full rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold font-serif text-[#582F0E]">Suggest New Location</h3>
@@ -390,7 +404,7 @@ export default function VotePage() {
               </div>
 
               {locationSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>{locationSuccess}</span>
                 </div>
@@ -447,9 +461,9 @@ export default function VotePage() {
               <button
                 type="submit"
                 disabled={submittingLocation}
-                className="w-full flex items-center justify-center gap-2 bg-[#FFB703] hover:bg-amber-400 text-[#582F0E] font-extrabold py-3 px-6 rounded-xl shadow-md transition text-xs"
+                className="w-full flex items-center justify-center gap-2 gold-gradient text-[#582F0E] font-black py-3.5 px-6 rounded-2xl shadow-md transition text-xs"
               >
-                {submittingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Submit Proposal for Screening</span>}
+                {submittingLocation ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Submit Proposal for Screening</span>}
               </button>
             </form>
           </div>

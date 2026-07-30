@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { Compass, ShieldCheck, MapPin, Sparkles, ArrowRight, UserCheck, CheckCircle2 } from 'lucide-react';
+import { Compass, Sparkles, ArrowRight, UserCheck, ShieldCheck, Award, MapPin, Zap } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
   const { user, loginWithSeed, isLoading } = useAuth();
-  const [selectedSeed, setSelectedSeed] = useState('user-1');
 
   const handleLogin = async (seedId: string) => {
     const ok = await loginWithSeed(seedId);
@@ -20,130 +19,126 @@ export default function HomePage() {
 
   return (
     <Navigation>
-      <div className="space-y-8">
-        {/* Banner Hero */}
-        <div className="bg-gradient-to-r from-[#582F0E] via-[#7D5800] to-[#2D6A4F] text-white rounded-3xl p-8 md:p-10 shadow-xl relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-[#FFB703]/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-bold tracking-wider text-[#FFB703] mb-4">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>EXPLORE PANGASINAN TOURISM</span>
+      <div className="space-y-8 max-w-5xl mx-auto">
+        {/* Interactive Gamified Hero Banner */}
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-r from-[#582F0E] via-[#7D5800] to-[#2D6A4F] text-white p-8 md:p-12 border border-[#FFB703]/30">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#FFB703]/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 space-y-6 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-xs font-extrabold tracking-wider text-[#FFB703] border border-white/10">
+              <Sparkles className="w-4 h-4" />
+              <span>JUANDERQUEST ADVENTURE HUB</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold font-serif mb-4 leading-tight">
-              Gamified Quests & Tourism Governance
+
+            <h1 className="text-3xl md:text-5xl font-black font-serif leading-tight">
+              Embark on the Pangasinan Quest Journey
             </h1>
-            <p className="text-sm md:text-base text-amber-100/90 leading-relaxed mb-6">
-              Welcome to JuanDerQuest! Discover eco-trails, cultural heritage spots, culinary destinations, vote on upcoming tourist locations, and earn reward vouchers.
+
+            <p className="text-sm md:text-base text-amber-100/90 leading-relaxed">
+              Explore coastal eco-trails, cultural heritage shrines, and culinary spots. Earn reward vouchers, cast mJDQ governance votes, and unlock real achievement badges!
             </p>
 
-            <div className="flex flex-wrap gap-4">
+            <div className="pt-2 flex flex-wrap items-center gap-4">
               <button
                 onClick={() => router.push('/quests')}
-                className="inline-flex items-center gap-2 bg-[#FFB703] text-[#582F0E] font-extrabold px-6 py-3 rounded-xl shadow-md hover:bg-amber-400 transition text-sm"
+                className="inline-flex items-center gap-2.5 gold-gradient text-[#582F0E] font-black px-7 py-4 rounded-2xl shadow-lg hover:scale-105 transition transform text-sm"
               >
-                <span>Browse Quest Feed</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Start Your Quest Journey</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
+
               <button
                 onClick={() => router.push('/vote')}
-                className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-bold px-6 py-3 rounded-xl backdrop-blur-md transition text-sm border border-white/20"
+                className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-bold px-6 py-4 rounded-2xl backdrop-blur-md transition text-sm border border-white/20"
               >
                 <Compass className="w-4 h-4 text-[#FFB703]" />
-                <span>Tourism Spot Voting</span>
+                <span>Governance Voting Arena</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Demo Login Quick Selector Card */}
-        <div className="bg-white rounded-2xl p-6 border border-[#D5C4AC]/40 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        {/* Streamlined Preset Traveler Login */}
+        <div className="bg-white rounded-3xl p-8 border border-[#D5C4AC]/40 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="text-lg font-bold font-serif text-[#582F0E]">Seeded Demo Login</h2>
-              <p className="text-xs text-[#514532]">Select a preset demo traveler account for instant E2E evaluation.</p>
+              <h2 className="text-xl font-bold font-serif text-[#582F0E]">Select Traveler Profile</h2>
+              <p className="text-xs text-[#514532]">Quick-start your evaluation session with a preset account.</p>
             </div>
             {user && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#2D6A4F]/10 text-[#2D6A4F] rounded-lg text-xs font-bold">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Active: {user.displayName}</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#2D6A4F]/10 text-[#2D6A4F] rounded-xl text-xs font-extrabold">
+                <Zap className="w-4 h-4 text-[#2D6A4F]" />
+                <span>Logged in as: {user.displayName}</span>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => handleLogin('user-1')}
               disabled={isLoading}
-              className={`p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
-                selectedSeed === 'user-1'
-                  ? 'border-[#2D6A4F] bg-[#2D6A4F]/5'
-                  : 'border-[#D5C4AC]/40 hover:border-[#2D6A4F]/50 bg-white'
-              }`}
+              className="p-6 rounded-2xl border-2 border-[#2D6A4F]/30 hover:border-[#2D6A4F] bg-gradient-to-br from-white to-[#2D6A4F]/5 text-left transition transform hover:-translate-y-1 shadow-sm flex items-center justify-between group"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#2D6A4F] text-white flex items-center justify-center font-black text-base shadow-md group-hover:scale-110 transition">
                   U1
                 </div>
                 <div>
-                  <div className="font-bold text-[#582F0E] text-sm">Juan Dela Cruz (Traveler)</div>
-                  <div className="text-xs text-[#514532]">Seed ID: user-1 • Verified active user</div>
+                  <div className="font-extrabold text-[#582F0E] text-base">Juan Dela Cruz</div>
+                  <div className="text-xs text-[#3F6653] font-bold">Verified Traveler • user-1</div>
                 </div>
               </div>
-              <UserCheck className="w-5 h-5 text-[#2D6A4F]" />
+              <UserCheck className="w-6 h-6 text-[#2D6A4F] group-hover:translate-x-1 transition" />
             </button>
 
             <button
               onClick={() => handleLogin('admin-1')}
               disabled={isLoading}
-              className={`p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
-                selectedSeed === 'admin-1'
-                  ? 'border-[#7D5800] bg-[#FFB703]/10'
-                  : 'border-[#D5C4AC]/40 hover:border-[#7D5800]/50 bg-white'
-              }`}
+              className="p-6 rounded-2xl border-2 border-[#7D5800]/30 hover:border-[#7D5800] bg-gradient-to-br from-white to-amber-50/50 text-left transition transform hover:-translate-y-1 shadow-sm flex items-center justify-between group"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#7D5800] text-white flex items-center justify-center font-bold text-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#7D5800] text-white flex items-center justify-center font-black text-base shadow-md group-hover:scale-110 transition">
                   A1
                 </div>
                 <div>
-                  <div className="font-bold text-[#582F0E] text-sm">Administrator Seed</div>
-                  <div className="text-xs text-[#514532]">Seed ID: admin-1 • Evaluation account</div>
+                  <div className="font-extrabold text-[#582F0E] text-base">Administrator Seed</div>
+                  <div className="text-xs text-[#7D5800] font-bold">Evaluation Account • admin-1</div>
                 </div>
               </div>
-              <ShieldCheck className="w-5 h-5 text-[#7D5800]" />
+              <ShieldCheck className="w-6 h-6 text-[#7D5800] group-hover:translate-x-1 transition" />
             </button>
           </div>
         </div>
 
-        {/* Feature Grid Highlights */}
+        {/* Visual Gamified Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-[#D5C4AC]/40 shadow-sm space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-[#7D5800] flex items-center justify-center font-bold">
+          <div className="bg-white p-6 rounded-3xl border border-[#D5C4AC]/40 shadow-sm space-y-3 hover:border-[#FFB703] transition">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-[#7D5800] flex items-center justify-center font-bold">
               <Compass className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold font-serif text-[#582F0E]">Pangasinan Quest Trails</h3>
+            <h3 className="text-base font-bold font-serif text-[#582F0E]">Explore Destinations</h3>
             <p className="text-xs text-[#514532] leading-relaxed">
-              Explore Hundred Islands, Patar Beach, Bolinao Lighthouse, Sunflower Maze, and San Fabian heritage sites.
+              Hundred Islands, Patar White Beach, Manaoag Shrine, and Dagupan Bangus spots.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-[#D5C4AC]/40 shadow-sm space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center font-bold">
+          <div className="bg-white p-6 rounded-3xl border border-[#D5C4AC]/40 shadow-sm space-y-3 hover:border-[#2D6A4F] transition">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center font-bold">
               <MapPin className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold font-serif text-[#582F0E]">GPS & Simulated AR Proof</h3>
+            <h3 className="text-base font-bold font-serif text-[#582F0E]">AR Radar Verification</h3>
             <p className="text-xs text-[#514532] leading-relaxed">
-              Scan simulated AR target markers, capture device coordinates, and submit location verification for review.
+              Simulated AR radar camera scanner capturing GPS coordinates and target markers.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-[#D5C4AC]/40 shadow-sm space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-[#7D5800] flex items-center justify-center font-bold">
-              <Sparkles className="w-6 h-6" />
+          <div className="bg-white p-6 rounded-3xl border border-[#D5C4AC]/40 shadow-sm space-y-3 hover:border-[#FFB703] transition">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-[#7D5800] flex items-center justify-center font-bold">
+              <Award className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold font-serif text-[#582F0E]">Paid Governance Voting</h3>
+            <h3 className="text-base font-bold font-serif text-[#582F0E]">mJDQ Governance</h3>
             <p className="text-xs text-[#514532] leading-relaxed">
-              Cast paid mJDQ binary votes (10 mJDQ per vote, 20% burn, 80% escrow) on next community tourism spots.
+              Participate in 10 mJDQ binary voting (20% burn, 80% escrow) to select upcoming spots.
             </p>
           </div>
         </div>
