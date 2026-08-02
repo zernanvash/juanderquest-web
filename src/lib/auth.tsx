@@ -17,7 +17,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const isStoredUser = (raw: unknown): raw is { display_name?: unknown; demo_points?: unknown; id?: unknown } =>
+const isStoredUser = (raw: unknown): raw is { display_name?: unknown; demo_points?: unknown; id?: unknown; role?: unknown } =>
   typeof raw === 'object' && raw !== null;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -34,8 +34,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const raw = JSON.parse(savedUser);
         // Validate stored user shape; discard broken sessions (Phase C repair).
         if (isStoredUser(raw) && raw.display_name && typeof raw.demo_points === 'number') {
+          const restored = normalizeUser(raw as Parameters<typeof normalizeUser>[0]);
+          // Preserve the admin handoff across reloads: admins belong on the dashboard.
+          if (restored.role === 'admin') {
+            window.location.assign(`${ADMIN_URL}/#session=${encodeURIComponent(savedToken)}`);
+            return;
+          }
           setToken(savedToken);
-          setUser(normalizeUser(raw as Parameters<typeof normalizeUser>[0]));
+          setUser(restored);
         } else {
           localStorage.removeItem('jdq_token');
           localStorage.removeItem('jdq_user');
