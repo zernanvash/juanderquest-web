@@ -33,7 +33,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
   ];
 
   // Compute Gamified Level & XP (Level = points / 50 + 1)
-  const currentPoints = user?.points ?? 120;
+  const currentPoints = user?.points ?? 0;
   const currentLevel = Math.floor(currentPoints / 50) + 1;
   const xpProgress = ((currentPoints % 50) / 50) * 100;
 
@@ -124,7 +124,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
               <span className="font-bold text-[#582F0E]">mJDQ Coin:</span>
             </div>
             <span className="font-extrabold text-[#2D6A4F]">
-              {wallet ? `${wallet.balance_mjdq} mJDQ` : '1,000 mJDQ'}
+              {wallet ? `${wallet.balanceMjdq} mJDQ` : '—'}
             </span>
           </div>
 

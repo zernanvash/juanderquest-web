@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { api, ProposalModel } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { api, normalizeGovernanceConfig, normalizeProposal, ProposalModel, GovernanceConfigModel, computeVoteFeeSplit } from '@/lib/api';
+import { useAuth, useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import {
   Vote,
@@ -16,12 +16,19 @@ import {
   Flame,
   Vault,
   Sparkles,
+  Users,
+  Clock,
 } from 'lucide-react';
+
+const VOTED_KEY = (proposalId: string) => `jdq_voted_${proposalId}`;
 
 export default function VotePage() {
   const { wallet, refreshWallet } = useAuth();
+  const { isReady } = useRequireAuth();
   const [proposals, setProposals] = useState<ProposalModel[]>([]);
+  const [config, setConfig] = useState<GovernanceConfigModel | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Voting Modal State
   const [voteModalProposal, setVoteModalProposal] = useState<ProposalModel | null>(null);
@@ -37,81 +44,50 @@ export default function VotePage() {
   const [category, setCategory] = useState('eco');
   const [description, setDescription] = useState('');
   const [submittingLocation, setSubmittingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [locationSuccess, setLocationSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProposals();
+    fetchConfig();
+    // Restore already-voted state from confirmed votes in this browser (server still enforces).
+    const restored: Record<string, 'yes' | 'no'> = {};
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('jdq_voted_')) {
+        const choice = localStorage.getItem(key);
+        if (choice === 'yes' || choice === 'no') {
+          restored[key.replace('jdq_voted_', '')] = choice;
+        }
+      }
+    });
+    setVotedMap(restored);
   }, []);
 
   const fetchProposals = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await api.get('/proposals');
-      if (res.data?.success && res.data.data.length > 0) {
-        setProposals(res.data.data);
+      if (res.data?.success) {
+        setProposals((res.data.data as Parameters<typeof normalizeProposal>[0][]).map(normalizeProposal));
       } else {
-        fallbackProposals();
+        setFetchError('The voting arena is unavailable right now.');
       }
     } catch (e) {
-      fallbackProposals();
+      setFetchError('Could not reach the governance server.');
     }
     setLoading(false);
   };
 
-  const fallbackProposals = () => {
-    setProposals([
-      {
-        id: 'prop_1',
-        title: 'Add Patar White Beach Eco Trail',
-        location_name: 'Bolinao, Pangasinan',
-        category: 'eco',
-        description: 'Add an eco-quest covering coastal rock formations, white sand beach trail, and Cape Bolinao lighthouse viewing tower.',
-        status: 'voting',
-        submitted_by_id: 'user-1',
-        submitted_by_name: 'Juan Dela Cruz',
-        yes_votes: 18,
-        no_votes: 3,
-        yes_weight_mjdq: 180,
-        no_weight_mjdq: 30,
-        total_voters: 21,
-        bond_mjdq: 25000,
-        escrowed_mjdq: 168,
-      },
-      {
-        id: 'prop_2',
-        title: 'Add Tayug Sunflower Maze Quest',
-        location_name: 'Tayug, Pangasinan',
-        category: 'eco',
-        description: 'Create an interactive agricultural quest at the famous sunflower maze park in eastern Pangasinan.',
-        status: 'voting',
-        submitted_by_id: 'user-2',
-        submitted_by_name: 'Maria Santos',
-        yes_votes: 12,
-        no_votes: 1,
-        yes_weight_mjdq: 120,
-        no_weight_mjdq: 10,
-        total_voters: 13,
-        bond_mjdq: 25000,
-        escrowed_mjdq: 104,
-      },
-      {
-        id: 'prop_3',
-        title: 'Add San Fabian Beach Heritage Trail',
-        location_name: 'San Fabian, Pangasinan',
-        category: 'cultural',
-        description: 'Feature WWII historic landing sites along San Fabian beach park.',
-        status: 'voting',
-        submitted_by_id: 'user-1',
-        submitted_by_name: 'Juan Dela Cruz',
-        yes_votes: 8,
-        no_votes: 0,
-        yes_weight_mjdq: 80,
-        no_weight_mjdq: 0,
-        total_voters: 8,
-        bond_mjdq: 25000,
-        escrowed_mjdq: 64,
-      },
-    ]);
+  const fetchConfig = async () => {
+    try {
+      const res = await api.get('/proposals/config');
+      if (res.data?.success) {
+        setConfig(normalizeGovernanceConfig(res.data.data));
+      }
+    } catch (e) {
+      console.error('Failed to load governance config', e);
+    }
   };
 
   const handleCastVote = async () => {
@@ -128,7 +104,9 @@ export default function VotePage() {
       });
 
       if (res.data?.success) {
-        setVotedMap((prev) => ({ ...prev, [voteModalProposal.id as string]: voteChoice }));
+        const proposalId = voteModalProposal.id;
+        localStorage.setItem(VOTED_KEY(proposalId), voteChoice);
+        setVotedMap((prev) => ({ ...prev, [proposalId]: voteChoice }));
         await refreshWallet();
         await fetchProposals();
         setVoteModalProposal(null);
@@ -145,33 +123,43 @@ export default function VotePage() {
     e.preventDefault();
     if (!title || !locationName) return;
     setSubmittingLocation(true);
+    setLocationError(null);
+    setLocationSuccess(null);
 
     try {
-      const res = await api.post('/proposals', {
+      const createRes = await api.post('/proposals', {
         title,
         location_name: locationName,
         category,
         description: description || 'Community suggested Pangasinan destination.',
       });
 
-      if (res.data?.success) {
-        const newId = res.data.data.id;
-        await api.post(`/proposals/${newId}/submit`);
-        setLocationSuccess(`Location proposal "${title}" submitted for screening!`);
-        setTitle('');
-        setLocationName('');
-        setDescription('');
-        setTimeout(() => {
-          setSuggestModalOpen(false);
-          setLocationSuccess(null);
-          fetchProposals();
-        }, 1500);
+      if (!createRes.data?.success) {
+        setLocationError(createRes.data?.error?.message || 'Proposal creation failed');
+        setSubmittingLocation(false);
+        return;
       }
-    } catch (e: any) {
-      console.error(e);
+
+      const newId = createRes.data.data.id;
+      await api.post(`/proposals/${newId}/submit`);
+      setLocationSuccess(`Location proposal "${title}" submitted for admin screening!`);
+      setTitle('');
+      setLocationName('');
+      setDescription('');
+      setTimeout(() => {
+        setSuggestModalOpen(false);
+        setLocationSuccess(null);
+        fetchProposals();
+      }, 1800);
+    } catch (err: any) {
+      setLocationError(err.response?.data?.error?.message || 'Could not submit proposal.');
     }
     setSubmittingLocation(false);
   };
+
+  const voteFeeSplit = config ? computeVoteFeeSplit(config) : null;
+
+  if (!isReady) return null;
 
   return (
     <Navigation>
@@ -193,7 +181,9 @@ export default function VotePage() {
                 Govern Pangasinan Tourism Spots
               </h1>
               <p className="text-xs md:text-sm text-[#514532] max-w-xl leading-relaxed">
-                Cast paid binary votes (10 mJDQ per vote) to approve destination proposals. 20% is burned permanently, 80% enters community reward escrow.
+                {config
+                  ? `Cast paid binary votes (${voteFeeSplit?.fee} mJDQ per vote). ${(config.burnBps / 100).toFixed(0)}% is burned permanently, the rest enters community reward escrow.`
+                  : 'Cast paid binary votes to approve destination proposals. Fees come from the live governance config and are disclosed before you confirm.'}
               </p>
             </div>
 
@@ -203,7 +193,7 @@ export default function VotePage() {
                 <div>
                   <div className="text-[10px] font-bold text-[#837560] uppercase">mJDQ Coin Wallet</div>
                   <div className="text-sm font-extrabold text-[#2D6A4F]">
-                    {wallet ? `${wallet.balance_mjdq} mJDQ` : '1,000 mJDQ'}
+                    {wallet ? `${wallet.balanceMjdq} mJDQ` : '—'}
                   </div>
                 </div>
               </div>
@@ -228,48 +218,96 @@ export default function VotePage() {
               <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
               <span className="text-xs font-bold text-[#582F0E]">Loading voting arena...</span>
             </div>
+          ) : fetchError ? (
+            <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4">
+              <p>{fetchError}</p>
+              <button
+                onClick={fetchProposals}
+                className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
+              >
+                Retry
+              </button>
+            </div>
           ) : proposals.length === 0 ? (
             <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
-              No active spot proposals available.
+              No spot proposals yet. Suggest the first destination!
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {proposals.map((prop) => {
-                const userVote = votedMap[prop.id.toString()];
-                const totalVotes = prop.yes_votes + prop.no_votes;
-                const yesPct = totalVotes > 0 ? Math.round((prop.yes_votes / totalVotes) * 100) : 0;
-                const noPct = totalVotes > 0 ? Math.round((prop.no_votes / totalVotes) * 100) : 0;
+                const userVote = votedMap[prop.id];
+                const totalVotes = prop.yesVotes + prop.noVotes;
+                const yesPct = totalVotes > 0 ? Math.round((prop.yesVotes / totalVotes) * 100) : 0;
+                const noPct = totalVotes > 0 ? Math.round((prop.noVotes / totalVotes) * 100) : 0;
+                const quorumMet = totalVotes >= prop.quorumRequired;
+                const canVote = prop.state === 'voting' && !userVote;
 
                 return (
                   <div
-                    key={prop.id.toString()}
+                    key={prop.id}
                     className="bg-white rounded-3xl border-2 border-[#D5C4AC]/40 p-6 flex flex-col justify-between shadow-sm space-y-4 hover:border-[#FFB703] transition duration-200"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-xl bg-[#FAF9F5] text-[#837560] border border-[#D5C4AC]/40">
-                          {prop.category}
+                          {prop.category.replace('_', ' ')}
                         </span>
                         <span className="text-[10px] font-black uppercase px-3 py-1 rounded-xl bg-amber-100 text-[#7D5800]">
-                          {prop.status}
+                          {prop.state}
                         </span>
                       </div>
 
-                      <h3 className="text-lg font-bold font-serif text-[#582F0E]">
-                        {prop.title}
-                      </h3>
-                      <div className="text-xs text-[#837560] font-bold">{prop.location_name}</div>
+                      <h3 className="text-lg font-bold font-serif text-[#582F0E]">{prop.title}</h3>
+                      <div className="text-xs text-[#837560] font-bold">{prop.locationName}</div>
                       <p className="text-xs text-[#514532] leading-relaxed">{prop.description}</p>
+
+                      {/* Governance metrics from the live proposal */}
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#D5C4AC]/40">
+                          <div className="text-[#837560] font-semibold flex items-center gap-1">
+                            <Users className="w-3 h-3" /> Eligible voters
+                          </div>
+                          <div className="font-extrabold text-[#582F0E]">{prop.eligibleVoterSnapshot}</div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#D5C4AC]/40">
+                          <div className="text-[#837560] font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Quorum
+                          </div>
+                          <div className={`font-extrabold ${quorumMet ? 'text-[#2D6A4F]' : 'text-[#BC4749]'}`}>
+                            {totalVotes}/{prop.quorumRequired}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#D5C4AC]/40">
+                          <div className="text-[#837560] font-semibold">Organizer bond</div>
+                          <div className="font-extrabold text-[#582F0E]">
+                            {prop.organizerBondMjdq} mJDQ
+                            <span className="text-[#837560] font-semibold"> · {prop.bondStatus}</span>
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#D5C4AC]/40">
+                          <div className="text-[#837560] font-semibold flex items-center gap-1">
+                            <Vault className="w-3 h-3" /> Reward escrow
+                          </div>
+                          <div className="font-extrabold text-[#2D6A4F]">{prop.escrowMjdq} mJDQ</div>
+                        </div>
+                      </div>
+
+                      {prop.votingClosesAt && prop.state === 'voting' && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-[#837560] font-semibold">
+                          <Clock className="w-3 h-3" />
+                          <span>Voting closes {new Date(prop.votingClosesAt).toLocaleString()}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Progress Bar & Vote Breakdown */}
                     <div className="p-4 bg-[#FAF9F5] rounded-2xl border border-[#D5C4AC]/40 space-y-2">
                       <div className="flex justify-between text-xs font-bold">
                         <span className="text-[#2D6A4F] flex items-center gap-1">
-                          <ThumbsUp className="w-3.5 h-3.5" /> YES: {prop.yes_votes} ({yesPct}%)
+                          <ThumbsUp className="w-3.5 h-3.5" /> YES: {prop.yesVotes} ({yesPct}%)
                         </span>
                         <span className="text-[#BC4749] flex items-center gap-1">
-                          <ThumbsDown className="w-3.5 h-3.5" /> NO: {prop.no_votes} ({noPct}%)
+                          <ThumbsDown className="w-3.5 h-3.5" /> NO: {prop.noVotes} ({noPct}%)
                         </span>
                       </div>
 
@@ -281,12 +319,12 @@ export default function VotePage() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* Action area: only the voting lifecycle allows votes */}
                     {userVote ? (
                       <div className="py-3 bg-[#2D6A4F]/10 text-[#2D6A4F] font-black text-xs text-center rounded-2xl">
                         Vote Cast: {userVote.toUpperCase()}
                       </div>
-                    ) : (
+                    ) : prop.state === 'voting' ? (
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => {
@@ -308,6 +346,15 @@ export default function VotePage() {
                           <ThumbsDown className="w-4 h-4" />
                           <span>Vote NO</span>
                         </button>
+                      </div>
+                    ) : (
+                      <div className="py-3 bg-[#FAF9F5] text-[#837560] font-bold text-xs text-center rounded-2xl border border-[#D5C4AC]/40">
+                        {prop.state === 'screening' && 'Awaiting admin screening approval...'}
+                        {prop.state === 'draft' && 'Draft proposal — pending submission'}
+                        {prop.state === 'scheduled' && 'Approved — scheduled quest'}
+                        {prop.state === 'active' && 'Quest is live'}
+                        {prop.state === 'feedback' && 'In community feedback phase'}
+                        {prop.state === 'closed' && 'Voting closed'}
                       </div>
                     )}
                   </div>
@@ -342,27 +389,31 @@ export default function VotePage() {
 
               <div className="text-xs font-bold text-[#582F0E]">Target: "{voteModalProposal.title}"</div>
 
-              {/* Visual Fee Split */}
-              <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 text-xs space-y-3">
-                <div className="flex justify-between font-bold">
-                  <span className="text-[#837560]">Vote Fee:</span>
-                  <span className="text-[#7D5800]">10 mJDQ (0.01 JDQ)</span>
+              {/* Visual Fee Split — computed from live /proposals/config */}
+              {voteFeeSplit ? (
+                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 text-xs space-y-3">
+                  <div className="flex justify-between font-bold">
+                    <span className="text-[#837560]">Vote Fee:</span>
+                    <span className="text-[#7D5800]">{voteFeeSplit.fee} mJDQ ({voteFeeSplit.feeJdq.toFixed(2)} JDQ)</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-red-50 text-red-700 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <Flame className="w-4 h-4 text-red-600" />
+                      <span>{(config!.burnBps / 100).toFixed(0)}% Burn Furnace:</span>
+                    </span>
+                    <span>{voteFeeSplit.burn} mJDQ</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <Vault className="w-4 h-4 text-[#2D6A4F]" />
+                      <span>{((10000 - config!.burnBps) / 100).toFixed(0)}% Reward Escrow Vault:</span>
+                    </span>
+                    <span>{voteFeeSplit.escrow} mJDQ</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-red-50 text-red-700 font-bold">
-                  <span className="flex items-center gap-1.5">
-                    <Flame className="w-4 h-4 text-red-600" />
-                    <span>20% Burn Furnace:</span>
-                  </span>
-                  <span>2 mJDQ</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold">
-                  <span className="flex items-center gap-1.5">
-                    <Vault className="w-4 h-4 text-[#2D6A4F]" />
-                    <span>80% Reward Escrow Vault:</span>
-                  </span>
-                  <span>8 mJDQ</span>
-                </div>
-              </div>
+              ) : (
+                <p className="text-xs text-[#837560]">Loading fee disclosure...</p>
+              )}
 
               {voteError && (
                 <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
@@ -373,7 +424,7 @@ export default function VotePage() {
 
               <button
                 onClick={handleCastVote}
-                disabled={voting}
+                disabled={voting || !voteFeeSplit}
                 className={`w-full flex items-center justify-center gap-2 font-black py-3.5 px-6 rounded-2xl text-white shadow-lg transition text-xs ${
                   voteChoice === 'yes' ? 'bg-[#2D6A4F] hover:bg-[#1B4332]' : 'bg-[#BC4749] hover:bg-red-800'
                 }`}
@@ -407,6 +458,13 @@ export default function VotePage() {
                 <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>{locationSuccess}</span>
+                </div>
+              )}
+
+              {locationError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{locationError}</span>
                 </div>
               )}
 

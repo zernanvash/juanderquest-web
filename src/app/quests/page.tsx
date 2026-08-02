@@ -2,79 +2,48 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { api, QuestModel } from '@/lib/api';
+import { api, normalizeQuest, QuestModel } from '@/lib/api';
+import { useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { Compass, MapPin, Award, ArrowRight, Loader2, Sparkles, Navigation as NavIcon } from 'lucide-react';
+import { Compass, MapPin, Award, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function QuestsPage() {
+  const { isReady } = useRequireAuth();
   const [quests, setQuests] = useState<QuestModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+
+  const fetchQuests = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get('/quests');
+      if (res.data?.success) {
+        setQuests((res.data.data as Parameters<typeof normalizeQuest>[0][]).map(normalizeQuest));
+      } else {
+        setError('The quest feed is unavailable right now.');
+      }
+    } catch (e) {
+      setError('Could not reach the quest server.');
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     fetchQuests();
   }, []);
 
-  const fetchQuests = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/quests');
-      if (res.data?.success) {
-        setQuests(res.data.data);
-      }
-    } catch (e) {
-      fallbackQuests();
-    }
-    setLoading(false);
-  };
-
-  const fallbackQuests = () => {
-    setQuests([
-      {
-        id: 'quest_1',
-        title: 'Hundred Islands Eco-Adventure',
-        description: 'Explore Governor’s Island view deck and coastal biodiversity in Alaminos City.',
-        category: 'eco',
-        target_lat: 16.2012,
-        target_lng: 120.0381,
-        radius_meters: 500,
-        reward_points: 100,
-        target_marker_id: 'MARKER_HUNDRED_ISLANDS',
-      },
-      {
-        id: 'quest_2',
-        title: 'Manaoag Shrine Cultural Trail',
-        description: 'Visit the historic Minor Basilica of Our Lady of the Rosary in Manaoag.',
-        category: 'cultural',
-        target_lat: 16.0435,
-        target_lng: 120.4851,
-        radius_meters: 300,
-        reward_points: 80,
-        target_marker_id: 'MARKER_MANAOAG',
-      },
-      {
-        id: 'quest_3',
-        title: 'Dagupan Bangus Culinary Tour',
-        description: 'Experience authentic milkfish gastronomy along Bonuan Blue Beach seafood hub.',
-        category: 'food_trade',
-        target_lat: 16.0821,
-        target_lng: 120.3412,
-        radius_meters: 400,
-        reward_points: 75,
-        target_marker_id: 'MARKER_DAGUPAN_BANGUS',
-      },
-    ]);
-  };
+  if (!isReady) return null;
 
   const filteredQuests = quests.filter((q) => {
     if (activeCategory === 'all') return true;
-    return q.category.toLowerCase().includes(activeCategory);
+    return q.category === activeCategory;
   });
 
   return (
     <Navigation>
       <div className="space-y-8 max-w-5xl mx-auto">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-[#3F6653] uppercase tracking-wider mb-1">
@@ -84,13 +53,12 @@ export default function QuestsPage() {
             <h1 className="text-3xl font-extrabold font-serif text-[#582F0E]">Pangasinan Quest Trails</h1>
           </div>
 
-          {/* Gamified Category Filter Chips */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {[
               { id: 'all', label: 'All Quests' },
               { id: 'eco', label: 'Eco-Tourism' },
               { id: 'cultural', label: 'Cultural Heritage' },
-              { id: 'food', label: 'Food & Culinary' },
+              { id: 'food_trade', label: 'Food & Culinary' },
             ].map((cat) => (
               <button
                 key={cat.id}
@@ -107,21 +75,30 @@ export default function QuestsPage() {
           </div>
         </div>
 
-        {/* Quests Cards Grid */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-[#837560]">
             <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
             <span className="text-xs font-bold text-[#582F0E]">Loading quest trails...</span>
+          </div>
+        ) : error ? (
+          <div className="bg-white p-12 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4">
+            <p>{error}</p>
+            <button
+              onClick={fetchQuests}
+              className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
+            >
+              Retry
+            </button>
           </div>
         ) : filteredQuests.length === 0 ? (
           <div className="bg-white p-12 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
             No quest trails available in this category.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredQuests.map((quest) => (
               <div
-                key={quest.id.toString()}
+                key={quest.id}
                 className="bg-white rounded-3xl border-2 border-[#D5C4AC]/40 hover:border-[#FFB703] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group"
               >
                 <div className="space-y-4">
@@ -131,7 +108,7 @@ export default function QuestsPage() {
                     </span>
                     <div className="flex items-center gap-1.5 text-[#7D5800] text-xs font-black gold-gradient px-3 py-1 rounded-xl shadow-sm text-white">
                       <Award className="w-4 h-4" />
-                      <span>+{quest.reward_points} PTS</span>
+                      <span>+{quest.rewardPoints} PTS</span>
                     </div>
                   </div>
 
@@ -145,14 +122,13 @@ export default function QuestsPage() {
 
                   <div className="flex items-center gap-2 text-xs text-[#837560] pt-2">
                     <MapPin className="w-4 h-4 text-[#2D6A4F]" />
-                    <span>Radius: {quest.radius_meters}m</span>
+                    <span className="truncate">{quest.locationName}</span>
+                    <span className="shrink-0">• Radius: {quest.radiusMeters}m</span>
                   </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-[#EFEEEA] flex items-center justify-between">
-                  <code className="text-[10px] font-mono font-bold text-[#7D5800] bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
-                    {quest.target_marker_id}
-                  </code>
+                  <span className="text-[10px] font-bold text-[#837560]">+{quest.rewardPoints} reward pts</span>
 
                   <Link
                     href={`/quests/${quest.id}`}

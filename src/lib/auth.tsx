@@ -1,7 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api, UserModel, WalletModel } from './api';
+import { useRouter } from 'next/navigation';
+import { api, ADMIN_URL, normalizeUser, normalizeWallet, UserModel, WalletModel } from './api';
 
 interface AuthContextType {
   user: UserModel | null;
@@ -12,10 +13,12 @@ interface AuthContextType {
   logout: () => void;
   refreshProfile: () => Promise<void>;
   refreshWallet: () => Promise<void>;
-  deductPointsLocally: (points: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const isStoredUser = (raw: unknown): raw is { display_name?: unknown; demo_points?: unknown; id?: unknown } =>
+  typeof raw === 'object' && raw !== null;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserModel | null>(null);
@@ -27,11 +30,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedToken = localStorage.getItem('jdq_token');
     const savedUser = localStorage.getItem('jdq_user');
     if (savedToken && savedUser) {
-      setToken(savedToken);
       try {
-        setUser(JSON.parse(savedUser));
+        const raw = JSON.parse(savedUser);
+        // Validate stored user shape; discard broken sessions (Phase C repair).
+        if (isStoredUser(raw) && raw.display_name && typeof raw.demo_points === 'number') {
+          setToken(savedToken);
+          setUser(normalizeUser(raw as Parameters<typeof normalizeUser>[0]));
+        } else {
+          localStorage.removeItem('jdq_token');
+          localStorage.removeItem('jdq_user');
+        }
       } catch (e) {
-        console.error(e);
+        localStorage.removeItem('jdq_token');
+        localStorage.removeItem('jdq_user');
       }
     }
     setIsLoading(false);
@@ -41,11 +52,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.get('/auth/me');
       if (res.data?.success) {
-        setUser(res.data.data);
+        const normalized = normalizeUser(res.data.data);
+        setUser(normalized);
         localStorage.setItem('jdq_user', JSON.stringify(res.data.data));
       }
-    } catch (e) {
-      console.error('Failed to refresh profile', e);
+    } catch (e: any) {
+      // Expired or invalid session: clear it so guards redirect to login.
+      if (e?.response?.status === 401 || e?.response?.status === 403) {
+        logout();
+      } else {
+        console.error('Failed to refresh profile', e);
+      }
     }
   };
 
@@ -53,16 +70,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.get('/wallet');
       if (res.data?.success) {
-        setWallet(res.data.data);
+        setWallet(normalizeWallet(res.data.data));
       }
     } catch (e) {
-      // Fallback wallet representation for prototype
-      setWallet({
-        settlement: 'off-chain prototype',
-        unit: 'mJDQ',
-        balance_mjdq: 1000,
-        balance_jdq: 1.0,
-      });
+      // No fabricated fallback balance: leave the wallet as null so UI shows a dash.
+      console.error('Failed to refresh wallet', e);
     }
   };
 
@@ -79,11 +91,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await api.post('/auth/demo-login', { seed_id: seedId });
       if (res.data?.success) {
         const authToken = res.data.data.token;
-        const userData = res.data.data.user;
+        const normalized = normalizeUser(res.data.data.user);
+        // Admin users hand off to the dashboard with a fragment session (restored protocol).
+        if (normalized.role === 'admin') {
+          window.location.assign(`${ADMIN_URL}/#session=${encodeURIComponent(authToken)}`);
+          return false;
+        }
         setToken(authToken);
-        setUser(userData);
+        setUser(normalized);
         localStorage.setItem('jdq_token', authToken);
-        localStorage.setItem('jdq_user', JSON.stringify(userData));
+        localStorage.setItem('jdq_user', JSON.stringify(res.data.data.user));
         setIsLoading(false);
         return true;
       }
@@ -102,14 +119,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('jdq_user');
   };
 
-  const deductPointsLocally = (points: number) => {
-    if (user) {
-      const updated = { ...user, points: Math.max(0, user.points - points) };
-      setUser(updated);
-      localStorage.setItem('jdq_user', JSON.stringify(updated));
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -121,7 +130,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         refreshProfile,
         refreshWallet,
-        deductPointsLocally,
       }}
     >
       {children}
@@ -135,4 +143,18 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// Guard for pages that require a traveler session. Redirects to the login page.
+export const useRequireAuth = (): { user: UserModel; token: string; isReady: boolean } => {
+  const { user, token, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/');
+    }
+  }, [isLoading, user, router]);
+
+  return { user: user as UserModel, token: token as string, isReady: !isLoading && !!user };
 };

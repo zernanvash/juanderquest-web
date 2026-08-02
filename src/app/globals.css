@@ -67,6 +67,24 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%);
 }
 
+/* Leaflet divIcon quest marker pin */
+.jq-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #FFB703 0%, #F77F00 100%);
+  border: 2px solid white;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+.jq-marker span {
+  transform: rotate(45deg);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

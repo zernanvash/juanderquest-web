@@ -1,179 +1,182 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { api, QuestModel } from '@/lib/api';
+import type { Map as LeafletMap } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { api, normalizeQuest, QuestModel } from '@/lib/api';
+import { useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { MapPin, Compass, Award, ExternalLink, Navigation as NavIcon } from 'lucide-react';
+import { MapPin, Compass, Award, ExternalLink, Navigation as NavIcon, Loader2 } from 'lucide-react';
+
+// Pangasinan province center.
+const MAP_CENTER: [number, number] = [16.0, 120.4];
 
 export default function QuestMapPage() {
+  const { isReady } = useRequireAuth();
   const [quests, setQuests] = useState<QuestModel[]>([]);
   const [selectedQuest, setSelectedQuest] = useState<QuestModel | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchQuests();
   }, []);
 
   const fetchQuests = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await api.get('/quests');
-      if (res.data?.success && res.data.data.length > 0) {
-        setQuests(res.data.data);
-        setSelectedQuest(res.data.data[0]);
+      if (res.data?.success) {
+        const list = (res.data.data as Parameters<typeof normalizeQuest>[0][]).map(normalizeQuest);
+        setQuests(list);
+        setSelectedQuest(list[0] ?? null);
       } else {
-        fallbackQuests();
+        setError('The quest map is unavailable right now.');
       }
     } catch (e) {
-      fallbackQuests();
+      setError('Could not reach the quest server.');
     }
+    setLoading(false);
   };
 
-  const fallbackQuests = () => {
-    const list: QuestModel[] = [
-      {
-        id: 'quest_1',
-        title: 'Hundred Islands Eco-Adventure',
-        description: 'Explore Governor’s Island view deck and coastal biodiversity in Alaminos City.',
-        category: 'eco',
-        target_lat: 16.2012,
-        target_lng: 120.0381,
-        radius_meters: 500,
-        reward_points: 100,
-        target_marker_id: 'MARKER_HUNDRED_ISLANDS',
-      },
-      {
-        id: 'quest_2',
-        title: 'Manaoag Shrine Cultural Trail',
-        description: 'Visit the historic Minor Basilica of Our Lady of the Rosary in Manaoag.',
-        category: 'cultural',
-        target_lat: 16.0435,
-        target_lng: 120.4851,
-        radius_meters: 300,
-        reward_points: 80,
-        target_marker_id: 'MARKER_MANAOAG',
-      },
-      {
-        id: 'quest_3',
-        title: 'Dagupan Bangus Culinary Tour',
-        description: 'Experience authentic milkfish gastronomy along Bonuan Blue Beach seafood hub.',
-        category: 'food_trade',
-        target_lat: 16.0821,
-        target_lng: 120.3412,
-        radius_meters: 400,
-        reward_points: 75,
-        target_marker_id: 'MARKER_DAGUPAN_BANGUS',
-      },
-    ];
-    setQuests(list);
-    setSelectedQuest(list[0]);
-  };
+  // Initialise the real Leaflet map once the container is mounted. Leaflet is
+  // imported lazily because it accesses `window` at module load (no SSR).
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container || !isReady || loading || error || quests.length === 0) return;
+
+    let map: LeafletMap | null = null;
+    let disposed = false;
+
+    (async () => {
+      const L = (await import('leaflet')).default;
+      if (disposed || !mapContainerRef.current) return;
+
+      map = L.map(mapContainerRef.current, { center: MAP_CENTER, zoom: 9 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+
+      quests.forEach((quest) => {
+        const icon = L.divIcon({
+          className: '',
+          html: `<div class="jq-marker"><span>${quest.category === 'food_trade' ? '🍤' : quest.category === 'cultural' ? '🛕' : '🏝️'}</span></div>`,
+          iconSize: [36, 36],
+          iconAnchor: [18, 36],
+        });
+
+        L.marker([quest.gpsLat, quest.gpsLng], { icon })
+          .addTo(map!)
+          .bindPopup(
+            `<strong>${quest.title}</strong><br/>${quest.locationName}<br/>+${quest.rewardPoints} pts`
+          )
+          .on('click', () => setSelectedQuest(quest));
+      });
+
+      map.fitBounds(L.latLngBounds(quests.map((q) => [q.gpsLat, q.gpsLng] as [number, number])).pad(0.2));
+    })();
+
+    return () => {
+      disposed = true;
+      map?.remove();
+    };
+  }, [isReady, loading, error, quests]);
+
+  if (!isReady) return null;
 
   return (
     <Navigation>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-extrabold font-serif text-[#582F0E]">Quest Map</h1>
-          <p className="text-xs text-[#514532]">Explore Pangasinan quest markers centered at (16.0350, 120.3330).</p>
+          <p className="text-xs text-[#514532]">Live Pangasinan quest markers from the server — click a pin to inspect.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Interactive Map Visual Container */}
-          <div className="lg:col-span-2 bg-[#1B4332] rounded-3xl p-6 border border-[#D5C4AC]/40 shadow-sm relative min-h-[420px] flex flex-col justify-between overflow-hidden">
-            {/* Map Canvas Fallback Visual */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#2D6A4F] to-[#0D1B2A] opacity-90" />
-            <div className="absolute inset-0 bg-[radial-gradient(#FFB703_1px,transparent_1px)] [background-size:16px_16px] opacity-20" />
-
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs text-[#FFB703] font-bold">
-                <NavIcon className="w-3.5 h-3.5" />
-                <span>PANGASINAN REGION MAP</span>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-[#837560]">
+            <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
+            <span className="text-xs font-bold text-[#582F0E]">Loading quest map...</span>
+          </div>
+        ) : error ? (
+          <div className="bg-white p-12 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4">
+            <p>{error}</p>
+            <button
+              onClick={fetchQuests}
+              className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Real interactive Leaflet map */}
+            <div className="lg:col-span-2 rounded-3xl border border-[#D5C4AC]/40 shadow-sm overflow-hidden relative">
+              <div ref={mapContainerRef} className="w-full h-[480px] z-0" />
+              <div className="absolute top-3 left-3 z-[500] inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md text-xs text-[#582F0E] font-bold shadow">
+                <NavIcon className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                <span>PANGASINAN QUEST MAP</span>
               </div>
-              <span className="text-[11px] text-gray-300">Lat: 16.0350 • Lng: 120.3330</span>
             </div>
 
-            {/* Simulated Pins */}
-            <div className="relative z-10 my-12 flex flex-wrap items-center justify-center gap-6">
-              {quests.map((q) => {
-                const isSelected = selectedQuest?.id === q.id;
-                return (
-                  <button
-                    key={q.id.toString()}
-                    onClick={() => setSelectedQuest(q)}
-                    className={`p-3 rounded-2xl border-2 transition transform hover:scale-105 flex items-center gap-2 text-left shadow-lg ${
-                      isSelected
-                        ? 'bg-[#FFB703] text-[#582F0E] border-white font-extrabold'
-                        : 'bg-white/90 text-[#582F0E] border-[#D5C4AC] backdrop-blur-md'
-                    }`}
+            {/* Selected Quest Sidebar Detail Card */}
+            <div className="bg-white rounded-3xl p-6 border border-[#D5C4AC]/40 shadow-sm flex flex-col justify-between space-y-4">
+              {selectedQuest ? (
+                <>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md bg-[#EFEEEA] text-[#837560]">
+                        {selectedQuest.category.replace('_', ' ')}
+                      </span>
+                      <div className="flex items-center gap-1 text-[#7D5800] text-xs font-extrabold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        <Award className="w-3.5 h-3.5" />
+                        <span>+{selectedQuest.rewardPoints} PTS</span>
+                      </div>
+                    </div>
+
+                    <h3 className="text-lg font-bold font-serif text-[#582F0E]">
+                      {selectedQuest.title}
+                    </h3>
+
+                    <p className="text-xs text-[#514532] leading-relaxed">
+                      {selectedQuest.description}
+                    </p>
+
+                    <div className="p-3 bg-[#FAF9F5] rounded-xl border border-[#D5C4AC]/40 text-xs space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-[#837560]">Coordinates:</span>
+                        <span className="font-bold text-[#582F0E]">{selectedQuest.gpsLat}, {selectedQuest.gpsLng}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#837560]">Radius:</span>
+                        <span className="font-bold text-[#582F0E]">{selectedQuest.radiusMeters}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#837560]">Location:</span>
+                        <span className="font-bold text-[#582F0E] text-right">{selectedQuest.locationName}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/quests/${selectedQuest.id}`}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold py-3 px-4 rounded-xl text-xs transition"
                   >
-                    <MapPin className={`w-5 h-5 ${isSelected ? 'text-[#582F0E]' : 'text-[#2D6A4F]'}`} />
-                    <div>
-                      <div className="text-xs font-bold leading-tight">{q.title}</div>
-                      <div className="text-[10px] opacity-80">{q.category}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="relative z-10 text-xs text-gray-300 text-center">
-              Click pins to inspect destination details and launcher proof capture.
-            </div>
-          </div>
-
-          {/* Selected Quest Sidebar Detail Card */}
-          <div className="bg-white rounded-3xl p-6 border border-[#D5C4AC]/40 shadow-sm flex flex-col justify-between space-y-4">
-            {selectedQuest ? (
-              <>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md bg-[#EFEEEA] text-[#837560]">
-                      {selectedQuest.category}
-                    </span>
-                    <div className="flex items-center gap-1 text-[#7D5800] text-xs font-extrabold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                      <Award className="w-3.5 h-3.5" />
-                      <span>+{selectedQuest.reward_points} PTS</span>
-                    </div>
-                  </div>
-
-                  <h3 className="text-lg font-bold font-serif text-[#582F0E]">
-                    {selectedQuest.title}
-                  </h3>
-
-                  <p className="text-xs text-[#514532] leading-relaxed">
-                    {selectedQuest.description}
-                  </p>
-
-                  <div className="p-3 bg-[#FAF9F5] rounded-xl border border-[#D5C4AC]/40 text-xs space-y-1.5">
-                    <div className="flex justify-between">
-                      <span className="text-[#837560]">Coordinates:</span>
-                      <span className="font-bold text-[#582F0E]">{selectedQuest.target_lat}, {selectedQuest.target_lng}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#837560]">Radius:</span>
-                      <span className="font-bold text-[#582F0E]">{selectedQuest.radius_meters}m</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#837560]">AR Marker:</span>
-                      <code className="font-mono text-[#7D5800] font-bold">{selectedQuest.target_marker_id}</code>
-                    </div>
-                  </div>
+                    <span>Launch AR Verification</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </Link>
+                </>
+              ) : (
+                <div className="text-xs text-[#837560] text-center my-auto">
+                  Select a marker on the map to view details.
                 </div>
-
-                <Link
-                  href={`/quests/${selectedQuest.id}`}
-                  className="w-full inline-flex items-center justify-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold py-3 px-4 rounded-xl text-xs transition"
-                >
-                  <span>Launch AR Verification</span>
-                  <ExternalLink className="w-4 h-4" />
-                </Link>
-              </>
-            ) : (
-              <div className="text-xs text-[#837560] text-center my-auto">
-                Select a marker on the map to view details.
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </Navigation>
   );

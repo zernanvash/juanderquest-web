@@ -138,7 +138,8 @@ export default function HomePage() {
             </div>
             <h3 className="text-base font-bold font-serif text-[#582F0E]">mJDQ Governance</h3>
             <p className="text-xs text-[#514532] leading-relaxed">
-              Participate in 10 mJDQ binary voting (20% burn, 80% escrow) to select upcoming spots.
+              Participate in paid binary voting on community-suggested spots. Fees follow the live
+              governance config — a share is burned, the rest enters the reward escrow.
             </p>
           </div>
         </div>
