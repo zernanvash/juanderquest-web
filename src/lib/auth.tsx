@@ -17,8 +17,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const isStoredUser = (raw: unknown): raw is { display_name?: unknown; demo_points?: unknown; id?: unknown; role?: unknown } =>
+export const isStoredUser = (raw: unknown): raw is { display_name?: unknown; demo_points?: unknown; id?: unknown; role?: unknown } =>
   typeof raw === 'object' && raw !== null;
+
+export const adminHandoffUrl = (token: string) => `${ADMIN_URL}/#session=${encodeURIComponent(token)}`;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserModel | null>(null);
@@ -37,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const restored = normalizeUser(raw as Parameters<typeof normalizeUser>[0]);
           // Preserve the admin handoff across reloads: admins belong on the dashboard.
           if (restored.role === 'admin') {
-            window.location.assign(`${ADMIN_URL}/#session=${encodeURIComponent(savedToken)}`);
+            window.location.assign(adminHandoffUrl(savedToken));
             return;
           }
           setToken(savedToken);
@@ -100,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const normalized = normalizeUser(res.data.data.user);
         // Admin users hand off to the dashboard with a fragment session (restored protocol).
         if (normalized.role === 'admin') {
-          window.location.assign(`${ADMIN_URL}/#session=${encodeURIComponent(authToken)}`);
+          window.location.assign(adminHandoffUrl(authToken));
           return false;
         }
         setToken(authToken);

@@ -156,14 +156,14 @@ export default function ShopPage() {
         {/* Redeem Confirmation & Code Modal */}
         {selectedVoucher && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white max-w-md w-full rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-5 text-center">
+            <div role="dialog" aria-modal="true" aria-labelledby="redeem-dialog-title" className="bg-white max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-5 text-center">
               {!redemption ? (
                 <>
                   <div className="w-16 h-16 rounded-2xl gold-gradient text-white flex items-center justify-center mx-auto shadow-md animate-float">
                     <Gift className="w-8 h-8" />
                   </div>
 
-                  <h3 className="text-lg font-bold font-serif text-[#582F0E]">
+                  <h3 id="redeem-dialog-title" className="text-lg font-bold font-serif text-[#582F0E]">
                     Unwrap Loot Voucher
                   </h3>
 
@@ -181,6 +181,7 @@ export default function ShopPage() {
 
                   <div className="flex items-center gap-3">
                     <button
+                      autoFocus
                       onClick={() => setSelectedVoucher(null)}
                       disabled={redeeming}
                       className="flex-1 py-3 rounded-2xl border border-[#D5C4AC] text-xs font-bold text-[#582F0E]"
@@ -202,13 +203,13 @@ export default function ShopPage() {
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
 
-                  <h3 className="text-lg font-bold font-serif text-[#582F0E]">
+                  <h3 id="redeem-dialog-title" className="text-lg font-bold font-serif text-[#582F0E]">
                     Voucher Unwrapped!
                   </h3>
 
                   <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 space-y-1">
                     <div className="text-[10px] text-[#837560] font-bold uppercase mb-1">Claimable Voucher Code</div>
-                    <div className="text-lg font-mono font-black text-[#7D5800] tracking-wider select-all">
+                    <div className="text-lg font-mono font-black text-[#7D5800] tracking-wider select-all break-all">
                       {redemption.code}
                     </div>
                     <div className="text-[10px] text-[#837560] font-semibold">

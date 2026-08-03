@@ -367,7 +367,7 @@ export default function VotePage() {
         {/* Paid Vote Confirmation & Token Allocation Modal */}
         {voteModalProposal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white max-w-md w-full rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-5">
+            <div role="dialog" aria-modal="true" aria-labelledby="vote-dialog-title" className="bg-white max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {voteChoice === 'yes' ? (
@@ -375,11 +375,12 @@ export default function VotePage() {
                   ) : (
                     <ThumbsDown className="w-6 h-6 text-[#BC4749]" />
                   )}
-                  <h3 className="text-lg font-bold font-serif text-[#582F0E]">
+                  <h3 id="vote-dialog-title" className="text-lg font-bold font-serif text-[#582F0E]">
                     Confirm Vote ({voteChoice.toUpperCase()})
                   </h3>
                 </div>
                 <button
+                  autoFocus
                   onClick={() => setVoteModalProposal(null)}
                   className="text-xs font-bold text-[#837560] hover:text-[#582F0E]"
                 >
@@ -442,11 +443,12 @@ export default function VotePage() {
         {/* Suggest Location Modal */}
         {suggestModalOpen && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <form onSubmit={handleSuggestLocation} className="bg-white max-w-lg w-full rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-4">
+            <form role="dialog" aria-modal="true" aria-labelledby="suggest-dialog-title" onSubmit={handleSuggestLocation} className="bg-white max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold font-serif text-[#582F0E]">Suggest New Location</h3>
+                <h3 id="suggest-dialog-title" className="text-lg font-bold font-serif text-[#582F0E]">Suggest New Location</h3>
                 <button
                   type="button"
+                  autoFocus
                   onClick={() => setSuggestModalOpen(false)}
                   className="text-xs font-bold text-[#837560] hover:text-[#582F0E]"
                 >

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -17,11 +17,14 @@ import {
   LogOut,
   ShieldCheck,
   ChevronRight,
+  Menu,
+  X,
 } from 'lucide-react';
 
 export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname();
   const { user, wallet, logout } = useAuth();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navItems = [
     { label: 'Quests', href: '/quests', icon: Compass },
@@ -38,9 +41,9 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
   const xpProgress = ((currentPoints % 50) / 50) * 100;
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#FAF9F5] flex flex-col lg:flex-row">
       {/* Gamified Sidebar (Desktop) */}
-      <aside className="w-full md:w-64 bg-white/90 backdrop-blur-md border-r border-[#D5C4AC]/40 flex flex-col shrink-0">
+      <aside className="hidden lg:flex w-64 bg-white/90 backdrop-blur-md border-r border-[#D5C4AC]/40 flex-col shrink-0">
         {/* Brand Header */}
         <div className="p-6 border-b border-[#D5C4AC]/30 flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl gold-gradient flex items-center justify-center text-white shadow-md font-extrabold text-lg animate-float">
@@ -87,7 +90,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
         <nav className="flex-1 px-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
@@ -143,25 +146,48 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
       {/* Main Content Viewport */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header Navigation */}
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-[#D5C4AC]/40 px-6 flex items-center justify-between sticky top-0 z-20">
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-[#D5C4AC]/40 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFB703]/20 text-[#7D5800] text-xs font-bold">
               <Zap className="w-3.5 h-3.5 text-[#FFB703] fill-[#FFB703]" />
-              <span>Pangasinan Tourism Gamified Web</span>
+              <span className="hidden sm:inline">Pangasinan Tourism Gamified Web</span>
+              <span className="sm:hidden">JuanDerQuest</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-[#FAF9F5] px-3 py-1.5 rounded-full border border-[#D5C4AC]/50 text-xs">
+            <div className="hidden sm:flex items-center gap-2 bg-[#FAF9F5] px-3 py-1.5 rounded-full border border-[#D5C4AC]/50 text-xs">
               <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
               <span className="font-bold text-[#582F0E]">{user ? user.displayName : 'Guest Traveler'}</span>
             </div>
+            <button onClick={() => setDrawerOpen(true)} className="lg:hidden p-2 rounded-xl text-[#582F0E] hover:bg-[#FAF9F5]" aria-label="Open navigation menu">
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
         </header>
 
         {/* Page View */}
-        <main className="flex-1 p-6 md:p-8 max-w-6xl w-full mx-auto">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 max-w-6xl w-full mx-auto">{children}</main>
       </div>
+
+      <nav aria-label="Primary navigation" className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#D5C4AC]/50 px-2 pb-[env(safe-area-inset-bottom)]">
+        <div className="grid grid-cols-4 max-w-xl mx-auto">
+          {navItems.slice(0, 4).map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return <Link key={item.href} href={item.href} aria-current={isActive ? 'page' : undefined} className={`flex flex-col items-center gap-1 py-3 text-[10px] font-extrabold ${isActive ? 'text-[#2D6A4F]' : 'text-[#837560]'}`}><Icon className={`w-5 h-5 ${isActive ? 'text-[#FFB703]' : ''}`} />{item.label}</Link>;
+          })}
+        </div>
+      </nav>
+
+      {drawerOpen && <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setDrawerOpen(false)}>
+        <aside role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title" className="ml-auto h-full w-[min(20rem,85vw)] bg-white p-5 shadow-2xl overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between mb-5"><h2 id="mobile-nav-title" className="font-serif font-extrabold text-[#582F0E]">Navigation</h2><button autoFocus onClick={() => setDrawerOpen(false)} aria-label="Close navigation menu" className="p-2 rounded-xl hover:bg-[#FAF9F5]"><X className="w-5 h-5" /></button></div>
+          <nav className="space-y-1">{navItems.map((item) => { const Icon = item.icon; const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`); return <Link key={item.href} href={item.href} onClick={() => setDrawerOpen(false)} aria-current={isActive ? 'page' : undefined} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold ${isActive ? 'bg-[#2D6A4F] text-white' : 'text-[#582F0E] hover:bg-[#FAF9F5]'}`}><Icon className="w-4 h-4" />{item.label}</Link>; })}</nav>
+          <div className="mt-6 p-3 bg-[#2D6A4F]/10 rounded-2xl text-xs font-bold break-words">{wallet ? `${wallet.balanceMjdq} mJDQ` : 'Wallet unavailable'}</div>
+          {user && <button onClick={logout} className="mt-3 w-full py-3 rounded-xl text-xs font-bold text-[#BC4749] hover:bg-[#BC4749]/10">Logout</button>}
+        </aside>
+      </div>}
     </div>
   );
 };
