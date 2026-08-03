@@ -10,6 +10,7 @@ interface AuthContextType {
   wallet: WalletModel | null;
   isLoading: boolean;
   loginWithSeed: (seedId: string) => Promise<boolean>;
+  loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<boolean>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
   refreshWallet: () => Promise<void>;
@@ -29,8 +30,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('jdq_token');
-    const savedUser = localStorage.getItem('jdq_user');
+    const savedToken = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
+    const savedUser = localStorage.getItem('jdq_user') || sessionStorage.getItem('jdq_user');
     if (savedToken && savedUser) {
       try {
         const raw = JSON.parse(savedUser);
@@ -47,10 +48,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           localStorage.removeItem('jdq_token');
           localStorage.removeItem('jdq_user');
+          sessionStorage.removeItem('jdq_token');
+          sessionStorage.removeItem('jdq_user');
         }
       } catch (e) {
         localStorage.removeItem('jdq_token');
         localStorage.removeItem('jdq_user');
+        sessionStorage.removeItem('jdq_token');
+        sessionStorage.removeItem('jdq_user');
       }
     }
     setIsLoading(false);
@@ -62,7 +67,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.data?.success) {
         const normalized = normalizeUser(res.data.data);
         setUser(normalized);
-        localStorage.setItem('jdq_user', JSON.stringify(res.data.data));
+        const storage = localStorage.getItem('jdq_token') ? localStorage : sessionStorage;
+        storage.setItem('jdq_user', JSON.stringify(res.data.data));
       }
     } catch (e: any) {
       // Expired or invalid session: clear it so guards redirect to login.
@@ -119,12 +125,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  const loginWithSimulatedWallet = async (username: string, password: string, rememberMe: boolean): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const res = await api.post('/auth/simulated-wallet-login', { username, password });
+      if (res.data?.success) {
+        const authToken = res.data.data.token;
+        const normalized = normalizeUser(res.data.data.user);
+        const storage = rememberMe ? localStorage : sessionStorage;
+        localStorage.removeItem('jdq_token');
+        localStorage.removeItem('jdq_user');
+        sessionStorage.removeItem('jdq_token');
+        sessionStorage.removeItem('jdq_user');
+        storage.setItem('jdq_token', authToken);
+        storage.setItem('jdq_user', JSON.stringify(res.data.data.user));
+        setToken(authToken);
+        setUser(normalized);
+        setIsLoading(false);
+        return true;
+      }
+    } catch (e) {
+      console.error('Simulated wallet login error', e);
+    }
+    setIsLoading(false);
+    return false;
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
     setWallet(null);
     localStorage.removeItem('jdq_token');
     localStorage.removeItem('jdq_user');
+    sessionStorage.removeItem('jdq_token');
+    sessionStorage.removeItem('jdq_user');
   };
 
   return (
@@ -135,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         wallet,
         isLoading,
         loginWithSeed,
+        loginWithSimulatedWallet,
         logout,
         refreshProfile,
         refreshWallet,

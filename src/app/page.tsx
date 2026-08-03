@@ -4,16 +4,31 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { Compass, Sparkles, ArrowRight, UserCheck, ShieldCheck, Award, MapPin, Zap } from 'lucide-react';
+import { Compass, Sparkles, ArrowRight, UserCheck, ShieldCheck, Award, MapPin, Zap, Wallet } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, loginWithSeed, isLoading } = useAuth();
+  const { user, loginWithSeed, loginWithSimulatedWallet, isLoading } = useAuth();
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [rememberMe, setRememberMe] = React.useState(true);
+  const [loginError, setLoginError] = React.useState('');
 
   const handleLogin = async (seedId: string) => {
     const ok = await loginWithSeed(seedId);
     if (ok) {
       router.push('/quests');
+    }
+  };
+
+  const handleWalletLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoginError('');
+    const ok = await loginWithSimulatedWallet(username, password, rememberMe);
+    if (ok) {
+      router.push('/quests');
+    } else {
+      setLoginError('Could not start the simulated wallet session.');
     }
   };
 
@@ -107,6 +122,61 @@ export default function HomePage() {
               </div>
               <ShieldCheck className="w-6 h-6 text-[#7D5800] group-hover:translate-x-1 transition" />
             </button>
+          </div>
+
+          <div className="pt-6 border-t border-[#D5C4AC]/30">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-[#582F0E]">Simulated Wallet Login</h3>
+                <p className="text-xs text-[#514532]">Temporary prototype login. No real wallet or password is stored.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleWalletLogin} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="text-xs font-bold text-[#582F0E]">
+                Username
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  minLength={2}
+                  maxLength={50}
+                  required
+                  autoComplete="username"
+                  className="mt-1.5 w-full px-4 py-3 rounded-xl border border-[#D5C4AC] bg-white text-sm outline-none focus:ring-2 focus:ring-[#2D6A4F]/30"
+                  placeholder="Traveler name"
+                />
+              </label>
+              <label className="text-xs font-bold text-[#582F0E]">
+                Password
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  minLength={2}
+                  maxLength={100}
+                  required
+                  autoComplete="current-password"
+                  className="mt-1.5 w-full px-4 py-3 rounded-xl border border-[#D5C4AC] bg-white text-sm outline-none focus:ring-2 focus:ring-[#2D6A4F]/30"
+                  placeholder="Temporary password"
+                />
+              </label>
+              <label className="md:col-span-2 flex items-center gap-2 text-xs font-bold text-[#514532]">
+                <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />
+                Remember this session on this device
+              </label>
+              {loginError && <p role="alert" className="md:col-span-2 text-xs font-bold text-[#BC4749]">{loginError}</p>}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="md:col-span-2 inline-flex items-center justify-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] disabled:opacity-60 text-white font-extrabold py-3 px-6 rounded-xl transition"
+              >
+                <Wallet className="w-4 h-4" />
+                {isLoading ? 'Connecting...' : 'Connect Simulated Wallet'}
+              </button>
+            </form>
           </div>
         </div>
 

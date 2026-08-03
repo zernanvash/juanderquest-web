@@ -12,7 +12,7 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('jdq_token');
+    const token = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
