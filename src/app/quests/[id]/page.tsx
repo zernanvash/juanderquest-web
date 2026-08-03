@@ -169,20 +169,6 @@ export default function QuestDetailPage() {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-3xl border border-[#D5C4AC]/40 p-8 shadow-md space-y-6 relative overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <span className="text-xs font-extrabold uppercase px-3.5 py-1 rounded-xl bg-[#FAF9F5] text-[#837560] border border-[#D5C4AC]/40">
-                {quest.category.replace('_', ' ')}
-              </span>
-              <div className="flex items-center gap-1.5 text-white font-extrabold text-xs gold-gradient px-4 py-1.5 rounded-xl shadow-sm">
-                <Award className="w-4 h-4" />
-                <span>+{quest.rewardPoints} REWARD POINTS</span>
-              </div>
-            </div>
-
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E] mb-3">
-                {quest.title}
           <div className="bg-[#FFFDF7] rounded-3xl p-6 md:p-8 border border-[#E8DCB8] shadow-sm space-y-6">
             {/* Hero Banner Header with Green Circular Back Button */}
             <div className="relative rounded-2xl overflow-hidden h-64 md:h-80 shadow-md">
