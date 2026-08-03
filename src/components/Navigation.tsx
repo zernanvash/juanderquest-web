@@ -44,11 +44,9 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
     <div className="min-h-screen bg-[#FAF9F5] flex flex-col lg:flex-row">
       {/* Gamified Sidebar (Desktop) */}
       <aside className="hidden lg:flex w-64 bg-white/90 backdrop-blur-md border-r border-[#D5C4AC]/40 flex-col shrink-0">
-        {/* Brand Header */}
-        <div className="p-6 border-b border-[#D5C4AC]/30 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl gold-gradient flex items-center justify-center text-white shadow-md font-extrabold text-lg animate-float">
-            JQ
-          </div>
+        {/* Brand Header with Official JuanderQuest Logo */}
+        <div className="p-5 border-b border-[#D5C4AC]/30 flex items-center gap-3">
+          <img src="/logo.png" alt="JuanDerQuest Logo" className="w-12 h-12 object-contain drop-shadow-md" />
           <div>
             <h1 className="font-serif font-extrabold text-lg text-[#582F0E] leading-none">
               JuanDerQuest

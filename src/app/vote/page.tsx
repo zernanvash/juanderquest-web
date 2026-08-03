@@ -377,13 +377,11 @@ export default function VotePage() {
                 <span className="font-extrabold text-[#582F0E]">"{voteModalProposal.title}"</span>
               </p>
 
-              {/* 3D JDQ Coin Badge (Stitch 12.png) */}
+              {/* 3D JDQ Coin Badge (Official Asset) */}
               <div className="py-3 px-6 rounded-2xl bg-amber-50 border border-amber-200/80 inline-flex items-center gap-3 mx-auto shadow-inner">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-300 text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-yellow-200">
-                  JDQ
-                </div>
+                <img src="/jdq-token.png" alt="JDQ Token" className="w-12 h-12 object-contain drop-shadow-md animate-pulse" />
                 <div className="text-3xl font-black text-[#582F0E]">
-                  {voteFeeSplit ? Math.round(voteFeeSplit.feeJdq || 5) : 5}
+                  {voteFeeSplit ? Math.round(voteFeeSplit.feeJdq || 5) : 5} JDQ
                 </div>
               </div>
 

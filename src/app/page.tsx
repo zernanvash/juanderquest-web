@@ -13,7 +13,13 @@ export default function HomePage() {
     <main className="min-h-screen bg-[#FAF9F5] grid place-items-center p-5">
       <section className="w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-r from-[#582F0E] via-[#7D5800] to-[#2D6A4F] text-white p-8 md:p-14">
         <div className="max-w-2xl space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 text-xs font-extrabold"><Compass className="w-4 h-4" />JUANDERQUEST ADVENTURE HUB</div>
+          <div className="flex items-center gap-4">
+            <img src="/logo.png" alt="JuanDerQuest Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-xl animate-float" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-xs font-extrabold text-amber-200 border border-white/20">
+              <Compass className="w-4 h-4 text-[#FFB703]" />
+              <span>JUANDERQUEST ADVENTURE HUB</span>
+            </div>
+          </div>
           <h1 className="text-4xl md:text-6xl font-black font-serif leading-tight">Explore Pangasinan. Complete quests. Build community.</h1>
           <p className="text-amber-100 leading-relaxed">Discover local destinations, verify visits, earn prototype rewards, and participate in community tourism decisions.</p>
           <button onClick={() => router.push(destination)} className="inline-flex items-center gap-2 rounded-2xl bg-[#FFB703] text-[#582F0E] font-black px-7 py-4 shadow-lg">
