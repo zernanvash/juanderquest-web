@@ -364,78 +364,71 @@ export default function VotePage() {
           )}
         </div>
 
-        {/* Paid Vote Confirmation & Token Allocation Modal */}
+        {/* Paid Vote Confirmation & Token Allocation Modal (Stitch 12.png Match) */}
         {voteModalProposal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div role="dialog" aria-modal="true" aria-labelledby="vote-dialog-title" className="bg-white max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl p-6 border border-[#D5C4AC] shadow-2xl space-y-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {voteChoice === 'yes' ? (
-                    <ThumbsUp className="w-6 h-6 text-[#2D6A4F]" />
-                  ) : (
-                    <ThumbsDown className="w-6 h-6 text-[#BC4749]" />
-                  )}
-                  <h3 id="vote-dialog-title" className="text-lg font-bold font-serif text-[#582F0E]">
-                    Confirm Vote ({voteChoice.toUpperCase()})
-                  </h3>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div role="dialog" aria-modal="true" aria-labelledby="vote-dialog-title" className="bg-[#FFFDF7] max-w-md w-full rounded-3xl p-6 sm:p-8 border-2 border-[#E8DCB8] shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200">
+              <h3 id="vote-dialog-title" className="text-2xl font-black font-serif text-[#582F0E]">
+                Confirm Vote?
+              </h3>
+
+              <p className="text-xs text-[#514532] font-semibold leading-relaxed">
+                You're about to cast your vote for your chosen destination: <br />
+                <span className="font-extrabold text-[#582F0E]">"{voteModalProposal.title}"</span>
+              </p>
+
+              {/* 3D JDQ Coin Badge (Stitch 12.png) */}
+              <div className="py-3 px-6 rounded-2xl bg-amber-50 border border-amber-200/80 inline-flex items-center gap-3 mx-auto shadow-inner">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-300 text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-yellow-200">
+                  JDQ
                 </div>
-                <button
-                  autoFocus
-                  onClick={() => setVoteModalProposal(null)}
-                  className="text-xs font-bold text-[#837560] hover:text-[#582F0E]"
-                >
-                  Cancel
-                </button>
+                <div className="text-3xl font-black text-[#582F0E]">
+                  {voteFeeSplit ? Math.round(voteFeeSplit.feeJdq || 5) : 5}
+                </div>
               </div>
 
-              <div className="text-xs font-bold text-[#582F0E]">Target: "{voteModalProposal.title}"</div>
+              <p className="text-[11px] text-[#837560] leading-relaxed px-2">
+                The winner of the voting will receive the collected funds to support the rehabilitation and improvement of the selected tourist spot. Confirm your vote to show your support and help fund the preservation of these beautiful places.
+              </p>
 
-              {/* Visual Fee Split — computed from live /proposals/config */}
-              {voteFeeSplit ? (
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 text-xs space-y-3">
-                  <div className="flex justify-between font-bold">
-                    <span className="text-[#837560]">Vote Fee:</span>
-                    <span className="text-[#7D5800]">{voteFeeSplit.fee} mJDQ ({voteFeeSplit.feeJdq.toFixed(2)} JDQ)</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-red-50 text-red-700 font-bold">
-                    <span className="flex items-center gap-1.5">
-                      <Flame className="w-4 h-4 text-red-600" />
-                      <span>{(config!.burnBps / 100).toFixed(0)}% Burn Furnace:</span>
-                    </span>
+              {/* Fee Split Badge */}
+              {voteFeeSplit && (
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-extrabold text-left pt-1">
+                  <div className="p-2 rounded-xl bg-red-50 text-red-700 border border-red-200/60 flex items-center justify-between">
+                    <span>🔥 Burn (50%):</span>
                     <span>{voteFeeSplit.burn} mJDQ</span>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold">
-                    <span className="flex items-center gap-1.5">
-                      <Vault className="w-4 h-4 text-[#2D6A4F]" />
-                      <span>{((10000 - config!.burnBps) / 100).toFixed(0)}% Reward Escrow Vault:</span>
-                    </span>
+                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/60 flex items-center justify-between">
+                    <span>🏛️ Treasury (50%):</span>
                     <span>{voteFeeSplit.escrow} mJDQ</span>
                   </div>
                 </div>
-              ) : (
-                <p className="text-xs text-[#837560]">Loading fee disclosure...</p>
               )}
 
               {voteError && (
-                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{voteError}</span>
                 </div>
               )}
 
-              <button
-                onClick={handleCastVote}
-                disabled={voting || !voteFeeSplit}
-                className={`w-full flex items-center justify-center gap-2 font-black py-3.5 px-6 rounded-2xl text-white shadow-lg transition text-xs ${
-                  voteChoice === 'yes' ? 'bg-[#2D6A4F] hover:bg-[#1B4332]' : 'bg-[#BC4749] hover:bg-red-800'
-                }`}
-              >
-                {voting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <span>Cast {voteChoice.toUpperCase()} Vote</span>
-                )}
-              </button>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setVoteModalProposal(null)}
+                  className="py-3 px-5 rounded-2xl border-2 border-red-400 text-red-600 font-extrabold text-xs hover:bg-red-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCastVote}
+                  disabled={voting || !voteFeeSplit}
+                  className="py-3 px-5 rounded-2xl border-2 border-emerald-500 bg-[#48C71D] hover:bg-[#3FB418] text-white font-extrabold text-xs shadow-lg transition"
+                >
+                  {voting ? 'Casting...' : 'Vote'}
+                </button>
+              </div>
             </div>
           </div>
         )}

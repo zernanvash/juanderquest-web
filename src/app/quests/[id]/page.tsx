@@ -183,34 +183,87 @@ export default function QuestDetailPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E] mb-3">
                 {quest.title}
-              </h1>
-              <p className="text-sm text-[#514532] leading-relaxed">{quest.description}</p>
+          <div className="bg-[#FFFDF7] rounded-3xl p-6 md:p-8 border border-[#E8DCB8] shadow-sm space-y-6">
+            {/* Hero Banner Header with Green Circular Back Button */}
+            <div className="relative rounded-2xl overflow-hidden h-64 md:h-80 shadow-md">
+              <img
+                src={quest.markerImageUrl || '/stitch_assets/16.png'}
+                alt={quest.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              
+              <button
+                onClick={() => router.push('/quests')}
+                className="absolute top-4 left-4 w-10 h-10 rounded-full bg-[#48C71D] hover:bg-[#3FB418] text-white flex items-center justify-center shadow-lg transition"
+                aria-label="Back to Quests"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[3]" />
+              </button>
+
+              <div className="absolute bottom-4 left-4 right-4 text-white space-y-1">
+                <h1 className="text-2xl md:text-4xl font-extrabold font-serif drop-shadow-md">{quest.title}</h1>
+                <div className="flex items-center gap-2 text-xs md:text-sm text-amber-200 font-bold">
+                  <MapPin className="w-4 h-4 text-[#48C71D]" />
+                  <span>{quest.locationName}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/50 text-xs">
-              <div>
-                <span className="text-[#837560] block mb-1 font-semibold">Target Coordinates</span>
-                <span className="font-extrabold text-[#582F0E] flex items-center gap-1">
-                  <MapPin className="w-4 h-4 text-[#2D6A4F]" />
-                  {quest.gpsLat}, {quest.gpsLng}
-                </span>
-              </div>
-              <div>
-                <span className="text-[#837560] block mb-1 font-semibold">GPS Radius</span>
-                <span className="font-extrabold text-[#582F0E]">{quest.radiusMeters} meters</span>
-              </div>
-              <div>
-                <span className="text-[#837560] block mb-1 font-semibold">Location</span>
-                <span className="font-extrabold text-[#582F0E]">{quest.locationName}</span>
+            {/* Detailed Overview Section */}
+            <div className="space-y-2">
+              <h2 className="text-sm font-black text-[#582F0E] uppercase tracking-wider">Detailed Overview:</h2>
+              <p className="text-xs md:text-sm text-[#514532] leading-relaxed">
+                {quest.description} Discover the authentic charm of {quest.locationName}. This destination offers scenic eco-trails, rich cultural heritage, and verified community interaction for travelers in Pangasinan.
+              </p>
+            </div>
+
+            {/* Activity Details Section */}
+            <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/50 space-y-3 text-xs text-[#514532]">
+              <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">Activity Details:</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-semibold">
+                <div>
+                  <span className="block text-[10px] text-gray-500 font-bold">Category</span>
+                  <span className="font-extrabold text-[#582F0E] capitalize">{quest.category}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-gray-500 font-bold">Base Reward</span>
+                  <span className="font-extrabold text-emerald-700">₱{quest.baseRewardPhp} ({quest.rewardPoints} mJDQ)</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-gray-500 font-bold">Difficulty</span>
+                  <span className="font-extrabold text-[#7D5800]">{quest.difficultyFactor}x</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-gray-500 font-bold">GPS Radius</span>
+                  <span className="font-extrabold text-[#582F0E]">{quest.radiusMeters}m</span>
+                </div>
               </div>
             </div>
 
+            {/* Activity Brochure Grid (Stitch 16.png / 15.png match) */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">Activity Brochure:</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="h-28 rounded-2xl overflow-hidden shadow-sm border border-amber-200/40">
+                  <img src="/stitch_assets/16.png" alt="Brochure 1" className="w-full h-full object-cover" />
+                </div>
+                <div className="h-28 rounded-2xl overflow-hidden shadow-sm border border-amber-200/40">
+                  <img src="/stitch_assets/15.png" alt="Brochure 2" className="w-full h-full object-cover" />
+                </div>
+                <div className="h-28 rounded-2xl overflow-hidden shadow-sm border border-amber-200/40">
+                  <img src="/stitch_assets/12.png" alt="Brochure 3" className="w-full h-full object-cover" />
+                </div>
+              </div>
+            </div>
+
+            {/* Main CTA Button: Join the Activity / Launch AR (Stitch Vibrant Green) */}
             <button
               onClick={handleLaunchAr}
-              className="w-full inline-flex items-center justify-center gap-3 emerald-gradient text-white font-black py-4 px-6 rounded-2xl shadow-lg hover:scale-[1.01] transition transform text-sm"
+              className="w-full inline-flex items-center justify-center gap-3 bg-[#48C71D] hover:bg-[#3FB418] text-white font-extrabold py-4 px-6 rounded-2xl shadow-xl hover:scale-[1.01] transition transform text-sm tracking-wide"
             >
-              <Camera className="w-5 h-5 text-[#FFB703]" />
-              <span>Launch AR Radar Scanner</span>
+              <Camera className="w-5 h-5 text-white" />
+              <span>Join the Activity & Scan AR Marker</span>
             </button>
           </div>
         )}
