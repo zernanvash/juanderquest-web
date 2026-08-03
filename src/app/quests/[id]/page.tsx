@@ -173,7 +173,7 @@ export default function QuestDetailPage() {
             {/* Hero Banner Header with Green Circular Back Button */}
             <div className="relative rounded-2xl overflow-hidden h-64 md:h-80 shadow-md">
               <img
-                src={quest.markerImageUrl || '/stitch_assets/16.png'}
+                src={quest.markerImageUrl || '/bg_landscape.png'}
                 alt={quest.title}
                 className="w-full h-full object-cover"
               />
@@ -223,22 +223,6 @@ export default function QuestDetailPage() {
                 <div>
                   <span className="block text-[10px] text-gray-500 font-bold">GPS Radius</span>
                   <span className="font-extrabold text-[#582F0E]">{quest.radiusMeters}m</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Activity Brochure Grid (Stitch 16.png / 15.png match) */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">Activity Brochure:</h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="h-28 rounded-2xl overflow-hidden shadow-sm border border-amber-200/40">
-                  <img src="/stitch_assets/16.png" alt="Brochure 1" className="w-full h-full object-cover" />
-                </div>
-                <div className="h-28 rounded-2xl overflow-hidden shadow-sm border border-amber-200/40">
-                  <img src="/stitch_assets/15.png" alt="Brochure 2" className="w-full h-full object-cover" />
-                </div>
-                <div className="h-28 rounded-2xl overflow-hidden shadow-sm border border-amber-200/40">
-                  <img src="/stitch_assets/12.png" alt="Brochure 3" className="w-full h-full object-cover" />
                 </div>
               </div>
             </div>
