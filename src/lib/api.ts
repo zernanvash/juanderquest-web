@@ -49,6 +49,9 @@ export interface QuestModel {
   gpsLat: number;
   gpsLng: number;
   radiusMeters: number;
+  baseRewardPhp?: number;
+  difficultyFactor?: number;
+  geoMultiplier?: number;
   rewardPoints: number;
   markerCode?: string; // present on detail only; list does not expose markers
   markerImageUrl: string;
@@ -165,6 +168,9 @@ type BackendQuest = {
   gps_lat: number;
   gps_lng: number;
   radius_meters: number;
+  base_reward_php?: number;
+  difficulty_factor?: number;
+  geo_multiplier?: number;
   reward_points: number;
   marker_code?: string;
   marker_image_url?: string;
@@ -180,6 +186,9 @@ export function normalizeQuest(raw: BackendQuest): QuestModel {
     gpsLat: Number(raw.gps_lat),
     gpsLng: Number(raw.gps_lng),
     radiusMeters: Number(raw.radius_meters),
+    baseRewardPhp: raw.base_reward_php ? Number(raw.base_reward_php) : 25.0,
+    difficultyFactor: raw.difficulty_factor ? Number(raw.difficulty_factor) : 1.0,
+    geoMultiplier: raw.geo_multiplier ? Number(raw.geo_multiplier) : 2.0,
     rewardPoints: Number(raw.reward_points),
     markerCode: raw.marker_code,
     markerImageUrl: raw.marker_image_url || '',
