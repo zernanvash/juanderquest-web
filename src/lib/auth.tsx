@@ -11,6 +11,8 @@ interface AuthContextType {
   isLoading: boolean;
   loginWithSeed: (seedId: string) => Promise<boolean>;
   loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<boolean>;
+  loginWithWallet: (address: string, signature: string, rememberMe: boolean) => Promise<boolean>;
+  loginWithLocalWallet: (address: string, rememberMe: boolean) => Promise<boolean>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
   refreshWallet: () => Promise<void>;
@@ -151,6 +153,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
+  const storeWalletSession = (data: { token: string; user: Parameters<typeof normalizeUser>[0] }, rememberMe: boolean) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    localStorage.removeItem('jdq_token');
+    localStorage.removeItem('jdq_user');
+    sessionStorage.removeItem('jdq_token');
+    sessionStorage.removeItem('jdq_user');
+    storage.setItem('jdq_token', data.token);
+    storage.setItem('jdq_user', JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(normalizeUser(data.user));
+  };
+
+  const loginWithWallet = async (address: string, signature: string, rememberMe: boolean) => {
+    setIsLoading(true);
+    try {
+      const res = await api.post('/auth/wallet/login', { address, signature });
+      if (res.data?.success) {
+        storeWalletSession(res.data.data, rememberMe);
+        return true;
+      }
+    } catch (e) {
+      console.error('Wallet login error', e);
+    } finally {
+      setIsLoading(false);
+    }
+    return false;
+  };
+
+  const loginWithLocalWallet = async (address: string, rememberMe: boolean) => {
+    setIsLoading(true);
+    try {
+      const res = await api.post('/auth/wallet/local-login', { address });
+      if (res.data?.success) {
+        storeWalletSession(res.data.data, rememberMe);
+        return true;
+      }
+    } catch {
+      // Expected validation/auth failures are rendered by the login page.
+    } finally {
+      setIsLoading(false);
+    }
+    return false;
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -170,6 +216,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         loginWithSeed,
         loginWithSimulatedWallet,
+        loginWithWallet,
+        loginWithLocalWallet,
         logout,
         refreshProfile,
         refreshWallet,
@@ -195,7 +243,7 @@ export const useRequireAuth = (): { user: UserModel; token: string; isReady: boo
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.replace('/');
+      router.replace('/login');
     }
   }, [isLoading, user, router]);
 

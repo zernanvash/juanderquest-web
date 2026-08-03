@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://jdq.zernanvash.dev/api/v1';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1';
 export const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://admin.jdq.zernanvash.dev';
 
 export const api = axios.create({
