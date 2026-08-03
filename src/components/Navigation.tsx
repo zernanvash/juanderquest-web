@@ -51,10 +51,6 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
             <h1 className="font-serif font-extrabold text-lg text-[#582F0E] leading-none">
               JuanDerQuest
             </h1>
-            <span className="text-[10px] font-bold text-[#3F6653] uppercase tracking-wider flex items-center gap-1 mt-0.5">
-              <Sparkles className="w-3 h-3 text-[#FFB703]" />
-              <span>Adventure Hub</span>
-            </span>
           </div>
         </div>
 

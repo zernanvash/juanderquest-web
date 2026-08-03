@@ -17,7 +17,7 @@ export default function HomePage() {
             <img src="/logo.png" alt="JuanDerQuest Logo" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-xl animate-float" />
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-xs font-extrabold text-amber-200 border border-white/20">
               <Compass className="w-4 h-4 text-[#FFB703]" />
-              <span>JUANDERQUEST ADVENTURE HUB</span>
+              <span>JUANDERQUEST</span>
             </div>
           </div>
           <h1 className="text-4xl md:text-6xl font-black font-serif leading-tight">Explore Pangasinan. Complete quests. Build community.</h1>
