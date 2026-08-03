@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (e: any) {
       // Expired or invalid session: clear it so guards redirect to login.
-      if (e?.response?.status === 401 || e?.response?.status === 403) {
+      if ([401, 403, 404].includes(e?.response?.status)) {
         logout();
       } else {
         console.error('Failed to refresh profile', e);
@@ -88,9 +88,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.data?.success) {
         setWallet(normalizeWallet(res.data.data));
       }
-    } catch (e) {
+    } catch (e: any) {
       // No fabricated fallback balance: leave the wallet as null so UI shows a dash.
-      console.error('Failed to refresh wallet', e);
+      setWallet(null);
+      if (![401, 403, 404].includes(e?.response?.status)) {
+        console.error('Failed to refresh wallet', e);
+      }
     }
   };
 
