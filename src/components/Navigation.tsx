@@ -27,7 +27,8 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navItems = [
-    { label: 'Quests', href: '/quests', icon: Compass },
+    { label: 'Explore', href: '/explore', icon: Compass },
+    { label: 'Quests', href: '/quests', icon: Zap },
     { label: 'Map', href: '/map', icon: MapPin },
     { label: 'Voting', href: '/vote', icon: Vote, badge: 'mJDQ' },
     { label: 'Shop', href: '/shop', icon: ShoppingBag },

@@ -34,7 +34,7 @@ export default function LoginPage() {
   }, []);
 
   const finish = (ok: boolean) => {
-    if (ok) router.push('/quests');
+    if (ok) router.push('/onboarding/interests');
     else setError('Wallet authentication failed. Please try again.');
   };
 
