@@ -143,6 +143,7 @@ export interface SpotModel {
   imageUrl: string; assetIds?: string[]; sourceType: string; sourceName: string; trustLevel: string;
   questId?: string; distanceKm?: number; recommendationScore?: number;
   recommendationReasons: string[]; saved: boolean; trendScore: number;
+  crowdStatus: 'quiet'|'moderate'|'estimated_busy'|'unknown'; crowdConfidence: string; crowdUpdatedAt?: string;
 }
 
 export interface UploadedAssetModel {
@@ -164,7 +165,7 @@ export async function uploadSpotPhoto(file: File): Promise<UploadedAssetModel> {
 }
 
 export function normalizeSpot(raw: any): SpotModel {
-  return { id:raw.id,slug:raw.slug,name:raw.name,description:raw.description,category:raw.category,subcategory:raw.subcategory,tags:raw.tags||[],municipality:raw.municipality,address:raw.address,gpsLat:Number(raw.gps_lat),gpsLng:Number(raw.gps_lng),priceLevel:Number(raw.price_level)||0,hours:raw.hours||{},amenities:raw.amenities||[],imageUrl:raw.image_url||'',assetIds:raw.asset_ids||[],sourceType:raw.source_type,sourceName:raw.source_name,trustLevel:raw.trust_level,questId:raw.quest_id,distanceKm:raw.distance_km===undefined?undefined:Number(raw.distance_km),recommendationScore:Number(raw.recommendation_score)||0,recommendationReasons:raw.recommendation_reasons||[],saved:!!raw.saved,trendScore:Number(raw.trend_score)||0 };
+  return { id:raw.id,slug:raw.slug,name:raw.name,description:raw.description,category:raw.category,subcategory:raw.subcategory,tags:raw.tags||[],municipality:raw.municipality,address:raw.address,gpsLat:Number(raw.gps_lat),gpsLng:Number(raw.gps_lng),priceLevel:Number(raw.price_level)||0,hours:raw.hours||{},amenities:raw.amenities||[],imageUrl:raw.image_url||'',assetIds:raw.asset_ids||[],sourceType:raw.source_type,sourceName:raw.source_name,trustLevel:raw.trust_level,questId:raw.quest_id,distanceKm:raw.distance_km===undefined?undefined:Number(raw.distance_km),recommendationScore:Number(raw.recommendation_score)||0,recommendationReasons:raw.recommendation_reasons||[],saved:!!raw.saved,trendScore:Number(raw.trend_score)||0,crowdStatus:raw.crowd_status||'unknown',crowdConfidence:raw.crowd_confidence||'none',crowdUpdatedAt:raw.crowd_updated_at||undefined };
 }
 
 // ---- Mappers ----

@@ -183,7 +183,7 @@ export default function AddSpotPage() {
       });
 
       if (res.data?.success) {
-        router.push(`/spots/${res.data.data.slug}`);
+      router.push('/explore?submitted=review');
       } else {
         setSubmitError('Failed to create destination spot.');
       }
