@@ -199,12 +199,12 @@ export default function ExplorePage() {
             </div>
 
             {/* Sorting & Filter Flairs */}
-            <div className="bg-white rounded-2xl p-3 border border-[#E3DFD5] shadow-xs space-y-3">
-              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
-                <div className="flex items-center gap-1.5">
+            <div className="bg-white rounded-2xl p-3 sm:p-4 border border-[#E3DFD5] shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     onClick={() => setSortFlair('hot')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${
                       sortFlair === 'hot'
                         ? 'bg-[#FFB703] text-[#582F0E] shadow-xs'
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
@@ -216,7 +216,7 @@ export default function ExplorePage() {
 
                   <button
                     onClick={() => setSortFlair('new')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${
                       sortFlair === 'new'
                         ? 'bg-[#2D6A4F] text-white shadow-xs'
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
@@ -228,7 +228,7 @@ export default function ExplorePage() {
 
                   <button
                     onClick={() => setSortFlair('quests')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${
                       sortFlair === 'quests'
                         ? 'bg-[#582F0E] text-white shadow-xs'
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
@@ -240,7 +240,7 @@ export default function ExplorePage() {
 
                   <button
                     onClick={() => setSortFlair('quiet')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${
                       sortFlair === 'quiet'
                         ? 'bg-[#2D6A4F] text-white shadow-xs'
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
@@ -251,7 +251,7 @@ export default function ExplorePage() {
                 </div>
 
                 {/* Search Input */}
-                <div className="relative min-w-[140px] sm:min-w-[200px]">
+                <div className="relative w-full sm:w-56 sm:min-w-[180px]">
                   <Search className="w-3.5 h-3.5 text-[#837560] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -264,12 +264,12 @@ export default function ExplorePage() {
               </div>
 
               {/* Category Filter Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t border-[#E3DFD5]/60">
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#E3DFD5]/60">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setCategory(cat.id)}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition ${
+                    className={`px-3 py-1 rounded-lg text-[11px] font-bold transition ${
                       category === cat.id
                         ? 'bg-[#2D6A4F]/15 text-[#2D6A4F] font-extrabold'
                         : 'text-[#7D5800] hover:bg-[#FAF9F5]'

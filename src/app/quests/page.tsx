@@ -58,7 +58,7 @@ export default function QuestsPage() {
           </div>
 
           {/* Categories Pill Bar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 bg-[#FAF9F5] p-1.5 rounded-2xl border border-[#E3DFD5]">
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#FAF9F5] p-2 rounded-2xl border border-[#E3DFD5]">
             {[
               { id: 'all', label: 'All Quests' },
               { id: 'eco', label: '🏖️ Eco-Tourism' },

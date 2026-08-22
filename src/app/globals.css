@@ -85,20 +85,36 @@ h1, h2, h3, h4, h5, h6 {
   transform: rotate(45deg);
 }
 
-/* Custom scrollbar */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Custom scrollbar - keep vertical clean, eliminate horizontal track */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 0px;
 }
 ::-webkit-scrollbar-track {
-  background: #FAF9F5;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: #D5C4AC;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #7D5800;
+  background: #837560;
+}
+
+/* Utility to completely hide scrollbar while preserving swipe */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  height: 0px;
+  width: 0px;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
