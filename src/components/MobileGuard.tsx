@@ -31,7 +31,7 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
   }>({
     versionName: '1.0.0',
     versionCode: 104,
-    downloadUrl: 'https://jdq.zernanvash.dev/downloads/juanderquest-latest.apk',
+    downloadUrl: 'https://jdq.zernanvash.dev/api/v1/app/download',
     changelog: 'Automated release build with native installer and latest Pangasinan destination spots.',
   });
 
@@ -51,7 +51,12 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
       .then((res) => res.json())
       .then((res) => {
         if (res.success && res.data) {
-          setVersionInfo(res.data);
+          setVersionInfo((prev) => ({
+            ...prev,
+            versionName: res.data.versionName || prev.versionName,
+            versionCode: res.data.versionCode || prev.versionCode,
+            changelog: res.data.changelog || prev.changelog,
+          }));
         }
       })
       .catch(() => {});
@@ -106,8 +111,7 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
           {/* Primary Download CTA Button */}
           <a
             href={versionInfo.downloadUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            download="juanderquest_beta_v1.0.0.apk"
             className="w-full flex flex-col items-center justify-center bg-[#2D6A4F] hover:bg-[#1B4332] active:scale-[0.98] text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition duration-200 group mb-3"
           >
             <div className="flex items-center gap-2.5 text-base">
@@ -122,10 +126,11 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
           {/* Secondary Mirrors & Version links */}
           <div className="flex items-center justify-center gap-3 text-[11px] text-[#7D5800] font-semibold mb-6">
             <a 
-              href="https://jdq.zernanvash.dev/downloads/juanderquest_beta_v1.0.0.apk"
+              href="https://jdq.zernanvash.dev/downloads/juanderquest-latest.apk"
+              download="juanderquest_beta_v1.0.0.apk"
               className="hover:underline flex items-center gap-1"
             >
-              <span>Versioned APK Mirror</span>
+              <span>Direct Mirror (Nginx)</span>
             </a>
             <span>•</span>
             <a 
