@@ -28,13 +28,13 @@ import { api, normalizeSpot, SpotModel } from '@/lib/api';
 
 const defaultMockTips = [
   {
-    author: 'u/HeritageGuide_Carl',
+    author: 'HeritageGuide_Carl',
     time: '3 hours ago',
     text: 'If visiting in the afternoon, bring an umbrella as there is limited shade along the outer trail. The view is completely worth it though!',
     upvotes: 24,
   },
   {
-    author: 'u/PangasinanLocal',
+    author: 'PangasinanLocal',
     time: '1 day ago',
     text: 'Do not miss the fresh tupig vendors near the town hall junction before heading up. Freshly grilled and very warm.',
     upvotes: 18,
@@ -81,7 +81,7 @@ export default function SpotDetailPage() {
     if (!newComment.trim()) return;
     setComments((prev) => [
       {
-        author: 'u/You',
+        author: 'You',
         time: 'Just now',
         text: newComment.trim(),
         upvotes: 1,
@@ -126,7 +126,7 @@ export default function SpotDetailPage() {
           <span>Back to Community Feed</span>
         </Link>
 
-        {/* Main Post Card (Reddit Thread Style) */}
+        {/* Main Post Card */}
         <div className="bg-white rounded-3xl border border-[#E3DFD5] shadow-xs overflow-hidden">
           {/* Post Header */}
           <div className="p-6 pb-4 flex items-start justify-between gap-4 border-b border-[#E3DFD5]/60">
@@ -136,7 +136,7 @@ export default function SpotDetailPage() {
                 <button
                   onClick={() => handleVote(1)}
                   className={`transition ${userVoted === 1 ? 'text-[#FFB703]' : 'text-[#837560] hover:text-[#FFB703]'}`}
-                  aria-label="Upvote"
+                  aria-label="Recommend"
                 >
                   <ArrowBigUp className="w-5 h-5" />
                 </button>
@@ -152,9 +152,12 @@ export default function SpotDetailPage() {
 
               <div>
                 <div className="flex items-center gap-2 text-xs text-[#837560]">
-                  <span className="font-extrabold text-[#2D6A4F]">p/{spot.municipality.toLowerCase().replace(/\s+/g, '')}</span>
+                  <span className="font-extrabold text-[#2D6A4F] flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {spot.municipality}
+                  </span>
                   <span>•</span>
-                  <span>Posted by <strong className="text-[#582F0E]">u/{spot.sourceName.replace(/\s+/g, '')}</strong></span>
+                  <span>Shared by <strong className="text-[#582F0E]">{spot.sourceName}</strong></span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[10px] uppercase font-black bg-emerald-50 text-[#2D6A4F] px-2 py-0.5 rounded">

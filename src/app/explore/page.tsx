@@ -34,7 +34,7 @@ import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 const categories = [
-  { id: 'all', label: 'All Posts' },
+  { id: 'all', label: 'All Destinations' },
   { id: 'eat_drink', label: '🍜 Food & Culinary' },
   { id: 'nature_outdoors', label: '🏖️ Nature & Beaches' },
   { id: 'culture_heritage', label: '🏛️ Heritage & Shrines' },
@@ -76,7 +76,7 @@ export default function ExplorePage() {
       const rawSpots: SpotModel[] = res.data.data.map(normalizeSpot);
       setSpots(rawSpots);
 
-      // Initialize mock dynamic upvotes & interaction states
+      // Initialize mock dynamic helpful reactions & interaction states
       const initialVotes: Record<string, { count: number; userVoted: number }> = {};
       rawSpots.forEach((s, idx) => {
         initialVotes[s.id] = {
@@ -145,17 +145,17 @@ export default function ExplorePage() {
   return (
     <Navigation>
       <div className="space-y-6">
-        {/* Reddit-Style Subreddit Community Header */}
+        {/* JuanDerQuest Traveler Community Header Banner */}
         <div className="rounded-3xl bg-white border border-[#E3DFD5] overflow-hidden shadow-xs">
           {/* Cover Header Banner */}
           <div className="h-36 sm:h-44 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#7D5800] p-6 relative flex items-end justify-between">
             <div className="absolute inset-0 bg-[radial-gradient(#FFB703_1px,transparent_1px)] [background-size:16px_16px] opacity-10"></div>
             <div className="relative z-10 text-white">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#FFB703] bg-black/30 px-2.5 py-1 rounded-full border border-white/10">
-                Pangasinan Tourism Hub
+                Pangasinan Tourism Network
               </span>
               <h1 className="text-2xl sm:text-4xl font-serif font-black text-white mt-1 drop-shadow-sm">
-                r/JuanDerQuest
+                Traveler Discoveries &amp; Quests
               </h1>
             </div>
             <Link
@@ -163,14 +163,14 @@ export default function ExplorePage() {
               className="relative z-10 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black text-xs px-4 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-md transition active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Share a Hidden Gem</span>
+              <span>Share a Destination</span>
             </Link>
           </div>
 
-          {/* Subreddit Stats & Description Bar */}
+          {/* Stats & Community Info Bar */}
           <div className="px-6 py-3.5 bg-white flex flex-wrap items-center justify-between gap-4 border-t border-[#E3DFD5]/60 text-xs">
             <p className="text-[#514532] font-medium max-w-xl">
-              The official traveler community for discovering lesser-known spots, validating on-site visits, and sharing crowd-free Pangasinan itineraries.
+              Explore authentic local spots across Pangasinan, discover quiet eco-trails, and unlock verified destination bounties.
             </p>
             <div className="flex items-center gap-4 text-[#7D5800] font-bold">
               <span className="flex items-center gap-1.5">
@@ -186,13 +186,13 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        {/* Two-Column Reddit Forum Layout (8 Cols Feed / 4 Cols Sticky Sidebar) */}
+        {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Widgets) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Main Feed Column (Span 8) */}
           <div className="lg:col-span-8 space-y-4">
             
-            {/* Create Post / Share Tip Quick Box */}
+            {/* Share / Post Box */}
             <div className="bg-white rounded-2xl p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#2D6A4F] text-white font-bold flex items-center justify-center text-sm shrink-0">
                 {user ? user.displayName.charAt(0).toUpperCase() : 'U'}
@@ -201,14 +201,13 @@ export default function ExplorePage() {
                 href="/spots/new"
                 className="flex-1 bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] rounded-xl px-4 py-2.5 text-xs text-[#837560] font-medium transition cursor-pointer flex items-center justify-between"
               >
-                <span>Share a hidden beach, heritage tip, or local food spot...</span>
+                <span>Share a hidden beach, heritage spot, or local food tip...</span>
                 <Camera className="w-4 h-4 text-[#2D6A4F]" />
               </Link>
             </div>
 
-            {/* Sorting & Category Flairs Bar */}
+            {/* Sorting & Filter Flairs */}
             <div className="bg-white rounded-2xl p-3 border border-[#E3DFD5] shadow-xs space-y-3">
-              {/* Flairs (Hot, New, Quests, Quiet) */}
               <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
                 <div className="flex items-center gap-1.5">
                   <button
@@ -220,7 +219,7 @@ export default function ExplorePage() {
                     }`}
                   >
                     <Flame className="w-3.5 h-3.5" />
-                    <span>Hot</span>
+                    <span>Trending</span>
                   </button>
 
                   <button
@@ -232,7 +231,7 @@ export default function ExplorePage() {
                     }`}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>New</span>
+                    <span>Recent</span>
                   </button>
 
                   <button
@@ -255,7 +254,7 @@ export default function ExplorePage() {
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
                     }`}
                   >
-                    <span>🌿 Quiet Gems</span>
+                    <span>🌿 Tranquil Gems</span>
                   </button>
                 </div>
 
@@ -266,13 +265,13 @@ export default function ExplorePage() {
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search posts..."
+                    placeholder="Search destinations..."
                     className="w-full pl-8 pr-3 py-1.5 bg-[#FAF9F5] rounded-xl text-xs border border-[#E3DFD5] outline-none focus:border-[#2D6A4F]"
                   />
                 </div>
               </div>
 
-              {/* Category Sub-Flairs */}
+              {/* Category Filter Chips */}
               <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t border-[#E3DFD5]/60">
                 {categories.map((cat) => (
                   <button
@@ -306,7 +305,7 @@ export default function ExplorePage() {
             ) : processedSpots.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 border border-[#E3DFD5] text-center space-y-2">
                 <Compass className="w-10 h-10 text-[#D5C4AC] mx-auto" />
-                <h3 className="font-bold text-sm text-[#582F0E]">No posts found</h3>
+                <h3 className="font-bold text-sm text-[#582F0E]">No destinations found</h3>
                 <p className="text-xs text-[#837560]">Try adjusting your search or category filter.</p>
               </div>
             ) : (
@@ -323,7 +322,7 @@ export default function ExplorePage() {
                       key={spot.id}
                       className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition duration-200 overflow-hidden flex flex-col sm:flex-row"
                     >
-                      {/* Left Upvote Bar (Reddit Style) */}
+                      {/* Left Reaction / Helpful Score Bar */}
                       <div className="bg-[#FAF9F5] sm:w-14 p-2 sm:py-4 flex sm:flex-col items-center justify-between sm:justify-start gap-1 border-b sm:border-b-0 sm:border-r border-[#E3DFD5]/70 shrink-0">
                         <button
                           onClick={() => handleVote(spot.id, 1)}
@@ -332,7 +331,7 @@ export default function ExplorePage() {
                               ? 'text-[#FFB703] bg-[#FFB703]/20 font-black'
                               : 'text-[#837560] hover:text-[#FFB703] hover:bg-white'
                           }`}
-                          aria-label="Upvote"
+                          aria-label="Recommend"
                         >
                           <ArrowBigUp className="w-6 h-6" />
                         </button>
@@ -354,16 +353,12 @@ export default function ExplorePage() {
                       <div className="flex-1 p-4 sm:p-5 space-y-3">
                         {/* Meta Header */}
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#837560]">
-                          <span className="font-extrabold text-[#2D6A4F] hover:underline cursor-pointer">
-                            p/{spot.municipality.toLowerCase().replace(/\s+/g, '')}
-                          </span>
-                          <span>•</span>
-                          <span>Posted by <strong className="text-[#582F0E]">u/{spot.sourceName.replace(/\s+/g, '')}</strong></span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1 text-[#7D5800]">
+                          <span className="font-extrabold text-[#2D6A4F] flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
                             {spot.municipality}
                           </span>
+                          <span>•</span>
+                          <span>Shared by <strong className="text-[#582F0E]">{spot.sourceName}</strong></span>
 
                           {/* Provenance Badge */}
                           {spot.trustLevel === 'lgu_verified' && (
@@ -381,15 +376,15 @@ export default function ExplorePage() {
                           </h2>
                         </Link>
 
-                        {/* Crowd Pressure Banner (Reddit Warning Style) */}
+                        {/* Crowd Status Banner */}
                         {spot.crowdStatus === 'estimated_busy' ? (
                           <div className="p-2.5 rounded-xl bg-[#FFF3E8] border border-[#FFD8B8] flex items-center justify-between text-xs text-[#9E3E00]">
                             <div className="flex items-center gap-2">
                               <AlertTriangle className="w-4 h-4 text-[#D95D00] shrink-0" />
-                              <span className="font-bold">Peak Tourist Hours Detected</span>
+                              <span className="font-bold">Peak Visitor Activity Reported</span>
                             </div>
                             <Link href={`/spots/${spot.slug}`} className="text-[11px] font-extrabold underline text-[#D95D00]">
-                              View quiet alternatives →
+                              View tranquil alternatives →
                             </Link>
                           </div>
                         ) : spot.crowdStatus === 'quiet' ? (
@@ -508,18 +503,18 @@ export default function ExplorePage() {
             )}
           </div>
 
-          {/* Right Sidebar Widgets Column (Span 4 - Fixed & Sticky) */}
+          {/* Right Sidebar Widgets Column (Span 4 - Fixed & Structured) */}
           <div className="lg:col-span-4 space-y-5">
             
-            {/* About Community Panel */}
+            {/* About JuanDerQuest Panel */}
             <div className="bg-white rounded-3xl p-5 border border-[#E3DFD5] shadow-xs space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-[#E3DFD5]">
                 <ShieldCheck className="w-5 h-5 text-[#2D6A4F]" />
-                <h3 className="font-serif font-black text-base text-[#582F0E]">About Community</h3>
+                <h3 className="font-serif font-black text-base text-[#582F0E]">About JuanDerQuest</h3>
               </div>
 
               <p className="text-xs text-[#514532] leading-relaxed">
-                JuanDerQuest is Pangasinan&apos;s decentralized eco-tourism network. Tourists verify their visits with GPS &amp; AR, earning off-chain rewards while helping distribute foot traffic to tranquil hidden gems.
+                JuanDerQuest is Pangasinan&apos;s eco-tourism network. Travelers verify their visits with GPS &amp; AR, earning prototype reward vouchers while helping distribute foot traffic to tranquil hidden gems.
               </p>
 
               <div className="grid grid-cols-2 gap-2 text-center py-2 bg-[#FAF9F5] rounded-2xl border border-[#E3DFD5]/60">
@@ -561,7 +556,7 @@ export default function ExplorePage() {
                 onClick={() => setSortFlair('quiet')}
                 className="w-full py-2.5 rounded-xl bg-[#D95D00] hover:bg-[#B34D00] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition"
               >
-                <span>Filter Serene Alternatives</span>
+                <span>Filter Tranquil Alternatives</span>
               </button>
             </div>
 
@@ -579,7 +574,7 @@ export default function ExplorePage() {
                 <div className="flex items-center justify-between p-2 rounded-xl bg-[#FAF9F5]">
                   <div className="flex items-center gap-2">
                     <span className="font-black text-[#FFB703]">1</span>
-                    <span className="font-bold text-[#582F0E]">u/PangasinanExplorer</span>
+                    <span className="font-bold text-[#582F0E]">PangasinanExplorer</span>
                   </div>
                   <span className="text-[10px] font-extrabold text-[#2D6A4F]">3,420 PTS</span>
                 </div>
@@ -587,7 +582,7 @@ export default function ExplorePage() {
                 <div className="flex items-center justify-between p-2 rounded-xl bg-[#FAF9F5]">
                   <div className="flex items-center gap-2">
                     <span className="font-black text-[#A7A7A7]">2</span>
-                    <span className="font-bold text-[#582F0E]">u/BolinaoWave</span>
+                    <span className="font-bold text-[#582F0E]">BolinaoWave</span>
                   </div>
                   <span className="text-[10px] font-extrabold text-[#2D6A4F]">2,890 PTS</span>
                 </div>
@@ -595,7 +590,7 @@ export default function ExplorePage() {
                 <div className="flex items-center justify-between p-2 rounded-xl bg-[#FAF9F5]">
                   <div className="flex items-center gap-2">
                     <span className="font-black text-[#CD7F32]">3</span>
-                    <span className="font-bold text-[#582F0E]">u/HeritageSeeker</span>
+                    <span className="font-bold text-[#582F0E]">HeritageSeeker</span>
                   </div>
                   <span className="text-[10px] font-extrabold text-[#2D6A4F]">2,150 PTS</span>
                 </div>

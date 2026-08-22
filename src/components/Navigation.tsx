@@ -62,14 +62,14 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
             <div className="hidden sm:flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="font-serif font-black text-base text-[#582F0E] tracking-tight group-hover:text-[#2D6A4F] transition">
-                  r/JuanDerQuest
+                  JuanDerQuest
                 </span>
                 <span className="bg-[#2D6A4F] text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded uppercase">
                   Beta
                 </span>
               </div>
               <span className="text-[10px] text-[#7D5800] font-semibold tracking-wide">
-                Pangasinan Tourism &amp; Quest Forum
+                Pangasinan Travelers Network
               </span>
             </div>
           </Link>
@@ -119,7 +119,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
                 </div>
                 <div className="flex flex-col text-left pr-1">
                   <span className="text-xs font-extrabold text-[#582F0E] leading-tight">
-                    u/{user.displayName.replace(/\s+/g, '_')}
+                    {user.displayName}
                   </span>
                   <span className="text-[10px] text-[#2D6A4F] font-bold">
                     Lvl {currentLevel} • {wallet ? `${(wallet.balanceMjdq / 1000).toFixed(0)} JDQ` : '100 JDQ'}
@@ -174,7 +174,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
               <div className="flex items-center justify-between pb-4 border-b border-[#E3DFD5] mb-5">
                 <div className="flex items-center gap-2">
                   <img src="/logo.png" alt="JuanDerQuest" className="w-7 h-7 object-contain" />
-                  <span className="font-serif font-black text-sm text-[#582F0E]">r/JuanDerQuest</span>
+                  <span className="font-serif font-black text-sm text-[#582F0E]">JuanDerQuest</span>
                 </div>
                 <button
                   onClick={() => setDrawerOpen(false)}
