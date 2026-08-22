@@ -1,19 +1,368 @@
 'use client';
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { AlertTriangle,ArrowLeft,ExternalLink,MapPin,ShieldCheck,Trophy,Wifi,Car,Clock } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ExternalLink,
+  MapPin,
+  ShieldCheck,
+  Trophy,
+  Wifi,
+  Car,
+  Clock,
+  ArrowBigUp,
+  ArrowBigDown,
+  MessageSquare,
+  Bookmark,
+  Share2,
+  Send,
+  Sparkles,
+  Camera,
+  CheckCircle2
+} from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { api,normalizeSpot,SpotModel } from '@/lib/api';
+import { api, normalizeSpot, SpotModel } from '@/lib/api';
 
-export default function SpotDetail(){
-  const {slug}=useParams<{slug:string}>();const [spot,setSpot]=React.useState<SpotModel|null>(null);const [alternatives,setAlternatives]=React.useState<SpotModel[]>([]);const [error,setError]=React.useState('');
-  React.useEffect(()=>{Promise.all([api.get(`/spots/${slug}`),api.get(`/spots/${slug}/alternatives`)]).then(([detail,alts])=>{const current=normalizeSpot(detail.data.data);setSpot(current);setAlternatives(alts.data.data.map(normalizeSpot));api.post(`/spots/${current.id}/interactions`,{type:'view'}).catch(()=>{});}).catch(()=>setError('Spot not found.'));},[slug]);
-  if(error)return <Navigation><div className="p-12 text-center">{error}</div></Navigation>;if(!spot)return <Navigation><div className="p-12 text-center">Loading destination...</div></Navigation>;
-  const directions=`https://www.google.com/maps/dir/?api=1&destination=${spot.gpsLat},${spot.gpsLng}`;const trackDirections=()=>api.post(`/spots/${spot.id}/interactions`,{type:'directions'}).catch(()=>{});
-  return <Navigation><article className="max-w-4xl mx-auto space-y-6"><Link href="/explore" className="inline-flex gap-2 text-xs font-bold text-[#2D6A4F]"><ArrowLeft className="w-4 h-4"/>Back to Explore</Link><div className="h-72 rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-100 to-amber-100 relative">{spot.imageUrl?<img src={spot.imageUrl} alt={spot.name} className="w-full h-full object-cover"/>:<MapPin className="absolute inset-0 m-auto w-20 h-20 text-[#2D6A4F]/30"/>}</div>
-  <section className="bg-white rounded-3xl p-6 md:p-8 border border-[#D5C4AC]/50 space-y-5"><div><div className="flex flex-wrap gap-2 mb-2"><span className="text-[10px] uppercase font-black bg-emerald-50 text-[#2D6A4F] px-2 py-1 rounded">{spot.subcategory.replaceAll('_',' ')}</span>{spot.trustLevel==='lgu_verified'&&<span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-1 rounded flex gap-1"><ShieldCheck className="w-3 h-3"/>LGU verified</span>}<span className="text-[10px] font-black bg-stone-100 px-2 py-1 rounded">{spot.crowdStatus==='estimated_busy'?'Estimated busy':spot.crowdStatus==='unknown'?'Crowd unknown':spot.crowdStatus}</span></div><h1 className="text-3xl md:text-4xl font-black font-serif text-[#582F0E]">{spot.name}</h1><p className="text-sm text-[#837560] mt-2 flex gap-1"><MapPin className="w-4 h-4"/>{spot.address}</p></div>
-  {spot.crowdStatus==='estimated_busy'&&<div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900"><p className="font-black flex gap-2"><AlertTriangle className="w-5 h-5"/>This destination may be busy</p><p className="mt-1">Based on recent JuanderQuest activity—not live occupancy. Consider a similar, lower-pressure destination below.</p></div>}
-  <p className="text-sm leading-7 text-[#514532]">{spot.description}</p><div className="grid sm:grid-cols-3 gap-3 text-xs"><div className="bg-[#FAF9F5] p-3 rounded-xl"><Clock className="w-4 h-4 text-[#2D6A4F] mb-1"/>{Object.values(spot.hours)[0]||'Hours unavailable'}</div><div className="bg-[#FAF9F5] p-3 rounded-xl"><Car className="w-4 h-4 text-[#2D6A4F] mb-1"/>{spot.amenities.includes('parking')?'Parking available':'Check local parking'}</div><div className="bg-[#FAF9F5] p-3 rounded-xl"><Wifi className="w-4 h-4 text-[#2D6A4F] mb-1"/>{spot.amenities.join(', ')||'Amenities updating'}</div></div><div className="flex flex-col sm:flex-row gap-3"><a onClick={trackDirections} href={directions} target="_blank" rel="noreferrer" className="flex-1 bg-[#2D6A4F] text-white rounded-xl py-3 px-5 text-sm font-black flex justify-center gap-2">Get directions<ExternalLink className="w-4 h-4"/></a>{spot.questId&&<Link href={`/quests/${spot.questId}`} className="flex-1 bg-[#FFB703] text-[#582F0E] rounded-xl py-3 px-5 text-sm font-black flex justify-center gap-2"><Trophy className="w-4 h-4"/>Play this quest</Link>}</div><p className="text-[10px] text-[#837560]">Source: {spot.sourceName}. Crowd level is an app-activity estimate, last updated {spot.crowdUpdatedAt?new Date(spot.crowdUpdatedAt).toLocaleString():'when sufficient activity is available'}.</p></section>
-  <section className="space-y-3"><p className="text-xs font-black uppercase tracking-wider text-[#7D5800]">Spread the adventure</p><h2 className="text-2xl font-black font-serif text-[#582F0E]">Similar places nearby</h2>{alternatives.length?<div className="grid md:grid-cols-3 gap-4">{alternatives.map(a=><Link href={`/spots/${a.slug}`} key={a.id} className="bg-white border border-[#D5C4AC]/50 rounded-2xl p-4 hover:shadow-lg"><h3 className="font-black text-[#582F0E]">{a.name}</h3><p className="text-xs text-[#837560] mt-1">{a.municipality} · {a.distanceKm?.toFixed(1)} km</p><div className="mt-3 flex flex-wrap gap-1">{a.recommendationReasons.slice(0,2).map(r=><span key={r} className="text-[10px] rounded bg-emerald-50 text-emerald-800 px-2 py-1">{r}</span>)}</div></Link>)}</div>:<p className="bg-white rounded-2xl p-5 text-sm text-[#514532]">No credible similar alternatives are available within 25 km yet.</p>}</section></article></Navigation>;
+const defaultMockTips = [
+  {
+    author: 'u/HeritageGuide_Carl',
+    time: '3 hours ago',
+    text: 'If visiting in the afternoon, bring an umbrella as there is limited shade along the outer trail. The view is completely worth it though!',
+    upvotes: 24,
+  },
+  {
+    author: 'u/PangasinanLocal',
+    time: '1 day ago',
+    text: 'Do not miss the fresh tupig vendors near the town hall junction before heading up. Freshly grilled and very warm.',
+    upvotes: 18,
+  },
+];
+
+export default function SpotDetailPage() {
+  const { slug } = useParams<{ slug: string }>();
+  const [spot, setSpot] = useState<SpotModel | null>(null);
+  const [alternatives, setAlternatives] = useState<SpotModel[]>([]);
+  const [error, setError] = useState('');
+  const [upvoteCount, setUpvoteCount] = useState(142);
+  const [userVoted, setUserVoted] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
+  const [comments, setComments] = useState(defaultMockTips);
+  const [newComment, setNewComment] = useState('');
+
+  useEffect(() => {
+    Promise.all([
+      api.get(`/spots/${slug}`),
+      api.get(`/spots/${slug}/alternatives`),
+    ])
+      .then(([detail, alts]) => {
+        const current = normalizeSpot(detail.data.data);
+        setSpot(current);
+        setAlternatives(alts.data.data.map(normalizeSpot));
+        api.post(`/spots/${current.id}/interactions`, { type: 'view' }).catch(() => {});
+      })
+      .catch(() => setError('Destination spot not found.'));
+  }, [slug]);
+
+  const handleVote = (direction: number) => {
+    if (userVoted === direction) {
+      setUpvoteCount((prev) => prev - direction);
+      setUserVoted(0);
+    } else {
+      setUpvoteCount((prev) => prev + direction - userVoted);
+      setUserVoted(direction);
+    }
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    setComments((prev) => [
+      {
+        author: 'u/You',
+        time: 'Just now',
+        text: newComment.trim(),
+        upvotes: 1,
+      },
+      ...prev,
+    ]);
+    setNewComment('');
+  };
+
+  if (error) {
+    return (
+      <Navigation>
+        <div className="p-12 text-center bg-white rounded-3xl border border-red-200">
+          <p className="text-sm font-bold text-[#BC4749]">{error}</p>
+          <Link href="/explore" className="mt-3 inline-block font-extrabold text-xs text-[#2D6A4F]">
+            ← Return to Community Feed
+          </Link>
+        </div>
+      </Navigation>
+    );
+  }
+
+  if (!spot) {
+    return (
+      <Navigation>
+        <div className="p-20 text-center text-[#837560]">
+          <span className="text-xs font-bold text-[#582F0E]">Loading destination thread...</span>
+        </div>
+      </Navigation>
+    );
+  }
+
+  const directions = `https://www.google.com/maps/dir/?api=1&destination=${spot.gpsLat},${spot.gpsLng}`;
+  const trackDirections = () => api.post(`/spots/${spot.id}/interactions`, { type: 'directions' }).catch(() => {});
+
+  return (
+    <Navigation>
+      <article className="max-w-4xl mx-auto space-y-6">
+        {/* Back Link */}
+        <Link href="/explore" className="inline-flex items-center gap-2 text-xs font-extrabold text-[#2D6A4F] hover:underline">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Community Feed</span>
+        </Link>
+
+        {/* Main Post Card (Reddit Thread Style) */}
+        <div className="bg-white rounded-3xl border border-[#E3DFD5] shadow-xs overflow-hidden">
+          {/* Post Header */}
+          <div className="p-6 pb-4 flex items-start justify-between gap-4 border-b border-[#E3DFD5]/60">
+            <div className="flex items-center gap-3">
+              {/* Upvote Pill */}
+              <div className="flex items-center gap-1.5 bg-[#FAF9F5] px-3 py-1.5 rounded-2xl border border-[#E3DFD5]">
+                <button
+                  onClick={() => handleVote(1)}
+                  className={`transition ${userVoted === 1 ? 'text-[#FFB703]' : 'text-[#837560] hover:text-[#FFB703]'}`}
+                  aria-label="Upvote"
+                >
+                  <ArrowBigUp className="w-5 h-5" />
+                </button>
+                <span className="text-xs font-black text-[#582F0E]">{upvoteCount}</span>
+                <button
+                  onClick={() => handleVote(-1)}
+                  className={`transition ${userVoted === -1 ? 'text-[#BC4749]' : 'text-[#837560] hover:text-[#BC4749]'}`}
+                  aria-label="Downvote"
+                >
+                  <ArrowBigDown className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 text-xs text-[#837560]">
+                  <span className="font-extrabold text-[#2D6A4F]">p/{spot.municipality.toLowerCase().replace(/\s+/g, '')}</span>
+                  <span>•</span>
+                  <span>Posted by <strong className="text-[#582F0E]">u/{spot.sourceName.replace(/\s+/g, '')}</strong></span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] uppercase font-black bg-emerald-50 text-[#2D6A4F] px-2 py-0.5 rounded">
+                    {spot.subcategory.replaceAll('_', ' ')}
+                  </span>
+                  {spot.trustLevel === 'lgu_verified' && (
+                    <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2 py-0.5 rounded flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>LGU Verified</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsSaved(!isSaved)}
+              className={`p-2 rounded-xl border transition ${isSaved ? 'bg-amber-50 border-amber-200 text-[#FFB703]' : 'border-[#E3DFD5] text-[#837560] hover:bg-[#FAF9F5]'}`}
+            >
+              <Bookmark className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Photo Gallery Banner */}
+          <div className="h-72 sm:h-96 w-full bg-stone-100 relative overflow-hidden">
+            {spot.imageUrl ? (
+              <img src={spot.imageUrl} alt={spot.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-[#837560]">
+                <Camera className="w-12 h-12 mb-2 text-[#D5C4AC]" />
+                <span className="text-xs">Community Photo Upload in Progress</span>
+              </div>
+            )}
+
+            {spot.questId && (
+              <div className="absolute top-4 right-4 bg-[#FFB703] text-[#582F0E] px-3.5 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5 shadow-lg">
+                <Trophy className="w-4 h-4" />
+                <span>Play Quest (+250 mJDQ)</span>
+              </div>
+            )}
+          </div>
+
+          {/* Post Content */}
+          <div className="p-6 sm:p-8 space-y-6">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black font-serif text-[#582F0E]">{spot.name}</h1>
+              <p className="text-xs sm:text-sm text-[#837560] mt-1.5 flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-[#2D6A4F]" />
+                <span>{spot.address}</span>
+              </p>
+            </div>
+
+            {/* Overcrowding Alert */}
+            {spot.crowdStatus === 'estimated_busy' && (
+              <div className="rounded-2xl bg-[#FFF3E8] border border-[#FFD8B8] p-4 text-xs text-[#9E3E00] space-y-1">
+                <p className="font-extrabold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[#D95D00]" />
+                  <span>High Tourist Activity Reported</span>
+                </p>
+                <p className="text-[#6B4B00]">
+                  Based on recent JuanderQuest check-in density. If you want a peaceful time, consider exploring one of the nearby serene alternatives below for bonus rewards!
+                </p>
+              </div>
+            )}
+
+            <p className="text-sm leading-relaxed text-[#514532] whitespace-pre-line">{spot.description}</p>
+
+            {/* Destination Practical Specs */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#E3DFD5]/60">
+                <div className="flex items-center gap-1.5 text-[#2D6A4F] font-bold mb-1">
+                  <Clock className="w-4 h-4" />
+                  <span>Visiting Hours</span>
+                </div>
+                <p className="text-[#582F0E] font-medium">{Object.values(spot.hours)[0] || 'Open Daily'}</p>
+              </div>
+
+              <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#E3DFD5]/60">
+                <div className="flex items-center gap-1.5 text-[#2D6A4F] font-bold mb-1">
+                  <Car className="w-4 h-4" />
+                  <span>Parking &amp; Access</span>
+                </div>
+                <p className="text-[#582F0E] font-medium">
+                  {spot.amenities.includes('parking') ? 'On-site parking' : 'Roadside / local parking'}
+                </p>
+              </div>
+
+              <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#E3DFD5]/60">
+                <div className="flex items-center gap-1.5 text-[#2D6A4F] font-bold mb-1">
+                  <Wifi className="w-4 h-4" />
+                  <span>Amenities</span>
+                </div>
+                <p className="text-[#582F0E] font-medium">{spot.amenities.join(', ') || 'Scenic view, rest areas'}</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <a
+                onClick={trackDirections}
+                href={directions}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-2xl py-3.5 px-5 text-xs font-black flex items-center justify-center gap-2 shadow-xs transition"
+              >
+                <MapPin className="w-4 h-4" />
+                <span>Get Directions (Google Maps)</span>
+                <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-70" />
+              </a>
+
+              {spot.questId && (
+                <Link
+                  href={`/quests/${spot.questId}`}
+                  className="flex-1 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] rounded-2xl py-3.5 px-5 text-xs font-black flex items-center justify-center gap-2 shadow-xs transition"
+                >
+                  <Trophy className="w-4 h-4" />
+                  <span>Play Quest at this Location (+250 mJDQ)</span>
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Traveler Discussion & Reviews Section (Forum Style) */}
+          <div className="bg-[#FAF9F5] p-6 sm:p-8 border-t border-[#E3DFD5] space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-[#2D6A4F]" />
+                <h3 className="font-serif font-black text-base text-[#582F0E]">
+                  Traveler Tips &amp; On-Site Discussion ({comments.length})
+                </h3>
+              </div>
+            </div>
+
+            {/* Add Comment Form */}
+            <form onSubmit={handleAddComment} className="flex gap-2">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Share a tip or advice for future visitors..."
+                className="flex-1 px-4 py-2.5 rounded-xl bg-white text-xs border border-[#E3DFD5] outline-none focus:border-[#2D6A4F]"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-bold hover:bg-[#1B4332] transition flex items-center gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Post Tip</span>
+              </button>
+            </form>
+
+            {/* Comments List */}
+            <div className="space-y-3 pt-2">
+              {comments.map((c, i) => (
+                <div key={i} className="p-4 rounded-2xl bg-white border border-[#E3DFD5]/80 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-[#837560]">
+                    <span className="font-extrabold text-[#582F0E]">{c.author}</span>
+                    <span>{c.time}</span>
+                  </div>
+                  <p className="text-xs text-[#514532] leading-relaxed">{c.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Similar Places Nearby (Spread the Adventure) */}
+        <section className="space-y-4 pt-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-wider text-[#7D5800]">Spread the Adventure</p>
+              <h2 className="text-xl font-black font-serif text-[#582F0E]">Nearby Tranquil Gems</h2>
+            </div>
+            <Link href="/explore" className="text-xs text-[#2D6A4F] font-extrabold hover:underline">
+              View All Feed →
+            </Link>
+          </div>
+
+          {alternatives.length ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {alternatives.map((a) => (
+                <Link
+                  href={`/spots/${a.slug}`}
+                  key={a.id}
+                  className="bg-white border border-[#E3DFD5] rounded-2xl p-4 hover:border-[#2D6A4F] shadow-xs hover:shadow-md transition group"
+                >
+                  <h4 className="font-bold text-sm text-[#582F0E] group-hover:text-[#2D6A4F] transition">{a.name}</h4>
+                  <p className="text-[11px] text-[#837560] mt-1 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-[#2D6A4F]" />
+                    <span>{a.municipality} · {a.distanceKm?.toFixed(1)} km</span>
+                  </p>
+                  <div className="mt-2.5 flex flex-wrap gap-1">
+                    {a.recommendationReasons.slice(0, 2).map((r) => (
+                      <span key={r} className="text-[9px] font-extrabold rounded bg-emerald-50 text-emerald-800 px-2 py-0.5">
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl p-6 text-center text-xs text-[#837560] border border-[#E3DFD5]">
+              No similar spots listed within 25 km yet.
+            </div>
+          )}
+        </section>
+      </article>
+    </Navigation>
+  );
 }
