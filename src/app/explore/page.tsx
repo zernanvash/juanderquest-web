@@ -12,8 +12,7 @@ import {
   Loader2,
   PlusCircle,
   MessageSquare,
-  ArrowBigUp,
-  ArrowBigDown,
+  Heart,
   Share2,
   Bookmark,
   ExternalLink,
@@ -58,7 +57,7 @@ export default function ExplorePage() {
   const [category, setCategory] = useState('all');
   const [sortFlair, setSortFlair] = useState<'hot' | 'new' | 'quests' | 'quiet'>('hot');
   const [search, setSearch] = useState('');
-  const [upvotes, setUpvotes] = useState<Record<string, { count: number; userVoted: number }>>({});
+  const [likes, setLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [userComments, setUserComments] = useState<Record<string, string[]>>({});
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
@@ -76,15 +75,15 @@ export default function ExplorePage() {
       const rawSpots: SpotModel[] = res.data.data.map(normalizeSpot);
       setSpots(rawSpots);
 
-      // Initialize mock dynamic helpful reactions & interaction states
-      const initialVotes: Record<string, { count: number; userVoted: number }> = {};
+      // Initialize mock dynamic like states
+      const initialLikes: Record<string, { count: number; isLiked: boolean }> = {};
       rawSpots.forEach((s, idx) => {
-        initialVotes[s.id] = {
+        initialLikes[s.id] = {
           count: 42 + (idx * 17) % 180,
-          userVoted: 0,
+          isLiked: false,
         };
       });
-      setUpvotes(initialVotes);
+      setLikes(initialLikes);
     } catch {
       setError('Could not load destination community feed.');
     } finally {
@@ -96,24 +95,17 @@ export default function ExplorePage() {
     loadSpots();
   }, [loadSpots]);
 
-  const handleVote = (spotId: string, direction: number) => {
-    setUpvotes((prev) => {
-      const current = prev[spotId] || { count: 50, userVoted: 0 };
-      if (current.userVoted === direction) {
-        // Toggle off
-        return {
-          ...prev,
-          [spotId]: { count: current.count - direction, userVoted: 0 },
-        };
-      } else {
-        return {
-          ...prev,
-          [spotId]: {
-            count: current.count + direction - current.userVoted,
-            userVoted: direction,
-          },
-        };
-      }
+  const handleToggleLike = (spotId: string) => {
+    setLikes((prev) => {
+      const current = prev[spotId] || { count: 50, isLiked: false };
+      const newLiked = !current.isLiked;
+      return {
+        ...prev,
+        [spotId]: {
+          count: newLiked ? current.count + 1 : current.count - 1,
+          isLiked: newLiked,
+        },
+      };
     });
   };
 
@@ -311,7 +303,7 @@ export default function ExplorePage() {
             ) : (
               <div className="space-y-4">
                 {processedSpots.map((spot) => {
-                  const voteState = upvotes[spot.id] || { count: 50, userVoted: 0 };
+                  const likeState = likes[spot.id] || { count: 50, isLiked: false };
                   const isCommentsOpen = Boolean(openComments[spot.id]);
                   const customTips = userComments[spot.id] || [];
                   const defaultTips = mockCommunityTips.default;
@@ -320,41 +312,14 @@ export default function ExplorePage() {
                   return (
                     <article
                       key={spot.id}
-                      className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition duration-200 overflow-hidden flex flex-col sm:flex-row"
+                      className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition duration-200 overflow-hidden"
                     >
-                      {/* Left Reaction / Helpful Score Bar */}
-                      <div className="bg-[#FAF9F5] sm:w-14 p-2 sm:py-4 flex sm:flex-col items-center justify-between sm:justify-start gap-1 border-b sm:border-b-0 sm:border-r border-[#E3DFD5]/70 shrink-0">
-                        <button
-                          onClick={() => handleVote(spot.id, 1)}
-                          className={`p-1.5 rounded-lg transition ${
-                            voteState.userVoted === 1
-                              ? 'text-[#FFB703] bg-[#FFB703]/20 font-black'
-                              : 'text-[#837560] hover:text-[#FFB703] hover:bg-white'
-                          }`}
-                          aria-label="Recommend"
-                        >
-                          <ArrowBigUp className="w-6 h-6" />
-                        </button>
-                        <span className="text-xs font-black text-[#582F0E]">{voteState.count}</span>
-                        <button
-                          onClick={() => handleVote(spot.id, -1)}
-                          className={`p-1.5 rounded-lg transition ${
-                            voteState.userVoted === -1
-                              ? 'text-[#BC4749] bg-red-50'
-                              : 'text-[#837560] hover:text-[#BC4749] hover:bg-white'
-                          }`}
-                          aria-label="Downvote"
-                        >
-                          <ArrowBigDown className="w-6 h-6" />
-                        </button>
-                      </div>
-
                       {/* Post Main Body */}
-                      <div className="flex-1 p-4 sm:p-5 space-y-3">
+                      <div className="p-4 sm:p-6 space-y-3">
                         {/* Meta Header */}
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#837560]">
                           <span className="font-extrabold text-[#2D6A4F] flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
+                            <MapPin className="w-3.5 h-3.5" />
                             {spot.municipality}
                           </span>
                           <span>•</span>
@@ -371,7 +336,7 @@ export default function ExplorePage() {
 
                         {/* Title */}
                         <Link href={`/spots/${spot.slug}`} className="block group">
-                          <h2 className="text-lg font-black font-serif text-[#582F0E] group-hover:text-[#2D6A4F] transition leading-snug">
+                          <h2 className="text-lg sm:text-xl font-black font-serif text-[#582F0E] group-hover:text-[#2D6A4F] transition leading-snug">
                             {spot.name}
                           </h2>
                         </Link>
@@ -394,13 +359,13 @@ export default function ExplorePage() {
                         ) : null}
 
                         {/* Description Text */}
-                        <p className="text-xs text-[#514532] leading-relaxed line-clamp-3">
+                        <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
                           {spot.description}
                         </p>
 
                         {/* Photo Image Card */}
                         {spot.imageUrl && (
-                          <Link href={`/spots/${spot.slug}`} className="block rounded-2xl overflow-hidden border border-[#E3DFD5] group max-h-80 relative bg-stone-100">
+                          <Link href={`/spots/${spot.slug}`} className="block rounded-2xl overflow-hidden border border-[#E3DFD5] group max-h-96 relative bg-stone-100">
                             <img
                               src={spot.imageUrl}
                               alt={spot.name}
@@ -415,17 +380,39 @@ export default function ExplorePage() {
                           </Link>
                         )}
 
-                        {/* Interaction Bar */}
-                        <div className="flex flex-wrap items-center justify-between pt-2 border-t border-[#E3DFD5]/60 text-xs text-[#7D5800] font-bold gap-2">
+                        {/* Social Interaction Action Bar (Instagram-style Heart + Comments + Actions) */}
+                        <div className="flex flex-wrap items-center justify-between pt-3 border-t border-[#E3DFD5]/60 text-xs text-[#7D5800] font-bold gap-2">
                           <div className="flex items-center gap-2 sm:gap-3">
+                            {/* Instagram-style Heart Button */}
+                            <button
+                              onClick={() => handleToggleLike(spot.id)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition duration-150 transform active:scale-90 ${
+                                likeState.isLiked
+                                  ? 'bg-rose-50 text-rose-600 font-black'
+                                  : 'hover:bg-[#FAF9F5] text-[#582F0E]'
+                              }`}
+                              aria-label={likeState.isLiked ? 'Unlike' : 'Like'}
+                            >
+                              <Heart
+                                className={`w-4 h-4 transition ${
+                                  likeState.isLiked
+                                    ? 'fill-rose-600 text-rose-600 scale-110'
+                                    : 'text-[#837560]'
+                                }`}
+                              />
+                              <span className="text-xs font-extrabold">{likeState.count}</span>
+                            </button>
+
+                            {/* Tips & Reviews Button */}
                             <button
                               onClick={() => handleToggleComments(spot.id)}
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-[#FAF9F5] transition"
                             >
-                              <MessageSquare className="w-4 h-4" />
-                              <span>{allTips.length} Tips &amp; Reviews</span>
+                              <MessageSquare className="w-4 h-4 text-[#837560]" />
+                              <span>{allTips.length} Tips</span>
                             </button>
 
+                            {/* Bookmark / Save */}
                             <button
                               onClick={() => toggleSave(spot.id)}
                               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition ${
@@ -437,11 +424,12 @@ export default function ExplorePage() {
                             </button>
                           </div>
 
+                          {/* Primary Direct Actions */}
                           <div className="flex items-center gap-2">
                             {spot.questId && (
                               <Link
                                 href={`/quests/${spot.questId}`}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-extrabold shadow-xs transition"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-extrabold shadow-xs transition"
                               >
                                 <Trophy className="w-3.5 h-3.5" />
                                 <span>Play Quest</span>
@@ -452,7 +440,7 @@ export default function ExplorePage() {
                               href={`https://www.google.com/maps/dir/?api=1&destination=${spot.gpsLat},${spot.gpsLng}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold shadow-xs transition"
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold shadow-xs transition"
                             >
                               <MapPin className="w-3.5 h-3.5" />
                               <span>Directions</span>

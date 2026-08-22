@@ -13,8 +13,7 @@ import {
   Wifi,
   Car,
   Clock,
-  ArrowBigUp,
-  ArrowBigDown,
+  Heart,
   MessageSquare,
   Bookmark,
   Share2,
@@ -46,8 +45,8 @@ export default function SpotDetailPage() {
   const [spot, setSpot] = useState<SpotModel | null>(null);
   const [alternatives, setAlternatives] = useState<SpotModel[]>([]);
   const [error, setError] = useState('');
-  const [upvoteCount, setUpvoteCount] = useState(142);
-  const [userVoted, setUserVoted] = useState(0);
+  const [likeCount, setLikeCount] = useState(142);
+  const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [comments, setComments] = useState(defaultMockTips);
   const [newComment, setNewComment] = useState('');
@@ -66,13 +65,13 @@ export default function SpotDetailPage() {
       .catch(() => setError('Destination spot not found.'));
   }, [slug]);
 
-  const handleVote = (direction: number) => {
-    if (userVoted === direction) {
-      setUpvoteCount((prev) => prev - direction);
-      setUserVoted(0);
+  const handleToggleLike = () => {
+    if (isLiked) {
+      setLikeCount((prev) => prev - 1);
+      setIsLiked(false);
     } else {
-      setUpvoteCount((prev) => prev + direction - userVoted);
-      setUserVoted(direction);
+      setLikeCount((prev) => prev + 1);
+      setIsLiked(true);
     }
   };
 
@@ -131,24 +130,25 @@ export default function SpotDetailPage() {
           {/* Post Header */}
           <div className="p-6 pb-4 flex items-start justify-between gap-4 border-b border-[#E3DFD5]/60">
             <div className="flex items-center gap-3">
-              {/* Upvote Pill */}
-              <div className="flex items-center gap-1.5 bg-[#FAF9F5] px-3 py-1.5 rounded-2xl border border-[#E3DFD5]">
-                <button
-                  onClick={() => handleVote(1)}
-                  className={`transition ${userVoted === 1 ? 'text-[#FFB703]' : 'text-[#837560] hover:text-[#FFB703]'}`}
-                  aria-label="Recommend"
-                >
-                  <ArrowBigUp className="w-5 h-5" />
-                </button>
-                <span className="text-xs font-black text-[#582F0E]">{upvoteCount}</span>
-                <button
-                  onClick={() => handleVote(-1)}
-                  className={`transition ${userVoted === -1 ? 'text-[#BC4749]' : 'text-[#837560] hover:text-[#BC4749]'}`}
-                  aria-label="Downvote"
-                >
-                  <ArrowBigDown className="w-5 h-5" />
-                </button>
-              </div>
+              {/* Instagram-style Heart Button */}
+              <button
+                onClick={handleToggleLike}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl border transition duration-150 transform active:scale-90 ${
+                  isLiked
+                    ? 'bg-rose-50 border-rose-200 text-rose-600 font-black'
+                    : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-rose-300'
+                }`}
+                aria-label={isLiked ? 'Unlike' : 'Like'}
+              >
+                <Heart
+                  className={`w-4 h-4 transition ${
+                    isLiked
+                      ? 'fill-rose-600 text-rose-600 scale-110'
+                      : 'text-[#837560]'
+                  }`}
+                />
+                <span className="text-xs font-black">{likeCount}</span>
+              </button>
 
               <div>
                 <div className="flex items-center gap-2 text-xs text-[#837560]">
