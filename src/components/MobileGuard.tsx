@@ -47,7 +47,7 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
 
           {/* Download APK CTA */}
           <a
-            href="https://jdq.zernanvash.dev/app-debug.apk"
+            href="https://jdq.zernanvash.dev/downloads/juanderquest-latest.apk"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-2.5 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition duration-200 text-sm mb-4"
