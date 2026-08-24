@@ -47,6 +47,33 @@ h1, h2, h3, h4, h5, h6 {
   50% { box-shadow: 0 0 30px rgba(255, 183, 3, 0.7); }
 }
 
+@keyframes vine-sway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2deg) scale(1.02); }
+}
+
+@keyframes leaf-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.15); }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-vine-sway {
+  animation: vine-sway 4s ease-in-out infinite;
+}
+
+.animate-leaf-pulse {
+  animation: leaf-pulse 3s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2.5s ease-in-out infinite;
+}
+
 .animate-shimmer {
   animation: shimmer 1.8s infinite;
 }

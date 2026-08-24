@@ -29,6 +29,7 @@ import {
   Compass,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
+import { OrganicBorder } from '@/components/OrganicBorder';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { SpotDetailSkeleton } from '@/components/Skeleton';
@@ -337,108 +338,111 @@ export default function SpotDetailPage() {
             {/* ----------------------------------------------------------------------- */}
             {/* ROW 1: PRIMARY ACTION BUTTONS & TELEMETRY COMMAND BAR                   */}
             {/* ----------------------------------------------------------------------- */}
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E3DFD5] shadow-sm space-y-6">
-              {/* Primary Call-to-Action Action Buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                {/* Valhalla Turn-by-Turn Navigation */}
-                <Link
-                  href={navigateUrl}
-                  onClick={trackDirections}
-                  className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-2xl py-4 px-6 text-sm font-black flex items-center justify-center gap-3 shadow-md transition transform hover:scale-[1.01] active:scale-95 cursor-pointer text-center"
-                >
-                  <Compass className="w-5 h-5 text-[#FFB703]" />
-                  <span>Navigate with Valhalla (Turn-by-Turn)</span>
-                </Link>
-
-                {/* Linked Quest Trigger (or fallback Explore Map CTA) */}
-                {spot.questId ? (
+            <OrganicBorder variant="vines" seed={spot.slug} density="medium" badgeText="Eco-Verified Destination">
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E3DFD5] shadow-sm space-y-6">
+                {/* Primary Call-to-Action Action Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  {/* Valhalla Turn-by-Turn Navigation */}
                   <Link
-                    href={`/quests/${spot.questId}`}
-                    className="w-full bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] rounded-2xl py-4 px-6 text-sm font-black flex items-center justify-center gap-2.5 shadow-md transition transform hover:scale-[1.01] active:scale-95 text-center cursor-pointer"
+                    href={navigateUrl}
+                    onClick={trackDirections}
+                    className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-2xl py-4 px-6 text-sm font-black flex items-center justify-center gap-3 shadow-md transition transform hover:scale-[1.01] active:scale-95 cursor-pointer text-center"
                   >
-                    <Trophy className="w-5 h-5 text-[#582F0E]" />
-                    <span>Play Linked Quest (+250 mJDQ Bounty)</span>
+                    <Compass className="w-5 h-5 text-[#FFB703]" />
+                    <span>Navigate with Valhalla (Turn-by-Turn)</span>
                   </Link>
-                ) : (
-                  <Link
-                    href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}`}
-                    className="w-full bg-[#FAF9F5] hover:bg-stone-100 text-[#582F0E] border border-[#D5C4AC] rounded-2xl py-4 px-6 text-sm font-black flex items-center justify-center gap-2.5 transition active:scale-95 text-center cursor-pointer"
-                  >
-                    <MapPin className="w-5 h-5 text-[#2D6A4F]" />
-                    <span>View on Province Map</span>
-                  </Link>
-                )}
-              </div>
 
-              {/* Quick Telemetry & Social Interaction Strip */}
-              <div className="pt-4 border-t border-[#E3DFD5]/60 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  {/* Instagram-style Heart Button */}
-                  <button
-                    onClick={handleToggleLike}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition duration-150 transform active:scale-95 cursor-pointer ${
-                      isLiked
-                        ? 'bg-rose-50 border-rose-200 text-rose-600 font-black'
-                        : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-rose-300'
-                    }`}
-                  >
-                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-600 text-rose-600' : 'text-gray-400'}`} />
-                    <span className="text-xs font-black">{likeCount} Liked</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById('community-forum-row');
-                      if (el) el.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-[#582F0E] text-xs font-black hover:bg-stone-50 transition cursor-pointer"
-                  >
-                    <MessageSquare className="w-4 h-4 text-[#2D6A4F]" />
-                    <span>{comments.length} Traveler Tips</span>
-                  </button>
-                </div>
-
-                {/* Live Crowd Status Badge */}
-                <div className="flex items-center gap-3">
-                  {spot.crowdStatus === 'estimated_busy' ? (
-                    <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FFF3E8] border border-[#FFD8B8] text-xs font-bold text-[#D95D00]">
-                      <AlertTriangle className="w-4 h-4 text-[#D95D00]" />
-                      <span>Peak Visitor Hours</span>
-                    </span>
+                  {/* Linked Quest Trigger (or fallback Explore Map CTA) */}
+                  {spot.questId ? (
+                    <Link
+                      href={`/quests/${spot.questId}`}
+                      className="w-full bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] rounded-2xl py-4 px-6 text-sm font-black flex items-center justify-center gap-2.5 shadow-md transition transform hover:scale-[1.01] active:scale-95 text-center cursor-pointer"
+                    >
+                      <Trophy className="w-5 h-5 text-[#582F0E]" />
+                      <span>Play Linked Quest (+250 mJDQ Bounty)</span>
+                    </Link>
                   ) : (
-                    <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#2D6A4F]">
-                      <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
-                      <span>Peaceful Visitor Traffic</span>
-                    </span>
+                    <Link
+                      href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}`}
+                      className="w-full bg-[#FAF9F5] hover:bg-stone-100 text-[#582F0E] border border-[#D5C4AC] rounded-2xl py-4 px-6 text-sm font-black flex items-center justify-center gap-2.5 transition active:scale-95 text-center cursor-pointer"
+                    >
+                      <MapPin className="w-5 h-5 text-[#2D6A4F]" />
+                      <span>View on Province Map</span>
+                    </Link>
                   )}
+                </div>
 
-                  <button
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share({ title: spot.name, url: window.location.href }).catch(() => {});
-                      }
-                    }}
-                    className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-gray-600 hover:text-[#582F0E] transition cursor-pointer"
-                    title="Share Destination"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
+                {/* Quick Telemetry & Social Interaction Strip */}
+                <div className="pt-4 border-t border-[#E3DFD5]/60 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    {/* Instagram-style Heart Button */}
+                    <button
+                      onClick={handleToggleLike}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-2xl border transition duration-150 transform active:scale-95 cursor-pointer ${
+                        isLiked
+                          ? 'bg-rose-50 border-rose-200 text-rose-600 font-black'
+                          : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-rose-300'
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-600 text-rose-600' : 'text-gray-400'}`} />
+                      <span className="text-xs font-black">{likeCount} Liked</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById('community-forum-row');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-[#582F0E] text-xs font-black hover:bg-stone-50 transition cursor-pointer"
+                    >
+                      <MessageSquare className="w-4 h-4 text-[#2D6A4F]" />
+                      <span>{comments.length} Traveler Tips</span>
+                    </button>
+                  </div>
+
+                  {/* Live Crowd Status Badge */}
+                  <div className="flex items-center gap-3">
+                    {spot.crowdStatus === 'estimated_busy' ? (
+                      <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FFF3E8] border border-[#FFD8B8] text-xs font-bold text-[#D95D00]">
+                        <AlertTriangle className="w-4 h-4 text-[#D95D00]" />
+                        <span>Peak Visitor Hours</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#2D6A4F]">
+                        <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
+                        <span>Peaceful Visitor Traffic</span>
+                      </span>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        if (navigator.share) {
+                          navigator.share({ title: spot.name, url: window.location.href }).catch(() => {});
+                        }
+                      }}
+                      className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-gray-600 hover:text-[#582F0E] transition cursor-pointer"
+                      title="Share Destination"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </OrganicBorder>
 
             {/* ----------------------------------------------------------------------- */}
             {/* ROW 2: DESTINATION NARRATIVE & PRACTICAL SPECIFICATIONS                 */}
             {/* ----------------------------------------------------------------------- */}
-            <div className="bg-white p-6 sm:p-8 md:p-10 rounded-3xl border border-[#E3DFD5] shadow-xs space-y-8">
-              {/* Narrative Story Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-[#E3DFD5]/60">
-                  <Sparkles className="w-5 h-5 text-[#2D6A4F]" />
-                  <h2 className="text-base font-black text-[#582F0E] uppercase tracking-wider font-serif">
-                    Destination Narrative &amp; Story
-                  </h2>
-                </div>
+            <OrganicBorder variant="woodland" seed={`${spot.slug}-narrative`} cornerOnly={true}>
+              <div className="bg-white p-6 sm:p-8 md:p-10 rounded-3xl border border-[#E3DFD5] shadow-xs space-y-8">
+                {/* Narrative Story Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-[#E3DFD5]/60">
+                    <Sparkles className="w-5 h-5 text-[#2D6A4F]" />
+                    <h2 className="text-base font-black text-[#582F0E] uppercase tracking-wider font-serif">
+                      Destination Narrative &amp; Story
+                    </h2>
+                  </div>
 
                 <p className="text-sm sm:text-base text-[#403526] leading-relaxed whitespace-pre-line">
                   {spot.description}
@@ -534,16 +538,18 @@ export default function SpotDetailPage() {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </OrganicBorder>
 
             {/* ----------------------------------------------------------------------- */}
             {/* ROW 3: COMMUNITY FIELD REPORTS & FORUM (BOTTOM)                         */}
             {/* ----------------------------------------------------------------------- */}
-            <div
-              id="community-forum-row"
-              className="bg-white p-6 sm:p-8 md:p-10 rounded-3xl border border-[#E3DFD5] shadow-xs space-y-6"
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-[#E3DFD5]/60">
+            <OrganicBorder variant="subtle-tendrils" seed={`${spot.slug}-forum`} cornerOnly={true}>
+              <div
+                id="community-forum-row"
+                className="bg-white p-6 sm:p-8 md:p-10 rounded-3xl border border-[#E3DFD5] shadow-xs space-y-6"
+              >
+                <div className="flex items-center justify-between pb-3 border-b border-[#E3DFD5]/60">
                 <div className="flex items-center gap-2.5">
                   <MessageSquare className="w-5 h-5 text-[#2D6A4F]" />
                   <h3 className="font-serif font-black text-lg text-[#582F0E]">
@@ -593,6 +599,7 @@ export default function SpotDetailPage() {
                 ))}
               </div>
             </div>
+          </OrganicBorder>
           </div>
         </div>
       </ErrorBoundary>

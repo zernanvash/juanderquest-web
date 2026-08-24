@@ -29,6 +29,7 @@ import {
   Filter
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
+import { OrganicBorder } from '@/components/OrganicBorder';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { fetchWithCache } from '@/lib/cache';
@@ -148,45 +149,47 @@ export default function ExplorePage() {
     <Navigation>
       <div className="space-y-6">
         {/* JuanDerQuest Traveler Community Header Banner */}
-        <div className="rounded-3xl bg-white border border-[#E3DFD5] overflow-hidden shadow-xs">
-          {/* Cover Header Banner */}
-          <div className="h-36 sm:h-44 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#7D5800] p-6 relative flex items-end justify-between">
-            <div className="absolute inset-0 bg-[radial-gradient(#FFB703_1px,transparent_1px)] [background-size:16px_16px] opacity-10"></div>
-            <div className="relative z-10 text-white">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FFB703] bg-black/30 px-2.5 py-1 rounded-full border border-white/10">
-                Pangasinan Tourism Network
-              </span>
-              <h1 className="text-2xl sm:text-4xl font-serif font-black text-white mt-1 drop-shadow-sm">
-                Traveler Discoveries &amp; Quests
-              </h1>
+        <OrganicBorder variant="vines" density="medium" seed="explore-community-header" badgeText="Pangasinan Eco-Tourism Feed">
+          <div className="rounded-3xl bg-white border border-[#E3DFD5] overflow-hidden shadow-xs">
+            {/* Cover Header Banner */}
+            <div className="h-36 sm:h-44 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#7D5800] p-6 relative flex items-end justify-between">
+              <div className="absolute inset-0 bg-[radial-gradient(#FFB703_1px,transparent_1px)] [background-size:16px_16px] opacity-10"></div>
+              <div className="relative z-10 text-white">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#FFB703] bg-black/30 px-2.5 py-1 rounded-full border border-white/10">
+                  Pangasinan Tourism Network
+                </span>
+                <h1 className="text-2xl sm:text-4xl font-serif font-black text-white mt-1 drop-shadow-sm">
+                  Traveler Discoveries &amp; Quests
+                </h1>
+              </div>
+              <Link
+                href="/spots/new"
+                className="relative z-10 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black text-xs px-4 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Share a Destination</span>
+              </Link>
             </div>
-            <Link
-              href="/spots/new"
-              className="relative z-10 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black text-xs px-4 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-md transition active:scale-95"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Share a Destination</span>
-            </Link>
-          </div>
 
-          {/* Stats & Community Info Bar */}
-          <div className="px-6 py-3.5 bg-white flex flex-wrap items-center justify-between gap-4 border-t border-[#E3DFD5]/60 text-xs">
-            <p className="text-[#514532] font-medium max-w-xl">
-              Explore authentic local spots across Pangasinan, discover quiet eco-trails, and unlock verified destination bounties.
-            </p>
-            <div className="flex items-center gap-4 text-[#7D5800] font-bold">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#48C71D] animate-pulse"></span>
-                <span>3,280 Travelers Online</span>
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5 text-[#FFB703]" />
-                <span>94 Active Quests</span>
-              </span>
+            {/* Stats & Community Info Bar */}
+            <div className="px-6 py-3.5 bg-white flex flex-wrap items-center justify-between gap-4 border-t border-[#E3DFD5]/60 text-xs">
+              <p className="text-[#514532] font-medium max-w-xl">
+                Explore authentic local spots across Pangasinan, discover quiet eco-trails, and unlock verified destination bounties.
+              </p>
+              <div className="flex items-center gap-4 text-[#7D5800] font-bold">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#48C71D] animate-pulse"></span>
+                  <span>3,280 Travelers Online</span>
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Trophy className="w-3.5 h-3.5 text-[#FFB703]" />
+                  <span>94 Active Quests</span>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        </OrganicBorder>
 
         {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Widgets) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
