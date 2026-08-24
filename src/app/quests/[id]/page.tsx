@@ -7,7 +7,6 @@ import { api, buildSubmissionPayload, normalizeQuest, QuestModel } from '@/lib/a
 import { fetchWithCache } from '@/lib/cache';
 import { useAuth, useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { OrganicBorder } from '@/components/OrganicBorder';
 import { Skeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
@@ -218,46 +217,43 @@ export default function QuestDetailPage() {
                 </div>
 
                 {/* Quest Overview & Objectives */}
-                <OrganicBorder variant="golden-leaves" seed={quest.id} density="medium" badgeText="Eco Quest Bounty">
-                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E3DFD5] shadow-xs space-y-4">
-                    <h2 className="text-sm font-black text-[#582F0E] uppercase tracking-wider">Mission Objectives:</h2>
-                    <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
-                      {quest.description}
-                    </p>
+                <div className="bg-white rounded-xl p-6 sm:p-7 border border-[#E3DFD5] space-y-4">
+                  <h2 className="text-sm font-bold text-[#582F0E] uppercase tracking-wider">Mission Objectives:</h2>
+                  <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
+                    {quest.description}
+                  </p>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                        <span className="text-[10px] text-gray-400 font-bold block">Reward Bounty</span>
-                        <span className="text-xs font-black text-emerald-700">+{quest.rewardPoints} mJDQ</span>
-                      </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-medium block">Reward Bounty</span>
+                      <span className="text-xs font-bold text-emerald-700">+{quest.rewardPoints} mJDQ</span>
+                    </div>
 
-                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                        <span className="text-[10px] text-gray-400 font-bold block">Base Reward (PHP)</span>
-                        <span className="text-xs font-black text-[#582F0E]">₱{quest.baseRewardPhp}</span>
-                      </div>
+                    <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-medium block">Base Reward (PHP)</span>
+                      <span className="text-xs font-bold text-[#582F0E]">₱{quest.baseRewardPhp}</span>
+                    </div>
 
-                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                        <span className="text-[10px] text-gray-400 font-bold block">GPS Radius</span>
-                        <span className="text-xs font-black text-[#7D5800]">{quest.radiusMeters}m</span>
-                      </div>
+                    <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-medium block">GPS Radius</span>
+                      <span className="text-xs font-bold text-[#7D5800]">{quest.radiusMeters}m</span>
+                    </div>
 
-                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                        <span className="text-[10px] text-gray-400 font-bold block">Difficulty Factor</span>
-                        <span className="text-xs font-black text-[#582F0E]">{quest.difficultyFactor}x</span>
-                      </div>
+                    <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-medium block">Difficulty Factor</span>
+                      <span className="text-xs font-bold text-[#582F0E]">{quest.difficultyFactor}x</span>
                     </div>
                   </div>
-                </OrganicBorder>
+                </div>
               </div>
 
               {/* Right Column: In-Page AR Scanner & GPS Telemetry Workbench (5 cols) */}
-              <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-20">
-                <OrganicBorder variant="vines" seed={`${quest.id}-radar`} density="medium" badgeText="Live Radar Scanner">
-                  <div className="bg-[#0D1B2A] text-white rounded-3xl p-6 border border-white/20 shadow-xl space-y-5">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                      <div className="flex items-center gap-2">
-                      <ScanLine className="w-5 h-5 text-[#FFB703] animate-pulse" />
-                      <span className="text-xs font-black text-amber-200 uppercase tracking-wider">
+              <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-20">
+                <div className="bg-[#0D1B2A] text-white rounded-xl p-5 sm:p-6 border border-white/20 shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <ScanLine className="w-4 h-4 text-[#FFB703] animate-pulse" />
+                      <span className="text-xs font-bold text-amber-200 uppercase tracking-wider">
                         AR Radar Scanner Workbench
                       </span>
                     </div>
@@ -266,20 +262,20 @@ export default function QuestDetailPage() {
 
                   {/* GPS Telemetry Fix Status */}
                   {gpsState !== 'ready' ? (
-                    <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                    <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
                       <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
                         <LocateFixed className="w-4 h-4 text-[#FFB703]" />
                         <span>
                           {gpsState === 'acquiring' ? 'Acquiring high-accuracy GPS fix...' : 'GPS telemetry required for verification'}
                         </span>
                       </div>
-                      {gpsState === 'acquiring' && <Loader2 className="w-6 h-6 animate-spin text-[#FFB703] mx-auto" />}
+                      {gpsState === 'acquiring' && <Loader2 className="w-5 h-5 animate-spin text-[#FFB703] mx-auto" />}
                       {gpsState === 'denied' && (
                         <>
                           <p className="text-xs text-red-300 leading-relaxed">{gpsError}</p>
                           <button
                             onClick={acquireGps}
-                            className="w-full py-2.5 rounded-xl bg-[#FFB703] text-[#582F0E] text-xs font-black transition cursor-pointer active:scale-95"
+                            className="w-full py-2 rounded-lg bg-[#FFB703] text-[#582F0E] text-xs font-bold transition cursor-pointer active:scale-98"
                           >
                             Retry GPS Acquisition
                           </button>
@@ -288,7 +284,7 @@ export default function QuestDetailPage() {
                       {gpsState === 'idle' && (
                         <button
                           onClick={acquireGps}
-                          className="w-full py-3 rounded-2xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black transition cursor-pointer active:scale-95"
+                          className="w-full py-2.5 rounded-lg bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-bold transition cursor-pointer active:scale-98"
                         >
                           Enable GPS Telemetry
                         </button>
@@ -297,15 +293,15 @@ export default function QuestDetailPage() {
                   ) : (
                     <>
                       {/* Integrated Scanner HUD Canvas */}
-                      <div className="h-64 rounded-2xl bg-black border-2 border-[#FFB703] relative flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+                      <div className="h-56 rounded-lg bg-black border border-[#FFB703]/80 relative flex flex-col items-center justify-center p-5 text-center overflow-hidden">
                         {arScanning && (
                           <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#FFB703] to-transparent animate-scan shadow-[0_0_15px_#FFB703]" />
                         )}
 
                         {arScanning ? (
-                          <div className="space-y-3 relative z-10">
-                            <Loader2 className="w-10 h-10 animate-spin text-[#FFB703] mx-auto" />
-                            <div className="text-xs font-black text-amber-200 tracking-wider break-all">
+                          <div className="space-y-2.5 relative z-10">
+                            <Loader2 className="w-8 h-8 animate-spin text-[#FFB703] mx-auto" />
+                            <div className="text-xs font-bold text-amber-200 tracking-wider break-all">
                               SCANNING MARKER: {quest.markerCode}
                             </div>
                             {gps && (
@@ -315,9 +311,9 @@ export default function QuestDetailPage() {
                             )}
                           </div>
                         ) : arSuccess ? (
-                          <div className="space-y-2 relative z-10">
-                            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-                            <div className="text-sm font-black text-emerald-400">
+                          <div className="space-y-1.5 relative z-10">
+                            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                            <div className="text-sm font-bold text-emerald-400">
                               Target Marker Verified!
                             </div>
                             <div className="text-[11px] text-gray-300">
@@ -325,8 +321,8 @@ export default function QuestDetailPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="space-y-2 relative z-10">
-                            <div className="text-xs font-bold text-gray-300">Target AR Marker Ready</div>
+                          <div className="space-y-1.5 relative z-10">
+                            <div className="text-xs font-semibold text-gray-300">Target AR Marker Ready</div>
                             {gps && (
                               <div className="text-[11px] text-emerald-300 font-mono">
                                 GPS Ready: [{gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}] ±{gps.accuracy.toFixed(1)}m
@@ -340,7 +336,7 @@ export default function QuestDetailPage() {
                       {!arScanning && !arSuccess && (
                         <button
                           onClick={handleSimulateArScan}
-                          className="w-full inline-flex items-center justify-center gap-2 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black py-4 px-6 rounded-2xl shadow-xl text-xs transition active:scale-95 cursor-pointer"
+                          className="w-full inline-flex items-center justify-center gap-2 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-bold py-3 px-5 rounded-lg shadow-sm text-xs transition active:scale-98 cursor-pointer"
                         >
                           <ScanLine className="w-4 h-4" />
                           <span>Scan AR Landmark Marker</span>
@@ -351,13 +347,13 @@ export default function QuestDetailPage() {
                         <button
                           onClick={handleSubmitProof}
                           disabled={submitting}
-                          className="w-full inline-flex items-center justify-center gap-2 bg-[#48C71D] hover:bg-[#3FB418] text-white font-black py-4 px-6 rounded-2xl shadow-xl text-sm transition active:scale-95 cursor-pointer disabled:opacity-50"
+                          className="w-full inline-flex items-center justify-center gap-2 bg-[#48C71D] hover:bg-[#3FB418] text-white font-bold py-3 px-5 rounded-lg shadow-sm text-xs sm:text-sm transition active:scale-98 cursor-pointer disabled:opacity-50"
                         >
                           {submitting ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
                             <>
-                              <CheckCircle2 className="w-5 h-5" />
+                              <CheckCircle2 className="w-4 h-4" />
                               <span>Submit Proof to Backend (+{quest.rewardPoints} mJDQ)</span>
                             </>
                           )}
@@ -367,13 +363,12 @@ export default function QuestDetailPage() {
                   )}
 
                   {submitError && (
-                    <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+                    <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span className="break-all">{submitError}</span>
                     </div>
                   )}
                 </div>
-              </OrganicBorder>
               </div>
             </div>
           )}

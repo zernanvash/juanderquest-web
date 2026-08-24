@@ -20,7 +20,6 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { OrganicBorder } from '@/components/OrganicBorder';
 import { fetchRoute, RouteModel, api, SpotModel, normalizeSpot } from '@/lib/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -278,8 +277,8 @@ function NavigateContent() {
         {/* Left Side: Route Controls, Metrics, & Maneuver Steps (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Travel Mode Selector */}
-          <div className="bg-white p-4 rounded-3xl border border-[#E3DFD5] shadow-xs space-y-3">
-            <label className="text-xs font-black text-[#582F0E] uppercase tracking-wider block">
+          <div className="bg-white p-4 rounded-xl border border-[#E3DFD5] space-y-3">
+            <label className="text-xs font-bold text-[#582F0E] uppercase tracking-wider block">
               Select Travel Mode:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -295,9 +294,9 @@ function NavigateContent() {
                   <button
                     key={m.id}
                     onClick={() => setCosting(m.id as any)}
-                    className={`py-3 px-2 rounded-2xl text-xs font-extrabold flex flex-col items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 ${
+                    className={`py-2.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition cursor-pointer active:scale-98 ${
                       active
-                        ? 'bg-[#2D6A4F] text-white shadow-md'
+                        ? 'bg-[#2D6A4F] text-white shadow-xs'
                         : 'bg-[#FAF9F5] border border-[#E3DFD5] text-[#582F0E] hover:bg-white'
                     }`}
                   >
@@ -309,11 +308,11 @@ function NavigateContent() {
             </div>
 
             {/* Overcrowding Diversion Switch */}
-            <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/60 flex items-center justify-between">
+            <div className="p-3 rounded-lg bg-amber-50/60 border border-amber-200/60 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <Sparkles className="w-5 h-5 text-[#2D6A4F]" />
+                <Sparkles className="w-4 h-4 text-[#2D6A4F]" />
                 <div>
-                  <span className="text-xs font-black text-[#582F0E] block">Algorithmic Crowd Diversion</span>
+                  <span className="text-xs font-bold text-[#582F0E] block">Algorithmic Crowd Diversion</span>
                   <span className="text-[10px] text-gray-600 block">
                     Penalize roads near peak tourist bottlenecks
                   </span>
@@ -322,13 +321,13 @@ function NavigateContent() {
               <button
                 type="button"
                 onClick={() => setAvoidCongested(!avoidCongested)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors cursor-pointer ${
                   avoidCongested ? 'bg-[#2D6A4F]' : 'bg-gray-300'
                 }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    avoidCongested ? 'translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    avoidCongested ? 'translate-x-5' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -337,41 +336,39 @@ function NavigateContent() {
 
           {/* Route Metrics Summary Card */}
           {route ? (
-            <OrganicBorder variant="woodland" seed="route-summary" density="subtle" cornerOnly={true}>
-              <div className="bg-[#FFFDF7] p-5 rounded-3xl border border-[#E8DCB8] shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Estimated Trip</span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-[#2D6A4F]">{route.summary.durationFormatted}</span>
-                      <span className="text-sm font-extrabold text-[#582F0E]">({route.summary.distanceKm} km)</span>
-                    </div>
+            <div className="bg-[#FFFDF7] p-4 sm:p-5 rounded-xl border border-[#E8DCB8] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider block">Estimated Trip</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-[#2D6A4F]">{route.summary.durationFormatted}</span>
+                    <span className="text-sm font-semibold text-[#582F0E]">({route.summary.distanceKm} km)</span>
                   </div>
-
-                  {route.summary.hasCrowdDiversion && (
-                    <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D6A4F] text-white text-xs font-black shadow-xs">
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Tranquil Route Active</span>
-                    </div>
-                  )}
                 </div>
 
-                <div className="text-xs text-gray-600 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <LocateFixed className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>Start: <b>Current Location / Lingayen</b></span>
+                {route.summary.hasCrowdDiversion && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2D6A4F] text-white text-xs font-bold shadow-xs">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Tranquil Route</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                    <span>End: <b>{destination.name}</b></span>
-                  </div>
+                )}
+              </div>
+
+              <div className="text-xs text-gray-600 space-y-1 pt-1 border-t border-[#E8DCB8]/60">
+                <div className="flex items-center gap-2">
+                  <LocateFixed className="w-3.5 h-3.5 text-[#FFB703]" />
+                  <span>Start: <b>Current Location / Lingayen</b></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                  <span>End: <b>{destination.name}</b></span>
                 </div>
               </div>
-            </OrganicBorder>
+            </div>
           ) : loadingRoute ? (
-            <div className="bg-white p-8 rounded-3xl border border-[#E3DFD5] text-center space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-[#2D6A4F] mx-auto" />
-              <p className="text-xs font-bold text-gray-500">Calculating Valhalla road graph...</p>
+            <div className="bg-white p-6 rounded-xl border border-[#E3DFD5] text-center space-y-2">
+              <Loader2 className="w-5 h-5 animate-spin text-[#2D6A4F] mx-auto" />
+              <p className="text-xs font-medium text-gray-500">Calculating Valhalla road graph...</p>
             </div>
           ) : null}
 
