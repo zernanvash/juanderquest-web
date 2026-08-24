@@ -57,6 +57,24 @@ export default function SpotDetailPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [comments, setComments] = useState(defaultMockTips);
   const [newComment, setNewComment] = useState('');
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  // Compute slides array from spot data
+  const slides = spot
+    ? [
+        spot.imageUrl,
+        '/bg_landscape.png',
+      ].filter(Boolean) as string[]
+    : ['/bg_landscape.png'];
+
+  // Auto-play slideshow every 6 seconds
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
 
   useEffect(() => {
     if (!slug) return;
@@ -192,34 +210,76 @@ export default function SpotDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Column: Visual Media, Overview, & Discussion Forum (7 cols) */}
             <div className="lg:col-span-7 space-y-6">
-              {/* Hero Image Banner */}
+              {/* Hero Image Slideshow Carousel (Stitch Slideshow Experience) */}
               <div className="bg-white rounded-3xl border border-[#E3DFD5] overflow-hidden shadow-xs">
-                <div className="relative w-full h-80 sm:h-96 bg-stone-100">
-                  {spot.imageUrl ? (
-                    <img
-                      src={spot.imageUrl}
-                      alt={spot.name}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
-                      }}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-[#837560]">
-                      <Camera className="w-12 h-12 mb-2 text-[#D5C4AC]" />
-                      <span className="text-xs font-bold">Pangasinan Scenic Destination</span>
+                <div className="relative w-full h-80 sm:h-[420px] bg-stone-900 group">
+                  {/* Current Active Slide Image */}
+                  <img
+                    src={slides[activeSlide] || spot.imageUrl || '/bg_landscape.png'}
+                    alt={`${spot.name} - View ${activeSlide + 1}`}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
+                    }}
+                    className="w-full h-full object-cover transition-all duration-700 transform scale-100"
+                  />
+
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none" />
+
+                  {/* Top Status & Quest Badges */}
+                  <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-auto">
+                    <span className="px-3.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white text-xs font-black flex items-center gap-1.5 shadow-md">
+                      <Camera className="w-3.5 h-3.5 text-[#FFB703]" />
+                      <span>{activeSlide + 1} / {slides.length}</span>
+                    </span>
+
+                    {spot.questId && (
+                      <div className="bg-[#FFB703] text-[#582F0E] px-3.5 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5 shadow-lg">
+                        <Trophy className="w-4 h-4" />
+                        <span>Quest Available (+250 mJDQ)</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Slideshow Previous / Next Controls */}
+                  {slides.length > 1 && (
+                    <div className="absolute inset-y-0 inset-x-3 flex items-center justify-between pointer-events-none">
+                      <button
+                        onClick={() => setActiveSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1))}
+                        className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 backdrop-blur-md text-white border border-white/20 flex items-center justify-center pointer-events-auto transition cursor-pointer active:scale-95 shadow-md"
+                        aria-label="Previous Slide"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setActiveSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1))}
+                        className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 backdrop-blur-md text-white border border-white/20 flex items-center justify-center pointer-events-auto transition cursor-pointer active:scale-95 shadow-md"
+                        aria-label="Next Slide"
+                      >
+                        <ArrowLeft className="w-4 h-4 rotate-180" />
+                      </button>
                     </div>
                   )}
 
-                  {spot.questId && (
-                    <div className="absolute top-4 right-4 bg-[#FFB703] text-[#582F0E] px-3.5 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5 shadow-lg">
-                      <Trophy className="w-4 h-4" />
-                      <span>Quest Available (+250 mJDQ)</span>
+                  {/* Slide Indicator Dots */}
+                  {slides.length > 1 && (
+                    <div className="absolute bottom-20 inset-x-0 flex items-center justify-center gap-2 z-10">
+                      {slides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveSlide(idx)}
+                          className={`h-2 rounded-full transition-all cursor-pointer ${
+                            activeSlide === idx ? 'w-6 bg-[#FFB703]' : 'w-2 bg-white/60 hover:bg-white'
+                          }`}
+                          aria-label={`Go to slide ${idx + 1}`}
+                        />
+                      ))}
                     </div>
                   )}
 
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <div className="bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 space-y-1">
+                  {/* Title & Location Overlay */}
+                  <div className="absolute bottom-4 left-4 right-4 text-white z-10">
+                    <div className="bg-black/50 backdrop-blur-md p-4 rounded-2xl border border-white/20 space-y-1">
                       <h1 className="text-xl sm:text-2xl font-black font-serif drop-shadow-sm">{spot.name}</h1>
                       <p className="text-xs text-amber-200 font-bold flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-[#48C71D]" />
