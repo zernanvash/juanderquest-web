@@ -7,6 +7,7 @@ import { api, buildSubmissionPayload, normalizeQuest, QuestModel } from '@/lib/a
 import { fetchWithCache } from '@/lib/cache';
 import { useAuth, useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
+import { OrganicBorder } from '@/components/OrganicBorder';
 import { Skeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
@@ -217,41 +218,44 @@ export default function QuestDetailPage() {
                 </div>
 
                 {/* Quest Overview & Objectives */}
-                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E3DFD5] shadow-xs space-y-4">
-                  <h2 className="text-sm font-black text-[#582F0E] uppercase tracking-wider">Mission Objectives:</h2>
-                  <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
-                    {quest.description}
-                  </p>
+                <OrganicBorder variant="golden-leaves" seed={quest.id} density="medium" badgeText="Eco Quest Bounty">
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E3DFD5] shadow-xs space-y-4">
+                    <h2 className="text-sm font-black text-[#582F0E] uppercase tracking-wider">Mission Objectives:</h2>
+                    <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
+                      {quest.description}
+                    </p>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                      <span className="text-[10px] text-gray-400 font-bold block">Reward Bounty</span>
-                      <span className="text-xs font-black text-emerald-700">+{quest.rewardPoints} mJDQ</span>
-                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                        <span className="text-[10px] text-gray-400 font-bold block">Reward Bounty</span>
+                        <span className="text-xs font-black text-emerald-700">+{quest.rewardPoints} mJDQ</span>
+                      </div>
 
-                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                      <span className="text-[10px] text-gray-400 font-bold block">Base Reward (PHP)</span>
-                      <span className="text-xs font-black text-[#582F0E]">₱{quest.baseRewardPhp}</span>
-                    </div>
+                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                        <span className="text-[10px] text-gray-400 font-bold block">Base Reward (PHP)</span>
+                        <span className="text-xs font-black text-[#582F0E]">₱{quest.baseRewardPhp}</span>
+                      </div>
 
-                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                      <span className="text-[10px] text-gray-400 font-bold block">GPS Radius</span>
-                      <span className="text-xs font-black text-[#7D5800]">{quest.radiusMeters}m</span>
-                    </div>
+                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                        <span className="text-[10px] text-gray-400 font-bold block">GPS Radius</span>
+                        <span className="text-xs font-black text-[#7D5800]">{quest.radiusMeters}m</span>
+                      </div>
 
-                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
-                      <span className="text-[10px] text-gray-400 font-bold block">Difficulty Factor</span>
-                      <span className="text-xs font-black text-[#582F0E]">{quest.difficultyFactor}x</span>
+                      <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                        <span className="text-[10px] text-gray-400 font-bold block">Difficulty Factor</span>
+                        <span className="text-xs font-black text-[#582F0E]">{quest.difficultyFactor}x</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </OrganicBorder>
               </div>
 
               {/* Right Column: In-Page AR Scanner & GPS Telemetry Workbench (5 cols) */}
               <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-20">
-                <div className="bg-[#0D1B2A] text-white rounded-3xl p-6 border border-white/20 shadow-xl space-y-5">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                    <div className="flex items-center gap-2">
+                <OrganicBorder variant="vines" seed={`${quest.id}-radar`} density="medium" badgeText="Live Radar Scanner">
+                  <div className="bg-[#0D1B2A] text-white rounded-3xl p-6 border border-white/20 shadow-xl space-y-5">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                      <div className="flex items-center gap-2">
                       <ScanLine className="w-5 h-5 text-[#FFB703] animate-pulse" />
                       <span className="text-xs font-black text-amber-200 uppercase tracking-wider">
                         AR Radar Scanner Workbench
@@ -369,6 +373,7 @@ export default function QuestDetailPage() {
                     </div>
                   )}
                 </div>
+              </OrganicBorder>
               </div>
             </div>
           )}

@@ -20,6 +20,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
+import { OrganicBorder } from '@/components/OrganicBorder';
 import { fetchRoute, RouteModel, api, SpotModel, normalizeSpot } from '@/lib/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -336,35 +337,37 @@ function NavigateContent() {
 
           {/* Route Metrics Summary Card */}
           {route ? (
-            <div className="bg-[#FFFDF7] p-5 rounded-3xl border border-[#E8DCB8] shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Estimated Trip</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-black text-[#2D6A4F]">{route.summary.durationFormatted}</span>
-                    <span className="text-sm font-extrabold text-[#582F0E]">({route.summary.distanceKm} km)</span>
+            <OrganicBorder variant="woodland" seed="route-summary" density="subtle" cornerOnly={true}>
+              <div className="bg-[#FFFDF7] p-5 rounded-3xl border border-[#E8DCB8] shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Estimated Trip</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-[#2D6A4F]">{route.summary.durationFormatted}</span>
+                      <span className="text-sm font-extrabold text-[#582F0E]">({route.summary.distanceKm} km)</span>
+                    </div>
                   </div>
+
+                  {route.summary.hasCrowdDiversion && (
+                    <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D6A4F] text-white text-xs font-black shadow-xs">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Tranquil Route Active</span>
+                    </div>
+                  )}
                 </div>
 
-                {route.summary.hasCrowdDiversion && (
-                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D6A4F] text-white text-xs font-black shadow-xs">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Tranquil Route Active</span>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <LocateFixed className="w-3.5 h-3.5 text-[#FFB703]" />
+                    <span>Start: <b>Current Location / Lingayen</b></span>
                   </div>
-                )}
-              </div>
-
-              <div className="text-xs text-gray-600 space-y-1">
-                <div className="flex items-center gap-2">
-                  <LocateFixed className="w-3.5 h-3.5 text-[#FFB703]" />
-                  <span>Start: <b>Current Location / Lingayen</b></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                  <span>End: <b>{destination.name}</b></span>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                    <span>End: <b>{destination.name}</b></span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </OrganicBorder>
           ) : loadingRoute ? (
             <div className="bg-white p-8 rounded-3xl border border-[#E3DFD5] text-center space-y-2">
               <Loader2 className="w-6 h-6 animate-spin text-[#2D6A4F] mx-auto" />
