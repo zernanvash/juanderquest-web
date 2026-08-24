@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api, buildSubmissionPayload, normalizeQuest, QuestModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { useAuth, useRequireAuth } from '@/lib/auth';
@@ -18,6 +19,10 @@ import {
   ArrowLeft,
   ScanLine,
   LocateFixed,
+  Navigation as NavIcon,
+  Sparkles,
+  Trophy,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface GpsFix {
@@ -36,7 +41,8 @@ export default function QuestDetailPage() {
   const [quest, setQuest] = useState<QuestModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [arModalOpen, setArModalOpen] = useState(false);
+
+  // In-Page AR Radar Scanner & GPS Telemetry State (No Modals)
   const [arScanning, setArScanning] = useState(false);
   const [arSuccess, setArSuccess] = useState(false);
   const [gps, setGps] = useState<GpsFix | null>(null);
@@ -44,7 +50,6 @@ export default function QuestDetailPage() {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
 
   const fetchQuestDetail = useCallback(async (forceRefresh = false) => {
     if (!questId) return;
@@ -72,7 +77,7 @@ export default function QuestDetailPage() {
     fetchQuestDetail();
   }, [fetchQuestDetail]);
 
-  // Real browser geolocation before any "GPS validated" claim.
+  // Real browser geolocation acquisition
   const acquireGps = useCallback(() => {
     setGpsState('acquiring');
     setGpsError(null);
@@ -94,24 +99,19 @@ export default function QuestDetailPage() {
         setGpsState('denied');
         setGpsError(
           err.code === err.PERMISSION_DENIED
-            ? 'Location permission denied. GPS is required to submit quest proof.'
-            : 'Could not acquire GPS position.'
+            ? 'Location permission denied. GPS fix is required to validate quest checkpoint radius.'
+            : 'Could not acquire GPS fix.'
         );
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, []);
 
-  const handleLaunchAr = () => {
-    setArModalOpen(true);
-    setArScanning(false);
-    setArSuccess(false);
-    setSubmitError(null);
-    acquireGps();
-  };
-
   const handleSimulateArScan = () => {
-    if (gpsState !== 'ready' || !gps) return;
+    if (gpsState !== 'ready' || !gps) {
+      acquireGps();
+      return;
+    }
     setArScanning(true);
     setTimeout(() => {
       setArScanning(false);
@@ -128,8 +128,7 @@ export default function QuestDetailPage() {
       const res = await api.post('/submissions', buildSubmissionPayload(quest, gps));
 
       if (res.data?.success) {
-        setArModalOpen(false);
-        router.push('/history');
+        router.push('/history?success=submitted');
       } else {
         setSubmitError(res.data?.error?.message || 'Submission failed');
       }
@@ -139,256 +138,237 @@ export default function QuestDetailPage() {
     setSubmitting(false);
   };
 
-  // Dialog behavior: Escape closes, focus moves into dialog.
-  useEffect(() => {
-    if (!arModalOpen) return;
-    dialogRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setArModalOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [arModalOpen]);
-
   if (!isReady) return null;
 
   return (
     <Navigation>
       <ErrorBoundary fallbackTitle="Unable to display Quest Details">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <button
-            onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-xs font-extrabold text-[#7D5800] hover:text-[#582F0E] transition cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Quest Feed</span>
-          </button>
+        <div className="space-y-6">
+          {/* Breadcrumbs */}
+          <div className="flex items-center justify-between">
+            <Link
+              href="/quests"
+              className="inline-flex items-center gap-2 text-xs font-black text-[#7D5800] hover:text-[#582F0E] transition"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Quest Trails</span>
+            </Link>
+
+            {quest && (
+              <Link
+                href={`/navigate?name=${encodeURIComponent(quest.locationName)}&lat=${quest.gpsLat}&lng=${quest.gpsLng}&address=${encodeURIComponent(quest.locationName)}`}
+                className="inline-flex items-center gap-2 text-xs font-black text-[#2D6A4F] hover:underline"
+              >
+                <NavIcon className="w-3.5 h-3.5" />
+                <span>Navigate to Trailhead</span>
+              </Link>
+            )}
+          </div>
 
           {loading ? (
-            <div className="bg-white rounded-3xl p-6 border border-[#E3DFD5] space-y-6 shadow-xs" aria-busy="true" aria-label="Loading quest details">
-              <Skeleton className="w-full h-64 md:h-80 rounded-2xl" />
+            <div className="bg-white rounded-3xl p-8 border border-[#E3DFD5] space-y-6 shadow-xs">
+              <Skeleton className="w-full h-80 rounded-2xl" />
               <div className="space-y-3">
-                <Skeleton className="w-1/3 h-5 rounded-md" />
+                <Skeleton className="w-1/3 h-6 rounded-md" />
                 <Skeleton className="w-full h-4 rounded-md" />
                 <Skeleton className="w-5/6 h-4 rounded-md" />
               </div>
-              <Skeleton className="w-full h-24 rounded-2xl" />
-              <Skeleton className="w-full h-14 rounded-2xl" />
             </div>
           ) : error || !quest ? (
             <div className="bg-white p-8 rounded-3xl border border-red-200 text-center text-xs text-[#BC4749] space-y-4 shadow-xs">
               <p className="font-bold">{error || 'Quest details not found.'}</p>
               <button
                 onClick={() => fetchQuestDetail(true)}
-                className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold transition cursor-pointer active:scale-95"
+                className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold cursor-pointer active:scale-95"
               >
                 Retry
               </button>
             </div>
           ) : (
-            <div className="bg-[#FFFDF7] rounded-3xl p-6 md:p-8 border border-[#E8DCB8] shadow-sm space-y-6">
-              {/* Hero Banner Header with Green Circular Back Button */}
-              <div className="relative rounded-2xl overflow-hidden h-64 md:h-80 shadow-md bg-stone-100">
-                <img
-                  src={quest.markerImageUrl || '/bg_landscape.png'}
-                  alt={quest.title}
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
-                  }}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                
-                <button
-                  onClick={() => router.push('/quests')}
-                  className="absolute top-4 left-4 w-10 h-10 rounded-full bg-[#48C71D] hover:bg-[#3FB418] text-white flex items-center justify-center shadow-lg transition cursor-pointer active:scale-95"
-                  aria-label="Back to Quests"
-                >
-                  <ArrowLeft className="w-5 h-5 stroke-[3]" />
-                </button>
+            /* Expansive 2-Column Quest Layout (No Modal Overlays) */
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Left Column: Quest Identity, Landmark Imagery, Description (7 cols) */}
+              <div className="lg:col-span-7 space-y-6">
+                {/* Hero Banner Header */}
+                <div className="relative rounded-3xl overflow-hidden h-80 sm:h-96 shadow-sm border border-[#E3DFD5] bg-stone-100">
+                  <img
+                    src={quest.markerImageUrl || '/bg_landscape.png'}
+                    alt={quest.title}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-                <div className="absolute bottom-4 left-4 right-4 text-white space-y-1">
-                  <h1 className="text-2xl md:text-4xl font-extrabold font-serif drop-shadow-md">{quest.title}</h1>
-                  <div className="flex items-center gap-2 text-xs md:text-sm text-amber-200 font-bold">
-                    <MapPin className="w-4 h-4 text-[#48C71D]" />
-                    <span>{quest.locationName}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Detailed Overview Section */}
-              <div className="space-y-2">
-                <h2 className="text-sm font-black text-[#582F0E] uppercase tracking-wider">Detailed Overview:</h2>
-                <p className="text-xs md:text-sm text-[#514532] leading-relaxed">
-                  {quest.description} Discover the authentic charm of {quest.locationName}. This destination offers scenic eco-trails, rich cultural heritage, and verified community interaction for travelers in Pangasinan.
-                </p>
-              </div>
-
-              {/* Activity Details Section */}
-              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/50 space-y-3 text-xs text-[#514532]">
-                <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">Activity Details:</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-semibold">
-                  <div>
-                    <span className="block text-[10px] text-gray-500 font-bold">Category</span>
-                    <span className="font-extrabold text-[#582F0E] capitalize">{quest.category.replace('_', ' ')}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-gray-500 font-bold">Base Reward</span>
-                    <span className="font-extrabold text-emerald-700">₱{quest.baseRewardPhp} ({quest.rewardPoints} mJDQ)</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-gray-500 font-bold">Difficulty</span>
-                    <span className="font-extrabold text-[#7D5800]">{quest.difficultyFactor}x</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] text-gray-500 font-bold">GPS Radius</span>
-                    <span className="font-extrabold text-[#582F0E]">{quest.radiusMeters}m</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main CTA Button: Join the Activity / Launch AR */}
-              <button
-                onClick={handleLaunchAr}
-                className="w-full inline-flex items-center justify-center gap-3 bg-[#48C71D] hover:bg-[#3FB418] text-white font-extrabold py-4 px-6 rounded-2xl shadow-xl hover:scale-[1.01] transition transform text-sm tracking-wide cursor-pointer active:scale-95"
-              >
-                <Camera className="w-5 h-5 text-white" />
-                <span>Join the Activity &amp; Scan AR Marker</span>
-              </button>
-            </div>
-          )}
-
-          {arModalOpen && quest && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-              <div
-                ref={dialogRef}
-                role="dialog"
-                aria-modal="true"
-                aria-label="AR Radar Scanner"
-                tabIndex={-1}
-                className="bg-[#0D1B2A] text-white max-w-lg w-full rounded-3xl p-6 border border-white/20 shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto outline-none"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ScanLine className="w-5 h-5 text-[#FFB703] animate-pulse" />
-                    <span className="text-xs font-bold text-amber-200 uppercase tracking-wider">
-                      AR RADAR SCANNER ENGINE
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full bg-[#FFB703] text-[#582F0E] text-xs font-black uppercase tracking-wider shadow-md">
+                      {quest.category.replace('_', ' ')} Trail
                     </span>
                   </div>
-                  <button
-                    onClick={() => setArModalOpen(false)}
-                    className="text-xs font-bold text-gray-400 hover:text-white px-3 py-1 bg-white/10 rounded-lg cursor-pointer"
-                  >
-                    Close
-                  </button>
+
+                  <div className="absolute bottom-6 left-6 right-6 text-white space-y-1.5">
+                    <h1 className="text-2xl sm:text-3xl font-black font-serif drop-shadow-md">{quest.title}</h1>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-200 font-bold">
+                      <MapPin className="w-4 h-4 text-[#48C71D]" />
+                      <span>{quest.locationName}</span>
+                    </div>
+                  </div>
                 </div>
 
-                {gpsState !== 'ready' ? (
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-bold">
-                      <LocateFixed className="w-5 h-5 text-[#FFB703]" />
-                      <span>
-                        {gpsState === 'acquiring' ? 'Acquiring your GPS position...' : 'GPS position required'}
+                {/* Quest Overview & Objectives */}
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E3DFD5] shadow-xs space-y-4">
+                  <h2 className="text-sm font-black text-[#582F0E] uppercase tracking-wider">Mission Objectives:</h2>
+                  <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
+                    {quest.description}
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-bold block">Reward Bounty</span>
+                      <span className="text-xs font-black text-emerald-700">+{quest.rewardPoints} mJDQ</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-bold block">Base Reward (PHP)</span>
+                      <span className="text-xs font-black text-[#582F0E]">₱{quest.baseRewardPhp}</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-bold block">GPS Radius</span>
+                      <span className="text-xs font-black text-[#7D5800]">{quest.radiusMeters}m</span>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
+                      <span className="text-[10px] text-gray-400 font-bold block">Difficulty Factor</span>
+                      <span className="text-xs font-black text-[#582F0E]">{quest.difficultyFactor}x</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: In-Page AR Scanner & GPS Telemetry Workbench (5 cols) */}
+              <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-20">
+                <div className="bg-[#0D1B2A] text-white rounded-3xl p-6 border border-white/20 shadow-xl space-y-5">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                    <div className="flex items-center gap-2">
+                      <ScanLine className="w-5 h-5 text-[#FFB703] animate-pulse" />
+                      <span className="text-xs font-black text-amber-200 uppercase tracking-wider">
+                        AR Radar Scanner Workbench
                       </span>
                     </div>
-                    {gpsState === 'acquiring' && <Loader2 className="w-6 h-6 animate-spin text-[#FFB703]" />}
-                    {gpsState === 'denied' && (
-                      <>
-                        <p className="text-xs text-red-300">{gpsError}</p>
+                    <span className="text-[10px] text-gray-400 font-mono">Pangasinan LGU Geo-Fence</span>
+                  </div>
+
+                  {/* GPS Telemetry Fix Status */}
+                  {gpsState !== 'ready' ? (
+                    <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                        <LocateFixed className="w-4 h-4 text-[#FFB703]" />
+                        <span>
+                          {gpsState === 'acquiring' ? 'Acquiring high-accuracy GPS fix...' : 'GPS telemetry required for verification'}
+                        </span>
+                      </div>
+                      {gpsState === 'acquiring' && <Loader2 className="w-6 h-6 animate-spin text-[#FFB703] mx-auto" />}
+                      {gpsState === 'denied' && (
+                        <>
+                          <p className="text-xs text-red-300 leading-relaxed">{gpsError}</p>
+                          <button
+                            onClick={acquireGps}
+                            className="w-full py-2.5 rounded-xl bg-[#FFB703] text-[#582F0E] text-xs font-black transition cursor-pointer active:scale-95"
+                          >
+                            Retry GPS Acquisition
+                          </button>
+                        </>
+                      )}
+                      {gpsState === 'idle' && (
                         <button
                           onClick={acquireGps}
-                          className="px-4 py-2 rounded-xl bg-[#FFB703] text-[#582F0E] text-xs font-black cursor-pointer active:scale-95"
+                          className="w-full py-3 rounded-2xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black transition cursor-pointer active:scale-95"
                         >
-                          Try Again
+                          Enable GPS Telemetry
                         </button>
-                      </>
-                    )}
-                    {gpsState === 'idle' && (
-                      <button
-                        onClick={acquireGps}
-                        className="px-4 py-2 rounded-xl bg-[#FFB703] text-[#582F0E] text-xs font-black cursor-pointer active:scale-95"
-                      >
-                        Enable GPS
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <div className="h-64 rounded-2xl bg-black border-2 border-[#FFB703] relative flex flex-col items-center justify-center p-6 text-center overflow-hidden">
-                      {arScanning && (
-                        <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#FFB703] to-transparent animate-scan shadow-[0_0_15px_#FFB703]" />
-                      )}
-
-                      {arScanning ? (
-                        <div className="space-y-3 relative z-10">
-                          <Loader2 className="w-10 h-10 animate-spin text-[#FFB703] mx-auto" />
-                          <div className="text-xs font-extrabold text-amber-200 tracking-wider break-all">
-                            SCANNING MARKER: {quest.markerCode}
-                          </div>
-                          {gps && (
-                            <div className="text-[10px] text-gray-400 font-mono">
-                              GPS Fix: [{gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}] ±{gps.accuracy.toFixed(1)}m
-                            </div>
-                          )}
-                        </div>
-                      ) : arSuccess ? (
-                        <div className="space-y-3 relative z-10 animate-float">
-                          <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto" />
-                          <div className="text-base font-black text-emerald-400">
-                            Target Marker Verified!
-                          </div>
-                          <div className="text-xs text-gray-300 break-all">
-                            GPS fix {gps?.accuracy.toFixed(1)}m accuracy — submission will be validated
-                            against the {quest.radiusMeters}m radius.
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3 relative z-10">
-                          <div className="text-xs text-gray-400">Press scan to evaluate AR marker</div>
-                          {gps && (
-                            <div className="text-[10px] text-emerald-300 font-mono">
-                              GPS Ready: [{gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}] ±{gps.accuracy.toFixed(1)}m
-                            </div>
-                          )}
-                        </div>
                       )}
                     </div>
+                  ) : (
+                    <>
+                      {/* Integrated Scanner HUD Canvas */}
+                      <div className="h-64 rounded-2xl bg-black border-2 border-[#FFB703] relative flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+                        {arScanning && (
+                          <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#FFB703] to-transparent animate-scan shadow-[0_0_15px_#FFB703]" />
+                        )}
 
-                    {!arScanning && !arSuccess && (
-                      <button
-                        onClick={handleSimulateArScan}
-                        className="w-full inline-flex items-center justify-center gap-2 bg-[#FFB703] text-[#582F0E] font-black py-3.5 px-6 rounded-2xl shadow-xl text-sm cursor-pointer active:scale-95"
-                      >
-                        <ScanLine className="w-4 h-4" />
-                        <span>Scan AR Marker</span>
-                      </button>
-                    )}
-                  </>
-                )}
+                        {arScanning ? (
+                          <div className="space-y-3 relative z-10">
+                            <Loader2 className="w-10 h-10 animate-spin text-[#FFB703] mx-auto" />
+                            <div className="text-xs font-black text-amber-200 tracking-wider break-all">
+                              SCANNING MARKER: {quest.markerCode}
+                            </div>
+                            {gps && (
+                              <div className="text-[10px] text-gray-400 font-mono">
+                                GPS Fix: [{gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}] ±{gps.accuracy.toFixed(1)}m
+                              </div>
+                            )}
+                          </div>
+                        ) : arSuccess ? (
+                          <div className="space-y-2 relative z-10">
+                            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
+                            <div className="text-sm font-black text-emerald-400">
+                              Target Marker Verified!
+                            </div>
+                            <div className="text-[11px] text-gray-300">
+                              GPS Accuracy: ±{gps?.accuracy.toFixed(1)}m (Target radius: {quest.radiusMeters}m)
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 relative z-10">
+                            <div className="text-xs font-bold text-gray-300">Target AR Marker Ready</div>
+                            {gps && (
+                              <div className="text-[11px] text-emerald-300 font-mono">
+                                GPS Ready: [{gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}] ±{gps.accuracy.toFixed(1)}m
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
-                {submitError && (
-                  <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span className="break-all">{submitError}</span>
-                  </div>
-                )}
+                      {/* Action Trigger Buttons */}
+                      {!arScanning && !arSuccess && (
+                        <button
+                          onClick={handleSimulateArScan}
+                          className="w-full inline-flex items-center justify-center gap-2 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black py-4 px-6 rounded-2xl shadow-xl text-xs transition active:scale-95 cursor-pointer"
+                        >
+                          <ScanLine className="w-4 h-4" />
+                          <span>Scan AR Landmark Marker</span>
+                        </button>
+                      )}
 
-                {arSuccess && (
-                  <button
-                    onClick={handleSubmitProof}
-                    disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 gold-gradient text-[#582F0E] font-black py-4 px-6 rounded-2xl shadow-xl hover:scale-[1.02] transition text-sm cursor-pointer active:scale-95"
-                  >
-                    {submitting ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span>Submit Proof to Backend</span>
-                      </>
-                    )}
-                  </button>
-                )}
+                      {arSuccess && (
+                        <button
+                          onClick={handleSubmitProof}
+                          disabled={submitting}
+                          className="w-full inline-flex items-center justify-center gap-2 bg-[#48C71D] hover:bg-[#3FB418] text-white font-black py-4 px-6 rounded-2xl shadow-xl text-sm transition active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          {submitting ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-5 h-5" />
+                              <span>Submit Proof to Backend (+{quest.rewardPoints} mJDQ)</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {submitError && (
+                    <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span className="break-all">{submitError}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

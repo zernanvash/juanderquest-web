@@ -145,15 +145,21 @@ export default function QuestsPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 pt-3.5 border-t border-[#E3DFD5]/70 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-[#7D5800]">GPS &amp; Marker Verified</span>
+                <div className="mt-5 pt-3.5 border-t border-[#E3DFD5]/70 flex items-center justify-between gap-2">
+                  <Link
+                    href={`/navigate?name=${encodeURIComponent(quest.locationName)}&lat=${quest.gpsLat}&lng=${quest.gpsLng}&address=${encodeURIComponent(quest.locationName)}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-[#2D6A4F] transition"
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>Navigate</span>
+                  </Link>
 
                   <Link
                     href={`/quests/${quest.id}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-black text-[#2D6A4F] group-hover:text-[#1B4332] group-hover:translate-x-0.5 transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-black shadow-xs group-hover:translate-x-0.5 transition"
                   >
                     <span>Start Quest</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </article>

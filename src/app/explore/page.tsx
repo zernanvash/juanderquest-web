@@ -464,15 +464,13 @@ export default function ExplorePage() {
                               </Link>
                             )}
 
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${spot.gpsLat},${spot.gpsLng}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <Link
+                              href={`/navigate?name=${encodeURIComponent(spot.name)}&lat=${spot.gpsLat}&lng=${spot.gpsLng}&address=${encodeURIComponent(spot.address)}`}
                               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold shadow-xs transition"
                             >
                               <MapPin className="w-3.5 h-3.5" />
-                              <span>Directions</span>
-                            </a>
+                              <span>Navigate</span>
+                            </Link>
                           </div>
                         </div>
 
