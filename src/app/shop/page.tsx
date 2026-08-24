@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth, useRequireAuth } from '@/lib/auth';
 import { api, normalizeVoucher, normalizeRedemption, uuid, VoucherModel, RedemptionModel } from '@/lib/api';
+import { fetchWithCache } from '@/lib/cache';
 import { Navigation } from '@/components/Navigation';
-import { ShoppingBag, Award, Coins, CheckCircle2, Ticket, Sparkles, Gift, Loader2, AlertCircle } from 'lucide-react';
+import { VoucherCardSkeleton } from '@/components/Skeleton';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ShoppingBag, Award, Coins, CheckCircle2, Ticket, Sparkles, Gift, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function ShopPage() {
   const { user, refreshProfile } = useAuth();
@@ -17,25 +20,30 @@ export default function ShopPage() {
   const [redeemError, setRedeemError] = useState<string | null>(null);
   const [redemption, setRedemption] = useState<RedemptionModel | null>(null);
 
-  const fetchVouchers = async () => {
+  const fetchVouchers = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await api.get('/vouchers');
-      if (res.data?.success) {
-        setVouchers((res.data.data as Parameters<typeof normalizeVoucher>[0][]).map(normalizeVoucher));
-      } else {
-        setFetchError('The rewards bazaar is unavailable right now.');
-      }
-    } catch (e) {
+      const { data: rawVouchers } = await fetchWithCache(
+        'merchant_vouchers',
+        async () => {
+          const res = await api.get('/vouchers');
+          if (!res.data?.success) throw new Error('Vouchers unavailable');
+          return (res.data.data as Parameters<typeof normalizeVoucher>[0][]).map(normalizeVoucher);
+        },
+        { ttlMs: 120_000, forceRefresh }
+      );
+      setVouchers(rawVouchers);
+    } catch {
       setFetchError('Could not reach the merchant server.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     fetchVouchers();
-  }, []);
+  }, [fetchVouchers]);
 
   const handleRedeem = async () => {
     if (!selectedVoucher) return;
@@ -66,45 +74,47 @@ export default function ShopPage() {
 
   return (
     <Navigation>
-      <div className="space-y-8 max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-[#7D5800] uppercase tracking-wider mb-1">
-              <Gift className="w-4 h-4 text-[#FFB703]" />
-              <span>COLLECTIBLE REWARDS BAZAAR</span>
-            </div>
-            <h1 className="text-3xl font-extrabold font-serif text-[#582F0E]">Merchant Vouchers</h1>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-[#D5C4AC]/50 flex items-center gap-3 shrink-0 shadow-sm">
-            <Coins className="w-6 h-6 text-[#7D5800]" />
+      <ErrorBoundary fallbackTitle="Unable to display Merchant Vouchers">
+        <div className="space-y-8 max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="text-[10px] font-extrabold text-[#837560] uppercase">Reward Points</div>
-              <div className="text-base font-black text-[#7D5800]">
-                {user ? `${user.points} PTS` : '—'}
+              <div className="flex items-center gap-2 text-xs font-bold text-[#7D5800] uppercase tracking-wider mb-1">
+                <Gift className="w-4 h-4 text-[#FFB703]" />
+                <span>COLLECTIBLE REWARDS BAZAAR</span>
+              </div>
+              <h1 className="text-3xl font-extrabold font-serif text-[#582F0E]">Merchant Vouchers</h1>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-[#D5C4AC]/50 flex items-center gap-3 shrink-0 shadow-sm">
+              <Coins className="w-6 h-6 text-[#7D5800]" />
+              <div>
+                <div className="text-[10px] font-extrabold text-[#837560] uppercase">Reward Points</div>
+                <div className="text-base font-black text-[#7D5800]">
+                  {user ? `${user.points} PTS` : '—'}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-[#837560]">
-            <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
-            <span className="text-xs font-bold text-[#582F0E]">Loading merchant vouchers...</span>
-          </div>
-        ) : fetchError ? (
-          <div className="bg-white p-12 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4">
-            <p>{fetchError}</p>
-            <button
-              onClick={fetchVouchers}
-              className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" aria-busy="true" aria-label="Loading vouchers">
+              <VoucherCardSkeleton />
+              <VoucherCardSkeleton />
+              <VoucherCardSkeleton />
+            </div>
+          ) : fetchError ? (
+            <div className="bg-white p-12 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4 shadow-xs">
+              <p>{fetchError}</p>
+              <button
+                onClick={() => fetchVouchers(true)}
+                className="px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {vouchers.map((v) => (
               <div
                 key={v.id}
@@ -229,6 +239,7 @@ export default function ShopPage() {
           </div>
         )}
       </div>
+      </ErrorBoundary>
     </Navigation>
   );
 }

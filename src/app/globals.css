@@ -25,6 +25,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Custom Animations */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes scan-beam {
   0% { transform: translateY(-100%); opacity: 0.3; }
   50% { opacity: 1; }
@@ -41,6 +47,10 @@ h1, h2, h3, h4, h5, h6 {
   50% { box-shadow: 0 0 30px rgba(255, 183, 3, 0.7); }
 }
 
+.animate-shimmer {
+  animation: shimmer 1.8s infinite;
+}
+
 .animate-scan {
   animation: scan-beam 2.5s infinite linear;
 }
@@ -51,6 +61,16 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-glow {
   animation: pulse-glow 3s infinite ease-in-out;
+}
+
+/* Touch targets and accessible interaction states */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid #2D6A4F;
+  outline-offset: 2px;
 }
 
 .glass-card {

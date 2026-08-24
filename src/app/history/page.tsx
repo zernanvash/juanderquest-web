@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api, normalizeSubmission, SubmissionModel } from '@/lib/api';
+import { fetchWithCache } from '@/lib/cache';
 import { useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { History, CheckCircle2, XCircle, Clock, MapPin, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/Skeleton';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { History, CheckCircle2, XCircle, Clock, MapPin } from 'lucide-react';
 
 export default function HistoryPage() {
   const { isReady } = useRequireAuth();
@@ -12,64 +15,71 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSubmissions();
-  }, []);
-
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/submissions');
-      if (res.data?.success) {
-        setSubmissions((res.data.data as Parameters<typeof normalizeSubmission>[0][]).map(normalizeSubmission));
-      } else {
-        setError('Your submission history is unavailable right now.');
-      }
-    } catch (e) {
+      const { data: rawSubmissions } = await fetchWithCache(
+        'user_submissions',
+        async () => {
+          const res = await api.get('/submissions');
+          if (!res.data?.success) throw new Error('Submissions unavailable');
+          return (res.data.data as Parameters<typeof normalizeSubmission>[0][]).map(normalizeSubmission);
+        },
+        { ttlMs: 60_000, forceRefresh }
+      );
+      setSubmissions(rawSubmissions);
+    } catch {
       setError('Could not reach the quest server.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [fetchSubmissions]);
 
   if (!isReady) return null;
 
   return (
     <Navigation>
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold font-serif text-[#582F0E]">Submissions & Proof History</h1>
-            <p className="text-xs text-[#514532]">Track status of submitted AR quest proof verifications.</p>
-          </div>
-          <button
-            onClick={fetchSubmissions}
-            className="px-4 py-2 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
-          >
-            Refresh
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-[#837560]">
-            <Loader2 className="w-8 h-8 animate-spin text-[#3F6653] mb-2" />
-            <span className="text-xs font-medium">Loading submission history...</span>
-          </div>
-        ) : error ? (
-          <div className="bg-white p-8 rounded-2xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4">
-            <p>{error}</p>
+      <ErrorBoundary fallbackTitle="Unable to display Submission History">
+        <div className="space-y-6 max-w-4xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-extrabold font-serif text-[#582F0E]">Submissions &amp; Proof History</h1>
+              <p className="text-xs text-[#514532]">Track status of submitted AR quest proof verifications.</p>
+            </div>
             <button
-              onClick={fetchSubmissions}
-              className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
+              onClick={() => fetchSubmissions(true)}
+              className="px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold transition cursor-pointer active:scale-95 shadow-xs"
             >
-              Retry
+              Refresh
             </button>
           </div>
-        ) : submissions.length === 0 ? (
-          <div className="bg-white p-8 rounded-2xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
-            No proof submissions found. Complete a quest to earn reward points.
-          </div>
-        ) : (
+
+          {loading ? (
+            <div className="space-y-4" aria-busy="true" aria-label="Loading submissions">
+              <Skeleton className="w-full h-28 rounded-2xl" />
+              <Skeleton className="w-full h-28 rounded-2xl" />
+              <Skeleton className="w-full h-28 rounded-2xl" />
+            </div>
+          ) : error ? (
+            <div className="bg-white p-8 rounded-2xl border border-red-200 text-center text-xs text-[#BC4749] space-y-4 shadow-xs">
+              <p className="font-bold">{error}</p>
+              <button
+                onClick={() => fetchSubmissions(true)}
+                className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
+              >
+                Retry
+              </button>
+            </div>
+          ) : submissions.length === 0 ? (
+            <div className="bg-white p-8 rounded-2xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] shadow-xs">
+              No proof submissions found. Complete a quest to earn reward points.
+            </div>
+          ) : (
           <div className="space-y-4">
             {submissions.map((sub) => {
               const isApproved = sub.status === 'approved';
@@ -142,6 +152,7 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
+      </ErrorBoundary>
     </Navigation>
   );
 }

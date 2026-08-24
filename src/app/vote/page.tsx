@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api, normalizeGovernanceConfig, normalizeProposal, ProposalModel, GovernanceConfigModel, computeVoteFeeSplit } from '@/lib/api';
+import { fetchWithCache } from '@/lib/cache';
 import { useAuth, useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
+import { ProposalCardSkeleton } from '@/components/Skeleton';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   Vote,
   PlusCircle,
@@ -12,12 +15,12 @@ import {
   Wallet,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Flame,
   Vault,
   Sparkles,
   Users,
   Clock,
+  Loader2,
 } from 'lucide-react';
 
 const VOTED_KEY = (proposalId: string) => `jdq_voted_${proposalId}`;
@@ -47,6 +50,44 @@ export default function VotePage() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationSuccess, setLocationSuccess] = useState<string | null>(null);
 
+  const fetchProposals = useCallback(async (forceRefresh = false) => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const { data: rawProposals } = await fetchWithCache(
+        'governance_proposals',
+        async () => {
+          const res = await api.get('/proposals');
+          if (!res.data?.success) throw new Error('Proposals unavailable');
+          return (res.data.data as Parameters<typeof normalizeProposal>[0][]).map(normalizeProposal);
+        },
+        { ttlMs: 120_000, forceRefresh }
+      );
+      setProposals(rawProposals);
+    } catch {
+      setFetchError('Could not reach the governance server.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const { data: rawConfig } = await fetchWithCache(
+        'governance_config',
+        async () => {
+          const res = await api.get('/proposals/config');
+          if (!res.data?.success) throw new Error('Config unavailable');
+          return normalizeGovernanceConfig(res.data.data);
+        },
+        { ttlMs: 300_000 }
+      );
+      setConfig(rawConfig);
+    } catch (e) {
+      console.error('Failed to load governance config', e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProposals();
     fetchConfig();
@@ -61,34 +102,7 @@ export default function VotePage() {
       }
     });
     setVotedMap(restored);
-  }, []);
-
-  const fetchProposals = async () => {
-    setLoading(true);
-    setFetchError(null);
-    try {
-      const res = await api.get('/proposals');
-      if (res.data?.success) {
-        setProposals((res.data.data as Parameters<typeof normalizeProposal>[0][]).map(normalizeProposal));
-      } else {
-        setFetchError('The voting arena is unavailable right now.');
-      }
-    } catch (e) {
-      setFetchError('Could not reach the governance server.');
-    }
-    setLoading(false);
-  };
-
-  const fetchConfig = async () => {
-    try {
-      const res = await api.get('/proposals/config');
-      if (res.data?.success) {
-        setConfig(normalizeGovernanceConfig(res.data.data));
-      }
-    } catch (e) {
-      console.error('Failed to load governance config', e);
-    }
-  };
+  }, [fetchProposals, fetchConfig]);
 
   const handleCastVote = async () => {
     if (!voteModalProposal) return;
@@ -98,61 +112,56 @@ export default function VotePage() {
     const idempotencyKey = `vote_${voteModalProposal.id}_${Date.now()}`;
 
     try {
-      const res = await api.post(`/proposals/${voteModalProposal.id}/votes`, {
-        choice: voteChoice,
+      const res = await api.post(`/proposals/${voteModalProposal.id}/vote`, {
         idempotency_key: idempotencyKey,
+        choice: voteChoice,
       });
 
       if (res.data?.success) {
-        const proposalId = voteModalProposal.id;
-        localStorage.setItem(VOTED_KEY(proposalId), voteChoice);
-        setVotedMap((prev) => ({ ...prev, [proposalId]: voteChoice }));
+        localStorage.setItem(VOTED_KEY(voteModalProposal.id), voteChoice);
+        setVotedMap((prev) => ({ ...prev, [voteModalProposal.id]: voteChoice }));
+        await fetchProposals(true);
         await refreshWallet();
-        await fetchProposals();
         setVoteModalProposal(null);
       } else {
-        setVoteError(res.data?.error?.message || 'Vote failed');
+        setVoteError(res.data?.error?.message || 'Vote submission failed.');
       }
     } catch (e: any) {
-      setVoteError(e.response?.data?.error?.message || 'Failed to cast vote. Check balance and eligibility.');
+      setVoteError(e.response?.data?.error?.message || 'Failed to submit vote.');
     }
     setVoting(false);
   };
 
   const handleSuggestLocation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !locationName) return;
+    if (!title || !locationName || !description) {
+      setLocationError('Please fill out all required fields.');
+      return;
+    }
+
     setSubmittingLocation(true);
     setLocationError(null);
     setLocationSuccess(null);
 
     try {
-      const createRes = await api.post('/proposals', {
+      const res = await api.post('/proposals', {
         title,
         location_name: locationName,
         category,
-        description: description || 'Community suggested Pangasinan destination.',
+        description,
       });
 
-      if (!createRes.data?.success) {
-        setLocationError(createRes.data?.error?.message || 'Proposal creation failed');
-        setSubmittingLocation(false);
-        return;
+      if (res.data?.success) {
+        setLocationSuccess('Proposal submitted! It is now pending admin screening.');
+        setTitle('');
+        setLocationName('');
+        setDescription('');
+        await fetchProposals(true);
+      } else {
+        setLocationError(res.data?.error?.message || 'Failed to create proposal.');
       }
-
-      const newId = createRes.data.data.id;
-      await api.post(`/proposals/${newId}/submit`);
-      setLocationSuccess(`Location proposal "${title}" submitted for admin screening!`);
-      setTitle('');
-      setLocationName('');
-      setDescription('');
-      setTimeout(() => {
-        setSuggestModalOpen(false);
-        setLocationSuccess(null);
-        fetchProposals();
-      }, 1800);
-    } catch (err: any) {
-      setLocationError(err.response?.data?.error?.message || 'Could not submit proposal.');
+    } catch (e: any) {
+      setLocationError(e.response?.data?.error?.message || 'Error submitting proposal.');
     }
     setSubmittingLocation(false);
   };
@@ -163,90 +172,91 @@ export default function VotePage() {
 
   return (
     <Navigation>
-      <div className="space-y-8 max-w-5xl mx-auto">
-        {/* Banner Arena Hero */}
-        <div className="bg-white rounded-3xl p-8 border-2 border-[#FFB703] shadow-md relative overflow-hidden">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#FFB703]" />
-                <span className="text-xs font-black tracking-wider text-[#7D5800] uppercase">
-                  COMMUNITY VOTING ARENA
-                </span>
-                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#2D6A4F]/10 text-[#2D6A4F]">
-                  POWERED BY mJDQ
-                </span>
+      <ErrorBoundary fallbackTitle="Unable to display Governance Proposals">
+        <div className="space-y-8 max-w-5xl mx-auto">
+          {/* Header Banner */}
+          <div className="p-6 md:p-8 rounded-3xl bg-white border border-[#D5C4AC]/60 shadow-sm relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#FFB703]" />
+                  <span className="text-xs font-black tracking-wider text-[#7D5800] uppercase">
+                    COMMUNITY VOTING ARENA
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#2D6A4F]/10 text-[#2D6A4F]">
+                    POWERED BY mJDQ
+                  </span>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E]">
+                  Govern Pangasinan Tourism Spots
+                </h1>
+                <p className="text-xs md:text-sm text-[#514532] max-w-xl leading-relaxed">
+                  {config
+                    ? `Cast paid binary votes (${voteFeeSplit?.fee} mJDQ per vote). ${(config.burnBps / 100).toFixed(0)}% is burned permanently, the rest enters community reward escrow.`
+                    : 'Cast paid binary votes to approve destination proposals. Fees come from the live governance config and are disclosed before you confirm.'}
+                </p>
               </div>
-              <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E]">
-                Govern Pangasinan Tourism Spots
-              </h1>
-              <p className="text-xs md:text-sm text-[#514532] max-w-xl leading-relaxed">
-                {config
-                  ? `Cast paid binary votes (${voteFeeSplit?.fee} mJDQ per vote). ${(config.burnBps / 100).toFixed(0)}% is burned permanently, the rest enters community reward escrow.`
-                  : 'Cast paid binary votes to approve destination proposals. Fees come from the live governance config and are disclosed before you confirm.'}
-              </p>
-            </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
-              <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 flex items-center gap-3">
-                <Wallet className="w-6 h-6 text-[#2D6A4F]" />
-                <div>
-                  <div className="text-[10px] font-bold text-[#837560] uppercase">mJDQ Coin Wallet</div>
-                  <div className="text-sm font-extrabold text-[#2D6A4F]">
-                    {wallet ? `${wallet.balanceMjdq} mJDQ` : '—'}
+              <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#D5C4AC]/60 flex items-center gap-3">
+                  <Wallet className="w-6 h-6 text-[#2D6A4F]" />
+                  <div>
+                    <div className="text-[10px] font-bold text-[#837560] uppercase">mJDQ Coin Wallet</div>
+                    <div className="text-sm font-extrabold text-[#2D6A4F]">
+                      {wallet ? `${wallet.balanceMjdq} mJDQ` : '—'}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <button
-                onClick={() => setSuggestModalOpen(true)}
-                className="inline-flex items-center gap-2 gold-gradient text-[#582F0E] font-black px-6 py-3.5 rounded-2xl shadow-md hover:scale-105 transition transform text-xs"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Suggest Location</span>
-              </button>
+                <button
+                  onClick={() => setSuggestModalOpen(true)}
+                  className="inline-flex items-center gap-2 gold-gradient text-[#582F0E] font-black px-6 py-3.5 rounded-2xl shadow-md hover:scale-105 transition transform text-xs cursor-pointer active:scale-95"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Suggest Location</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Arena Proposals Grid */}
-        <div>
-          <h2 className="text-xl font-black font-serif text-[#582F0E] mb-4">Active Spot Proposals</h2>
+          {/* Arena Proposals Grid */}
+          <div>
+            <h2 className="text-xl font-black font-serif text-[#582F0E] mb-4">Active Spot Proposals</h2>
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-[#837560]">
-              <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
-              <span className="text-xs font-bold text-[#582F0E]">Loading voting arena...</span>
-            </div>
-          ) : fetchError ? (
-            <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4">
-              <p>{fetchError}</p>
-              <button
-                onClick={fetchProposals}
-                className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
-              >
-                Retry
-              </button>
-            </div>
-          ) : proposals.length === 0 ? (
-            <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560]">
-              No spot proposals yet. Suggest the first destination!
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {proposals.map((prop) => {
-                const userVote = votedMap[prop.id];
-                const totalVotes = prop.yesVotes + prop.noVotes;
-                const yesPct = totalVotes > 0 ? Math.round((prop.yesVotes / totalVotes) * 100) : 0;
-                const noPct = totalVotes > 0 ? Math.round((prop.noVotes / totalVotes) * 100) : 0;
-                const quorumMet = totalVotes >= prop.quorumRequired;
-                const canVote = prop.state === 'voting' && !userVote;
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6" aria-busy="true" aria-label="Loading proposals">
+                <ProposalCardSkeleton />
+                <ProposalCardSkeleton />
+              </div>
+            ) : fetchError ? (
+              <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4 shadow-xs">
+                <p>{fetchError}</p>
+                <button
+                  onClick={() => fetchProposals(true)}
+                  className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold transition cursor-pointer active:scale-95"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : proposals.length === 0 ? (
+              <div className="bg-white p-8 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] shadow-xs">
+                No spot proposals yet. Suggest the first destination!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {proposals.map((prop) => {
+                  const userVote = votedMap[prop.id];
+                  const totalVotes = prop.yesVotes + prop.noVotes;
+                  const yesPct = totalVotes > 0 ? Math.round((prop.yesVotes / totalVotes) * 100) : 0;
+                  const noPct = totalVotes > 0 ? Math.round((prop.noVotes / totalVotes) * 100) : 0;
+                  const quorumMet = totalVotes >= prop.quorumRequired;
+                  const canVote = prop.state === 'voting' && !userVote;
 
-                return (
-                  <div
-                    key={prop.id}
-                    className="bg-white rounded-3xl border-2 border-[#D5C4AC]/40 p-6 flex flex-col justify-between shadow-sm space-y-4 hover:border-[#FFB703] transition duration-200"
-                  >
+                  return (
+                    <div
+                      key={prop.id}
+                      className="bg-white rounded-3xl border-2 border-[#D5C4AC]/40 p-6 flex flex-col justify-between shadow-sm space-y-4 hover:border-[#FFB703] transition duration-200"
+                    >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-xl bg-[#FAF9F5] text-[#837560] border border-[#D5C4AC]/40">
@@ -520,6 +530,7 @@ export default function VotePage() {
           </div>
         )}
       </div>
+      </ErrorBoundary>
     </Navigation>
   );
 }

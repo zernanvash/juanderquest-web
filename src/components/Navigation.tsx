@@ -161,6 +161,40 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
         {children}
       </main>
 
+      {/* Floating Bottom Navigation Bar (Mobile / Tablet < 1280px) */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E3DFD5] px-2 py-1.5 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-center justify-around"
+      >
+        {[
+          { label: 'Explore', href: '/explore', icon: Compass },
+          { label: 'Quests', href: '/quests', icon: Zap },
+          { label: 'Map', href: '/map', icon: MapPin },
+          { label: 'DAO', href: '/vote', icon: Vote },
+          { label: 'Shop', href: '/shop', icon: ShoppingBag },
+          { label: 'Profile', href: '/profile', icon: User },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition min-w-[50px] ${
+                isActive
+                  ? 'text-[#2D6A4F] font-black'
+                  : 'text-[#837560] hover:text-[#582F0E] font-medium'
+              }`}
+            >
+              <div className={`p-1 rounded-xl transition ${isActive ? 'bg-[#2D6A4F]/10' : ''}`}>
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#2D6A4F]' : 'text-[#837560]'}`} />
+              </div>
+              <span className="text-[10px] mt-0.5 tracking-tight">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
       {/* Mobile Drawer */}
       {drawerOpen && (
         <div className="xl:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs" onClick={() => setDrawerOpen(false)}>
@@ -179,6 +213,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
                 <button
                   onClick={() => setDrawerOpen(false)}
                   className="p-1.5 rounded-lg hover:bg-[#FAF9F5] text-[#582F0E]"
+                  aria-label="Close navigation menu"
                 >
                   <X className="w-5 h-5" />
                 </button>

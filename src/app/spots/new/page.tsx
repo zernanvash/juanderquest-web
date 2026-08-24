@@ -17,6 +17,8 @@ import {
 import { Navigation } from '@/components/Navigation';
 import { useRequireAuth } from '@/lib/auth';
 import { api, uploadSpotPhoto } from '@/lib/api';
+import { invalidateCache } from '@/lib/cache';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const categories = [
   { id: 'eat_drink', label: 'Eat & Drink', subcategories: ['restaurant', 'carinderia', 'cafe', 'bakery', 'street_food', 'bar'] },
@@ -183,7 +185,8 @@ export default function AddSpotPage() {
       });
 
       if (res.data?.success) {
-      router.push('/explore?submitted=review');
+        invalidateCache('spots');
+        router.push('/explore?submitted=review');
       } else {
         setSubmitError('Failed to create destination spot.');
       }
@@ -198,7 +201,8 @@ export default function AddSpotPage() {
 
   return (
     <Navigation>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <ErrorBoundary fallbackTitle="Unable to display Spot Creation Form">
+        <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <button
@@ -465,6 +469,7 @@ export default function AddSpotPage() {
           </button>
         </form>
       </div>
+      </ErrorBoundary>
     </Navigation>
   );
 }

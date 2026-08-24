@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import type { Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api, normalizeQuest, QuestModel } from '@/lib/api';
+import { fetchWithCache } from '@/lib/cache';
 import { useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
-import { MapPin, Compass, Award, ExternalLink, Navigation as NavIcon, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/Skeleton';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { MapPin, Compass, Award, ExternalLink, Navigation as NavIcon } from 'lucide-react';
 
 // Pangasinan province center.
 const MAP_CENTER: [number, number] = [16.0, 120.4];
@@ -20,27 +23,31 @@ export default function QuestMapPage() {
   const [error, setError] = useState<string | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchQuests();
-  }, []);
-
-  const fetchQuests = async () => {
+  const fetchQuests = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/quests');
-      if (res.data?.success) {
-        const list = (res.data.data as Parameters<typeof normalizeQuest>[0][]).map(normalizeQuest);
-        setQuests(list);
-        setSelectedQuest(list[0] ?? null);
-      } else {
-        setError('The quest map is unavailable right now.');
-      }
-    } catch (e) {
+      const { data: rawQuests } = await fetchWithCache(
+        'quests_map_data',
+        async () => {
+          const res = await api.get('/quests');
+          if (!res.data?.success) throw new Error('Quest map data unavailable');
+          return (res.data.data as Parameters<typeof normalizeQuest>[0][]).map(normalizeQuest);
+        },
+        { ttlMs: 120_000, forceRefresh }
+      );
+      setQuests(rawQuests);
+      setSelectedQuest(rawQuests[0] ?? null);
+    } catch {
       setError('Could not reach the quest server.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchQuests();
+  }, [fetchQuests]);
 
   // Initialise the real Leaflet map once the container is mounted. Leaflet is
   // imported lazily because it accesses `window` at module load (no SSR).
@@ -90,28 +97,29 @@ export default function QuestMapPage() {
 
   return (
     <Navigation>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-extrabold font-serif text-[#582F0E]">Quest Map</h1>
-          <p className="text-xs text-[#514532]">Live Pangasinan quest markers from the server — click a pin to inspect.</p>
-        </div>
+      <ErrorBoundary fallbackTitle="Unable to display Quest Map">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-extrabold font-serif text-[#582F0E]">Quest Map</h1>
+            <p className="text-xs text-[#514532]">Live Pangasinan quest markers from the server — click a pin to inspect.</p>
+          </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-[#837560]">
-            <Loader2 className="w-10 h-10 animate-spin text-[#2D6A4F] mb-3" />
-            <span className="text-xs font-bold text-[#582F0E]">Loading quest map...</span>
-          </div>
-        ) : error ? (
-          <div className="bg-white p-12 rounded-3xl border border-[#D5C4AC]/40 text-center text-xs text-[#837560] space-y-4">
-            <p>{error}</p>
-            <button
-              onClick={fetchQuests}
-              className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
+          {loading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-busy="true" aria-label="Loading map">
+              <Skeleton className="lg:col-span-2 h-[480px] rounded-3xl" />
+              <Skeleton className="h-[480px] rounded-3xl" />
+            </div>
+          ) : error ? (
+            <div className="bg-white p-12 rounded-3xl border border-red-200 text-center text-xs text-[#BC4749] space-y-4 shadow-xs">
+              <p className="font-bold">{error}</p>
+              <button
+                onClick={() => fetchQuests(true)}
+                className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold transition cursor-pointer active:scale-95"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Real interactive Leaflet map */}
             <div className="lg:col-span-2 rounded-3xl border border-[#D5C4AC]/40 shadow-sm overflow-hidden relative">
@@ -178,6 +186,7 @@ export default function QuestMapPage() {
           </div>
         )}
       </div>
+      </ErrorBoundary>
     </Navigation>
   );
 }

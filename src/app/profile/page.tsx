@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth, useRequireAuth } from '@/lib/auth';
 import { api, normalizeSubmission, SubmissionModel } from '@/lib/api';
+import { fetchWithCache } from '@/lib/cache';
 import { Navigation } from '@/components/Navigation';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { User, Wallet, Award, History, Shield, Sparkles, Leaf, Utensils, Landmark } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -13,22 +15,29 @@ export default function ProfilePage() {
   const [submissions, setSubmissions] = useState<SubmissionModel[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
-  useEffect(() => {
-    fetchSubmissions();
-  }, []);
-
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = useCallback(async (forceRefresh = false) => {
     try {
-      const res = await api.get('/submissions');
-      if (res.data?.success) {
-        setSubmissions((res.data.data as Parameters<typeof normalizeSubmission>[0][]).map(normalizeSubmission));
-      }
+      const { data: rawSubmissions } = await fetchWithCache(
+        'user_submissions',
+        async () => {
+          const res = await api.get('/submissions');
+          if (!res.data?.success) throw new Error('Submissions unavailable');
+          return (res.data.data as Parameters<typeof normalizeSubmission>[0][]).map(normalizeSubmission);
+        },
+        { ttlMs: 60_000, forceRefresh }
+      );
+      setSubmissions(rawSubmissions);
     } catch (e) {
       // History is supplementary here; profile still renders from the live user object.
       console.error('Failed to load submission history', e);
+    } finally {
+      setLoadingHistory(false);
     }
-    setLoadingHistory(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [fetchSubmissions]);
 
   if (!isReady) return null;
 
@@ -44,7 +53,8 @@ export default function ProfilePage() {
 
   return (
     <Navigation>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <ErrorBoundary fallbackTitle="Unable to display Traveler Profile">
+        <div className="max-w-3xl mx-auto space-y-6">
         {/* Profile Header */}
         <div className="bg-white rounded-3xl p-8 border border-[#D5C4AC]/40 shadow-sm text-center flex flex-col items-center">
           <div className="w-24 h-24 rounded-full border-4 border-[#FFB703] overflow-hidden bg-amber-100 flex items-center justify-center font-bold text-2xl text-[#582F0E] shadow-md mb-4">
@@ -153,6 +163,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      </ErrorBoundary>
     </Navigation>
   );
 }

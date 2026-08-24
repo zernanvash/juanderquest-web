@@ -31,6 +31,9 @@ import {
 import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { fetchWithCache } from '@/lib/cache';
+import { SpotCardSkeleton } from '@/components/Skeleton';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const categories = [
   { id: 'all', label: 'All Destinations' },
@@ -63,19 +66,26 @@ export default function ExplorePage() {
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [savedPosts, setSavedPosts] = useState<Record<string, boolean>>({});
 
-  const loadSpots = useCallback(async () => {
+  const loadSpots = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError('');
     try {
-      const params: Record<string, string | number> = {};
-      if (category !== 'all') params.categories = category;
-      if (search) params.q = search;
+      const cacheKey = `spots_${category}_${search.trim().toLowerCase()}`;
+      const { data: rawSpots } = await fetchWithCache(
+        cacheKey,
+        async () => {
+          const params: Record<string, string | number> = {};
+          if (category !== 'all') params.categories = category;
+          if (search.trim()) params.q = search.trim();
+          const res = await api.get('/spots', { params });
+          return (res.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
+        },
+        { ttlMs: 120_000, forceRefresh }
+      );
 
-      const res = await api.get('/spots', { params });
-      const rawSpots: SpotModel[] = res.data.data.map(normalizeSpot);
       setSpots(rawSpots);
 
-      // Initialize mock dynamic like states
+      // Initialize dynamic like states
       const initialLikes: Record<string, { count: number; isLiked: boolean }> = {};
       rawSpots.forEach((s, idx) => {
         initialLikes[s.id] = {
@@ -283,22 +293,36 @@ export default function ExplorePage() {
 
             {/* Post Feed List */}
             {loading ? (
-              <div className="bg-white rounded-3xl p-16 border border-[#E3DFD5] flex flex-col items-center justify-center text-[#837560]">
-                <Loader2 className="w-8 h-8 animate-spin text-[#2D6A4F] mb-3" />
-                <span className="text-xs font-bold text-[#582F0E]">Curating community feed...</span>
+              <div className="space-y-4" aria-busy="true" aria-label="Loading destinations">
+                <SpotCardSkeleton />
+                <SpotCardSkeleton />
+                <SpotCardSkeleton />
               </div>
             ) : error ? (
-              <div className="bg-white rounded-3xl p-8 border border-red-200 text-center space-y-3">
+              <div className="bg-white rounded-3xl p-8 border border-red-200 text-center space-y-3 shadow-xs">
                 <p className="text-xs text-[#BC4749] font-bold">{error}</p>
-                <button onClick={loadSpots} className="px-4 py-2 rounded-xl bg-[#2D6A4F] text-white text-xs font-bold">
-                  Retry
+                <button
+                  onClick={() => loadSpots(true)}
+                  className="px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                >
+                  Retry Loading
                 </button>
               </div>
             ) : processedSpots.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 border border-[#E3DFD5] text-center space-y-2">
+              <div className="bg-white rounded-3xl p-12 border border-[#E3DFD5] text-center space-y-3 shadow-xs">
                 <Compass className="w-10 h-10 text-[#D5C4AC] mx-auto" />
                 <h3 className="font-bold text-sm text-[#582F0E]">No destinations found</h3>
                 <p className="text-xs text-[#837560]">Try adjusting your search or category filter.</p>
+                <button
+                  onClick={() => {
+                    setCategory('all');
+                    setSearch('');
+                    setSortFlair('hot');
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-bold text-[#582F0E] hover:bg-white transition"
+                >
+                  Clear all filters
+                </button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -363,12 +387,16 @@ export default function ExplorePage() {
                           {spot.description}
                         </p>
 
-                        {/* Photo Image Card */}
+                        {/* Photo Image Card with graceful fallback */}
                         {spot.imageUrl && (
-                          <Link href={`/spots/${spot.slug}`} className="block rounded-2xl overflow-hidden border border-[#E3DFD5] group max-h-96 relative bg-stone-100">
+                          <Link href={`/spots/${spot.slug}`} className="block rounded-2xl overflow-hidden border border-[#E3DFD5] group max-h-96 relative bg-[#FAF9F5] aspect-video">
                             <img
                               src={spot.imageUrl}
                               alt={spot.name}
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none';
+                              }}
                               className="w-full h-full object-cover group-hover:scale-102 transition duration-300"
                             />
                             {spot.questId && (

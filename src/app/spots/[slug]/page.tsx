@@ -24,6 +24,9 @@ import {
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
+import { fetchWithCache } from '@/lib/cache';
+import { SpotDetailSkeleton } from '@/components/Skeleton';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const defaultMockTips = [
   {
@@ -52,15 +55,25 @@ export default function SpotDetailPage() {
   const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      api.get(`/spots/${slug}`),
-      api.get(`/spots/${slug}/alternatives`),
-    ])
-      .then(([detail, alts]) => {
-        const current = normalizeSpot(detail.data.data);
-        setSpot(current);
-        setAlternatives(alts.data.data.map(normalizeSpot));
-        api.post(`/spots/${current.id}/interactions`, { type: 'view' }).catch(() => {});
+    if (!slug) return;
+    fetchWithCache(
+      `spot_detail_${slug}`,
+      async () => {
+        const [detail, alts] = await Promise.all([
+          api.get(`/spots/${slug}`),
+          api.get(`/spots/${slug}/alternatives`),
+        ]);
+        return {
+          spot: normalizeSpot(detail.data.data),
+          alternatives: (alts.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot),
+        };
+      },
+      { ttlMs: 120_000 }
+    )
+      .then(({ data }) => {
+        setSpot(data.spot);
+        setAlternatives(data.alternatives);
+        api.post(`/spots/${data.spot.id}/interactions`, { type: 'view' }).catch(() => {});
       })
       .catch(() => setError('Destination spot not found.'));
   }, [slug]);
@@ -93,9 +106,9 @@ export default function SpotDetailPage() {
   if (error) {
     return (
       <Navigation>
-        <div className="p-12 text-center bg-white rounded-3xl border border-red-200">
+        <div className="p-12 text-center bg-white rounded-3xl border border-red-200 shadow-xs max-w-lg mx-auto my-12">
           <p className="text-sm font-bold text-[#BC4749]">{error}</p>
-          <Link href="/explore" className="mt-3 inline-block font-extrabold text-xs text-[#2D6A4F]">
+          <Link href="/explore" className="mt-3 inline-block font-extrabold text-xs text-[#2D6A4F] hover:underline">
             ← Return to Community Feed
           </Link>
         </div>
@@ -106,9 +119,7 @@ export default function SpotDetailPage() {
   if (!spot) {
     return (
       <Navigation>
-        <div className="p-20 text-center text-[#837560]">
-          <span className="text-xs font-bold text-[#582F0E]">Loading destination thread...</span>
-        </div>
+        <SpotDetailSkeleton />
       </Navigation>
     );
   }
