@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Patar Beach - JuanDerQuest</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;700;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "subtle-box": "#FAF9F5",
+                      "on-error": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "on-secondary-fixed": "#271900",
+                      "body-brown": "#2B2319",
+                      "on-secondary-fixed-variant": "#5e4100",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary": "#693d1b",
+                      "secondary-fixed-dim": "#ffba27",
+                      "secondary-container": "#ffb702",
+                      "surface": "#faf9f4",
+                      "error": "#ba1a1a",
+                      "on-primary-fixed-variant": "#0e5138",
+                      "gold-hover": "#F59E0B",
+                      "outline-variant": "#bfc9c1",
+                      "on-tertiary": "#ffffff",
+                      "on-background": "#1b1c19",
+                      "pine-dark": "#081C15",
+                      "outline": "#707973",
+                      "on-surface-variant": "#404943",
+                      "primary-fixed": "#b1f0ce",
+                      "primary-fixed-dim": "#95d4b3",
+                      "primary-container": "#2d6a4f",
+                      "pine-hover": "#1B4332",
+                      "inverse-primary": "#95d4b3",
+                      "surface-tint": "#2c694e",
+                      "on-primary-container": "#a8e7c5",
+                      "background": "#faf9f4",
+                      "radar-bg": "#0D1B2A",
+                      "surface-bright": "#faf9f4",
+                      "white-surface": "#FFFFFF",
+                      "surface-variant": "#e3e3de",
+                      "tertiary-fixed-dim": "#f9b98d",
+                      "surface-container-high": "#e9e8e3",
+                      "tertiary-container": "#855430",
+                      "on-surface": "#1b1c19",
+                      "on-tertiary-container": "#ffd1b3",
+                      "input-border": "#D5C4AC",
+                      "surface-container-low": "#f5f4ef",
+                      "primary": "#0f5238",
+                      "on-tertiary-fixed-variant": "#683c1a",
+                      "secondary-fixed": "#ffdea9",
+                      "status-peaceful": "#D8F3DC",
+                      "on-primary": "#ffffff",
+                      "surface-container-highest": "#e3e3de",
+                      "status-verified": "#E0F2FE",
+                      "status-error": "#BC4749",
+                      "border-substrate": "#E3DFD5",
+                      "gold-muted": "#E8DCB8",
+                      "inverse-surface": "#30312e",
+                      "surface-container": "#efeee9",
+                      "on-secondary": "#ffffff",
+                      "inverse-on-surface": "#f2f1ec",
+                      "on-secondary-container": "#6b4b00",
+                      "surface-dim": "#dbdad5",
+                      "secondary": "#7d5800",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed": "#002114",
+                      "tertiary-fixed": "#ffdcc6",
+                      "on-tertiary-fixed": "#301400",
+                      "status-busy": "#FFF3E8",
+                      "muted-brown": "#837560"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "max-width": "1280px",
+                      "unit": "4px",
+                      "margin-desktop": "40px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "headline-sm": [
+                              "Playfair Display"
+                      ],
+                      "telemetry-data": [
+                              "JetBrains Mono"
+                      ],
+                      "display-lg": [
+                              "Playfair Display"
+                      ],
+                      "ui-label": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "display-lg-mobile": [
+                              "Playfair Display"
+                      ],
+                      "headline-md": [
+                              "Playfair Display"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-sm": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "telemetry-data": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "900"
+                              }
+                      ],
+                      "ui-label": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "900"
+                              }
+                      ],
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-surface min-h-screen font-body-md antialiased pt-16">
+<!-- TopNavBar -->
+<nav aria-label="Top Navigation" class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-desktop h-16 max-w-max-width mx-auto bg-white/95 backdrop-blur-md shadow-xs hidden md:flex">
+<img alt="JuanDerQuest Logo" class="h-12 w-auto object-contain drop-shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC1isDRmJYEejIUNAIib6jgWbRs-g7RWjSJHOMXVhVoEcc9l_OHK1FAL0A7CNWvj0ZqqieJQeW6h6vaZgfchRU-bBFr3thmSv7Ni7UdW9soOYEnQbLHlKwXLLbkSas0O1Pw4iZ-vVChlyW2-m2jrZtpviq94JwlpSlXJf58WfrKPWAXpYJNEc2ZOPdsnauFfD_-YT4kg7wwBgwuMDlEdvzq7DM4w32OL1kiaq_URRxWtPUqb7UdLuxSLtlra-utr-u"/>
+<ul class="flex space-x-6">
+<li><a class="font-ui-label text-ui-label text-primary font-bold border-b-2 border-primary pb-1" href="#">Explore</a></li>
+<li><a class="font-ui-label text-ui-label text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low rounded-xl px-2 py-1" href="#">Quests</a></li>
+<li><a class="font-ui-label text-ui-label text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low rounded-xl px-2 py-1" href="#">Map</a></li>
+<li><a class="font-ui-label text-ui-label text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low rounded-xl px-2 py-1" href="#">DAO</a></li>
+<li><a class="font-ui-label text-ui-label text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low rounded-xl px-2 py-1" href="#">Shop</a></li>
+</ul>
+<div class="flex items-center space-x-4">
+<span class="font-body-md text-ui-label text-on-surface-variant">250 JQ • Lvl 12</span>
+<img alt="User Profile Avatar" class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="A detailed headshot avatar of an adventurous explorer wearing a wide-brimmed hat. The lighting is bright and warm, fitting the eco-tourism light-mode aesthetic. A green pine forest is visible in the blurred background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5rjdzWo-KkRkv1dG7wXYC6kQlfdT1_VCAbN4LH47a--l8abz-9MqbMSeHo2h2VNolPD4AQUszte5U2ZhDR94qvIsUdbqNMFkXA3iRThGvyoDn5aWF8osD4TITfLKW08TFQgiOrjRUocM4_Wb7cqE07FRmeMvLVtuvVG8UGxok0U9B6mh2REgMEUugyccABAon2NworC3rH7Pu_-h8cOfZvVuVWqIChyUNx4s05DMu_wSYn7Ubnxc"/>
+</div>
+</nav>
+<!-- Main Content Grid -->
+<main class="max-w-max-width mx-auto px-margin-mobile md:px-margin-desktop py-gutter grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Left Column: Narrative (7 cols) -->
+<div class="col-span-1 md:col-span-7 flex flex-col gap-6">
+<!-- Hero Banner -->
+<div class="w-full h-80 md:h-[400px] rounded-3xl overflow-hidden relative shadow-xs">
+<img alt="Patar Beach Hero Image" class="w-full h-full object-cover absolute inset-0" data-alt="A breathtaking, expansive view of Patar Beach featuring golden pristine sand meeting clear turquoise waters under a bright, sunny sky. The scene is bathed in a serene, warm light that highlights the natural beauty. Lush green palm trees frame the edges, perfectly aligning with a heritage modern eco-tourism aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0O6zddklY70RTX-R5YEgpiYAi-7nXC1gw9UOQh6uMzpdfWZpDqPh7LHsr8Aljmpa7Hx5JE9XMuQsg_YrI545kJ_o602tcDSx7NSsHcu0T1E6ReBncnk_aIvj6IXeDjiMTXlF89Q_SmsIA1i2-4Hq98nS1NVSW54pS7oOe_K2uvUUiAxwIKyiFVDitfWY4Q4_IEJcEGBLQ_jrLOFvjbpMVXNlC0NwbhUbZ3BhRddk_3igZNxp-WaQ"/>
+<div class="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full pl-2 pr-4 py-1.5 flex items-center gap-2 shadow-lg border border-border-substrate z-10">
+<img alt="JDQ Coin" class="w-6 h-6 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeTjFdnrRNsUydyUR3dUsBDvy-8_iYdAgMS9Pd6v-CJHb28q8tt5h2qwI-8iIH0sf8cSBEGhioQCw6mKdAoan72Y5Nk00E0OyCGSnCJpnUl_p3XCz0U_nXNuyKt3KmaZVI-k37n4Y8zdzQ-LHtXXd5pt-j6b6U-BzTSufv8_WOCCYEGsbBNh-uOlEdCN9JqE7cpSdS_6HzbLfZdZ_EThdePA5YRaF1Kdf1bn3ZW0RW2sZWlD2Aym6DiGOuEB7kveyL"/>
+<span class="font-ui-label text-ui-label text-body-brown font-bold">+250 mJDQ</span>
+</div>
+<div class="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-pine-dark/80 to-transparent z-10">
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-white-surface">Patar Beach</h1>
+<p class="font-body-md text-body-md text-surface-variant mt-2 flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">location_on</span>
+                        Bolinao, Pangasinan
+                    </p>
+</div>
+</div>
+<!-- Social/Interaction Bar -->
+<div class="flex items-center justify-between bg-white-surface rounded-3xl p-4 shadow-xs">
+<div class="flex space-x-4">
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+<span class="font-ui-label text-ui-label">12.4k</span>
+</button>
+<button class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">share</span>
+<span class="font-ui-label text-ui-label">Share</span>
+</button>
+</div>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-surface-container-low text-on-surface-variant rounded-xl font-ui-label text-ui-label border border-border-substrate">#PristineSands</span>
+<span class="px-3 py-1 bg-surface-container-low text-on-surface-variant rounded-xl font-ui-label text-ui-label border border-border-substrate">#EcoTourism</span>
+</div>
+</div>
+<!-- Narrative Description -->
+<div class="bg-white-surface rounded-3xl p-6 shadow-xs flex flex-col gap-4 relative overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center opacity-5 pointer-events-none" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAlxCcwrS1eXKzRx520kD_D2puSxm9553zn-WHQi7IBobZrUcaR9pCL0TDM0ZjFbscUoICwJsAa7_huXlIenQ-8hCofywBFZDf1dvL57-qIzbUps7oZ9z40GtxpCMgGfH9JrVhm-QDR0BLzqoequNx-rJBtzMzoYrKEi09RNu4yRV5m8fVggLWP4JsNi33emH3XMWoOmyfnMdFpe2KjRBajBZDxLmneTjkAsBjNowPTNCdKdMWGeWVrlIQq7OjOV_49');"></div>
+<div class="relative z-10">
+<h2 class="font-headline-sm text-headline-sm text-body-brown">The Golden Coast of the North</h2>
+<div class="font-body-md text-body-md text-on-surface-variant space-y-4 mt-4">
+<p>Known affectionately as the "Boracay of the North," Patar Beach offers a dramatic stretch of coarse, golden sand that meets the vigorous waves of the West Philippine Sea. Unlike its highly commercialized counterparts, Patar retains a raw, unpretentious beauty that appeals to true explorers and nature enthusiasts.</p>
+<p>The shoreline is punctuated by fascinating coral rock formations, providing not just scenic vistas but also teeming tide pools ready for gentle exploration during low tide. The coastal vegetation stands resilient against the sea breeze, offering dappled shade for those seeking a quiet afternoon with a book or a journal.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Action Card (5 cols) -->
+<div class="col-span-1 md:col-span-5 flex flex-col gap-6 relative">
+<div class="sticky top-24 flex flex-col gap-6">
+<!-- Primary Action Card -->
+<div class="bg-white-surface rounded-3xl p-6 shadow-xs flex flex-col gap-6 relative overflow-hidden border-2 border-[#8A5A2B]/10">
+<div class="absolute inset-0 bg-cover bg-center opacity-10 pointer-events-none" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD1zVhs42OQHB8XQaKL87TmOC3Gn59Xw606XS9sRrT4jIoHHIvxaGaq_g8L-oKOChNl0MBpG_eKi-Cq1q6GIzNFws_wWwPt0dzxiSI5x5nlDcqsJlUHw8SeCSM-gB10e3biaGwCG5kbxg6ktgiBzXwholjQDukXHFS5QlT3oBKkw5Uj6l4r-QU3AO17zbw2GV9BVhVHD5sg9ZIHIsjN7C5qdjku06UTkIJxGnJgmdiBKTp63kgTKmylZCnu_k_fEwtb');"></div>
+<div class="relative z-10 flex flex-col gap-6 w-full">
+<!-- Crowd Gauge -->
+<div class="flex items-center justify-between p-4 bg-status-peaceful/90 backdrop-blur-sm rounded-2xl border border-status-peaceful shadow-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">eco</span>
+<div class="flex flex-col">
+<span class="font-ui-label text-ui-label text-primary-container">Live Crowd</span>
+<span class="font-headline-sm text-[20px] text-primary">Tranquil</span>
+</div>
+</div>
+<span class="font-telemetry-data text-telemetry-data text-outline font-bold">UPDATED 5M AGO</span>
+</div>
+<!-- Actions -->
+<div class="flex flex-col gap-3">
+<button class="w-full bg-primary hover:bg-pine-hover text-on-primary rounded-2xl py-3 flex items-center justify-center gap-2 transition-colors active:scale-95 duration-200 shadow-sm border-b-4 border-pine-hover hover:border-b-2 hover:translate-y-[2px]">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-ui-label text-ui-label">Navigate with Valhalla</span>
+</button>
+<button class="w-full bg-gradient-to-b from-[#FFE81C] to-[#FFA000] text-[#4A2E00] rounded-2xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95 duration-200 shadow-md border-b-4 border-[#C97B00] hover:border-b-2 hover:translate-y-[2px]">
+<span class="material-symbols-outlined font-bold">military_tech</span>
+<span class="font-ui-label text-ui-label font-bold text-lg">Play Linked Quest</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav aria-label="Bottom Navigation" class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-white/95 backdrop-blur-md shadow-xl rounded-t-3xl md:hidden">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-2xl p-2 min-w-[64px] active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-ui-label text-[10px]">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high transition-all rounded-2xl min-w-[64px] active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">military_tech</span>
+<span class="font-ui-label text-[10px]">Quests</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high transition-all rounded-2xl min-w-[64px] active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">explore_nearby</span>
+<span class="font-ui-label text-[10px]">Map</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high transition-all rounded-2xl min-w-[64px] active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-ui-label text-[10px]">DAO</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-surface-container-high transition-all rounded-2xl min-w-[64px] active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">shopping_bag</span>
+<span class="font-ui-label text-[10px]">Shop</span>
+</a>
+</nav>
+</body></html>
