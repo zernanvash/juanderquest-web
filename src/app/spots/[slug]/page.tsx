@@ -27,6 +27,7 @@ import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { SpotDetailSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RouteModal } from '@/components/RouteModal';
 
 const defaultMockTips = [
   {
@@ -53,6 +54,7 @@ export default function SpotDetailPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [comments, setComments] = useState(defaultMockTips);
   const [newComment, setNewComment] = useState('');
+  const [routeModalOpen, setRouteModalOpen] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -267,22 +269,22 @@ export default function SpotDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <a
-                onClick={trackDirections}
-                href={directions}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-2xl py-3.5 px-5 text-xs font-black flex items-center justify-center gap-2 shadow-xs transition"
+              <button
+                type="button"
+                onClick={() => {
+                  trackDirections();
+                  setRouteModalOpen(true);
+                }}
+                className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-2xl py-3.5 px-5 text-xs font-black flex items-center justify-center gap-2 shadow-xs transition cursor-pointer active:scale-95"
               >
                 <MapPin className="w-4 h-4" />
-                <span>Get Directions (Google Maps)</span>
-                <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-70" />
-              </a>
+                <span>View Route &amp; Navigation</span>
+              </button>
 
               {spot.questId && (
                 <Link
                   href={`/quests/${spot.questId}`}
-                  className="flex-1 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] rounded-2xl py-3.5 px-5 text-xs font-black flex items-center justify-center gap-2 shadow-xs transition"
+                  className="flex-1 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] rounded-2xl py-3.5 px-5 text-xs font-black flex items-center justify-center gap-2 shadow-xs transition active:scale-95"
                 >
                   <Trophy className="w-4 h-4" />
                   <span>Play Quest at this Location (+250 mJDQ)</span>
@@ -377,6 +379,19 @@ export default function SpotDetailPage() {
           )}
         </section>
       </article>
+
+      {spot && (
+        <RouteModal
+          isOpen={routeModalOpen}
+          onClose={() => setRouteModalOpen(false)}
+          destination={{
+            name: spot.name,
+            lat: spot.gpsLat,
+            lng: spot.gpsLng,
+            address: spot.address,
+          }}
+        />
+      )}
     </Navigation>
   );
 }

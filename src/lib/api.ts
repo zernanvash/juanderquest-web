@@ -397,3 +397,41 @@ export function buildSubmissionPayload(quest: Pick<QuestModel, 'id' | 'markerCod
     captured_accuracy: position.accuracy,
   };
 }
+
+export interface RouteManeuver {
+  instruction: string;
+  streetName?: string;
+  distanceMeters: number;
+  timeSeconds: number;
+}
+
+export interface RouteModel {
+  summary: {
+    distanceKm: number;
+    durationSeconds: number;
+    durationFormatted: string;
+    costing: 'auto' | 'pedestrian' | 'bicycle' | 'motorcycle';
+    hasCrowdDiversion: boolean;
+    engine: 'valhalla' | 'fallback_straight_line';
+  };
+  coordinates: [number, number][];
+  maneuvers: RouteManeuver[];
+}
+
+export async function fetchRoute(params: {
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  costing?: 'auto' | 'pedestrian' | 'bicycle' | 'motorcycle';
+  avoidCongested?: boolean;
+}): Promise<RouteModel> {
+  const res = await api.post('/routes', {
+    start: { lat: params.startLat, lng: params.startLng },
+    end: { lat: params.endLat, lng: params.endLng },
+    costing: params.costing || 'auto',
+    avoid_congested: params.avoidCongested !== false,
+  });
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to calculate route');
+  return res.data.data;
+}
