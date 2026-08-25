@@ -65,9 +65,8 @@ export default function ShopPage() {
     setRedeemError(null);
 
     try {
-      const res = await api.post('/vouchers/redeem', {
+      const res = await api.post(`/vouchers/${voucher.id}/redeem`, {
         idempotency_key: uuid(),
-        voucher_id: voucher.id,
       });
 
       if (res.data?.success) {
