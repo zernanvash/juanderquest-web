@@ -27,7 +27,8 @@ import {
   CheckCircle2,
   Tag,
   Filter,
-  Zap
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
@@ -161,6 +162,36 @@ export default function ExplorePage() {
             <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] bg-white border border-[#E3DFD5] px-2.5 py-1 rounded-md">
               Filter &amp; Discover →
             </span>
+          </Link>
+        </div>
+
+        {/* Live Anti-Crowd Alert Banner */}
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-50/80 to-orange-50/60 rounded-xl p-4 sm:p-5 border border-amber-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-300/60 flex items-center justify-center text-[#D95D00] shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#D95D00] bg-amber-100/90 px-2 py-0.5 rounded">
+                  Live Anti-Crowd Alert
+                </span>
+                <span className="text-xs font-bold text-[#582F0E]">
+                  Hundred Islands Peak Pressure
+                </span>
+              </div>
+              <p className="text-xs text-[#6B4B00] leading-relaxed max-w-3xl">
+                High tourist density reported at Alaminos Lucap wharfs. Divert to tranquil nearby spots like <strong>Timmaw Cave</strong> or <strong>Tambobong Beach</strong> to unlock <strong>+1.5x mJDQ Points</strong>!
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/search?crowd=quiet"
+            className="py-2.5 px-4 rounded-lg bg-[#D95D00] hover:bg-[#B34D00] text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-98 cursor-pointer shrink-0 shadow-xs"
+          >
+            <span>Filter Tranquil Alternatives</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
@@ -412,29 +443,6 @@ export default function ExplorePage() {
 
           {/* Right Sidebar Widgets Column (Span 4 - Clean & Uncluttered) */}
           <div className="lg:col-span-4 space-y-5">
-            {/* Overcrowding Diversion Live Bounty Card */}
-            <div className="bg-amber-50/70 rounded-xl p-5 border border-amber-200/80 shadow-xs space-y-3">
-              <div className="flex items-center gap-2 text-[#D95D00] font-bold text-xs">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="uppercase tracking-wide">Live Anti-Crowd Alert</span>
-              </div>
-
-              <h4 className="text-sm font-bold text-[#582F0E]">
-                Hundred Islands Peak Pressure
-              </h4>
-
-              <p className="text-xs text-[#6B4B00] leading-relaxed">
-                High tourist density reported at Alaminos Lucap wharfs. Divert to tranquil nearby spots like <strong>Timmaw Cave</strong> or <strong>Tambobong Beach</strong> to unlock <strong>+1.5x mJDQ Points</strong>!
-              </p>
-
-              <button
-                onClick={() => setSortFlair('quiet')}
-                className="w-full py-2.5 rounded-lg bg-[#D95D00] hover:bg-[#B34D00] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
-              >
-                <span>Filter Tranquil Alternatives</span>
-              </button>
-            </div>
-
             {/* Quick Portal Shortcuts */}
             <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
