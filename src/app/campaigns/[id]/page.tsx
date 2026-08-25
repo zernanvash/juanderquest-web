@@ -210,10 +210,8 @@ function CampaignDetailContent({ paramsPromise }: { paramsPromise: Promise<{ id:
   const reservedPercent = Math.min(100, Math.round((campaign.reservedParticipants / campaign.maxParticipants) * 100));
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-[#2C221E] pb-24">
-      <Navigation />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6">
+    <Navigation>
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
@@ -562,8 +560,8 @@ function CampaignDetailContent({ paramsPromise }: { paramsPromise: Promise<{ id:
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </Navigation>
   );
 }
 

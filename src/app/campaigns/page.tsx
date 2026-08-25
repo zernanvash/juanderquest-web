@@ -76,10 +76,8 @@ function CampaignsContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-[#2C221E] pb-24">
-      <Navigation />
-
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-8">
+    <Navigation>
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Editorial Header Section */}
         <div className="bg-white rounded-xl p-6 sm:p-8 border border-[#E3DFD5] shadow-xs space-y-6">
           <div className="max-w-2xl space-y-2.5">
@@ -284,8 +282,8 @@ function CampaignsContent() {
             })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </Navigation>
   );
 }
 

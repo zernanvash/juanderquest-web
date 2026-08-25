@@ -158,9 +158,11 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-10">
-        {children}
-      </main>
+      {children && (
+        <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-10">
+          {children}
+        </main>
+      )}
 
       {/* Floating Bottom Navigation Bar (Mobile / Tablet < 1280px) */}
       <nav
