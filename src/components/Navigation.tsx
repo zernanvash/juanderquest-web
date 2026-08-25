@@ -24,7 +24,7 @@ import {
   Bell
 } from 'lucide-react';
 
-export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: boolean }> = ({ children, fullBleed = false }) => {
   const pathname = usePathname();
   const { user, wallet, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -150,7 +150,13 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
 
       {/* Main Content Area */}
       {children && (
-        <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-10">
+        <main
+          className={
+            fullBleed
+              ? 'flex-1 w-full relative h-[calc(100dvh-64px)] overflow-hidden flex flex-col'
+              : 'flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-10'
+          }
+        >
           {children}
         </main>
       )}
