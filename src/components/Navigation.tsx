@@ -53,49 +53,53 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
 
   return (
     <div className="min-h-screen bg-[#F4F3EE] flex flex-col selection:bg-[#FFB703]/30 text-[#2B2319]">
-      {/* Top Global Header Bar (Reddit/Forum Style) */}
+      {/* Top Global Header Bar */}
       <header className="h-16 bg-white border-b border-[#E3DFD5] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        {/* Brand & Subreddit Title */}
-        <div className="flex items-center gap-4">
-          <Link href="/explore" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1 flex items-center justify-center shadow-xs group-hover:scale-105 transition transform">
-              <img src="/logo.png" alt="JuanDerQuest Logo" className="w-8 h-8 object-contain" />
-            </div>
-            <div className="hidden sm:flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-serif font-black text-base text-[#582F0E] tracking-tight group-hover:text-[#2D6A4F] transition">
-                  JuanDerQuest
-                </span>
-                <span className="bg-[#2D6A4F] text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded uppercase">
-                  Beta
-                </span>
-              </div>
-              <span className="text-[10px] text-[#7D5800] font-semibold tracking-wide">
-                Pangasinan Travelers Network
-              </span>
+        {/* Brand Logo Only (Clean & Minimalist) */}
+        <div className="flex items-center gap-3">
+          <Link href="/explore" className="flex items-center group" title="JuanDerQuest">
+            <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:scale-105 group-hover:border-[#2D6A4F]/40 transition transform">
+              <img src="/logo.png" alt="JuanDerQuest" className="w-7 h-7 object-contain" />
             </div>
           </Link>
         </div>
 
-        {/* Global Nav Links (Desktop Center) */}
-        <nav className="hidden xl:flex items-center gap-1 bg-[#FAF9F5] p-1 rounded-2xl border border-[#E3DFD5]">
+        {/* Interactive Expanding Pill Dock (Passive: Icons Only, Hover: Expands Name Smoothly) */}
+        <nav className="hidden lg:flex items-center gap-1.5 bg-[#FAF9F5] p-1.5 rounded-2xl border border-[#E3DFD5] shadow-2xs">
           {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                className={`group relative flex items-center h-10 px-3.5 rounded-xl text-xs font-bold transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] cursor-pointer select-none overflow-hidden ${
                   isActive
                     ? 'bg-[#2D6A4F] text-white shadow-xs'
-                    : 'text-[#582F0E] hover:bg-white hover:text-[#2D6A4F]'
+                    : 'text-[#582F0E] hover:bg-white hover:text-[#2D6A4F] hover:shadow-xs'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#FFB703]' : ''}`} />
-                <span>{item.label}</span>
+                <Icon
+                  className={`w-4 h-4 shrink-0 transition-transform duration-300 group-hover:scale-115 ${
+                    isActive ? 'text-[#FFB703]' : ''
+                  }`}
+                />
+
+                {/* Expanding Label Animation */}
+                <span
+                  className={`max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 ${
+                    isActive ? 'max-w-xs opacity-100 pl-2' : 'group-hover:pl-2'
+                  } whitespace-nowrap overflow-hidden transition-all duration-300 ease-out`}
+                >
+                  {item.label}
+                </span>
+
                 {item.badge && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#FFB703] text-[#582F0E] font-black">
+                  <span
+                    className={`ml-1.5 text-[9px] px-1.5 py-0.2 rounded-full bg-[#FFB703] text-[#582F0E] font-black shrink-0 transition-opacity duration-300 ${
+                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}
+                  >
                     {item.badge}
                   </span>
                 )}
@@ -150,7 +154,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
           {/* Mobile Drawer Trigger */}
           <button
             onClick={() => setDrawerOpen(true)}
-            className="xl:hidden p-2 rounded-xl text-[#582F0E] hover:bg-[#FAF9F5] border border-[#E3DFD5]"
+            className="lg:hidden p-2 rounded-xl text-[#582F0E] hover:bg-[#FAF9F5] border border-[#E3DFD5]"
             aria-label="Open navigation menu"
           >
             <Menu className="w-5 h-5" />
@@ -165,10 +169,10 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
         </main>
       )}
 
-      {/* Floating Bottom Navigation Bar (Mobile / Tablet < 1280px) */}
+      {/* Floating Bottom Navigation Bar (Mobile / Tablet < 1024px) */}
       <nav
         aria-label="Mobile Navigation"
-        className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E3DFD5] px-2 py-1.5 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-center justify-around"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E3DFD5] px-2 py-1.5 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-center justify-around"
       >
         {[
           { label: 'Explore', href: '/explore', icon: Compass },

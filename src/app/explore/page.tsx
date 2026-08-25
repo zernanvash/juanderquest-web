@@ -59,7 +59,7 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [category, setCategory] = useState('all');
-  const [sortFlair, setSortFlair] = useState<'hot' | 'new' | 'quests' | 'quiet'>('hot');
+  const [sortFlair, setSortFlair] = useState<'for_you' | 'hot' | 'new' | 'quests' | 'quiet'>('for_you');
   const [search, setSearch] = useState('');
   const [likes, setLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
@@ -148,44 +148,56 @@ export default function ExplorePage() {
   return (
     <Navigation>
       <div className="space-y-6">
-        {/* JuanDerQuest Traveler Community Header Banner */}
-        <div className="rounded-xl bg-white border border-[#E3DFD5] overflow-hidden shadow-xs">
-          {/* Cover Header Banner */}
-          <div className="h-32 sm:h-40 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#7D5800] p-5 sm:p-6 relative flex items-end justify-between">
-            <div className="absolute inset-0 bg-[radial-gradient(#FFB703_1px,transparent_1px)] [background-size:16px_16px] opacity-10"></div>
-            <div className="relative z-10 text-white">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#FFB703] bg-black/30 px-2 py-0.5 rounded-md border border-white/10">
-                Pangasinan Tourism Network
+        {/* Social Media Search Bar & Quick Story Highlights */}
+        <div className="space-y-4">
+          {/* Main Search Bar (Smoothly opens /search on click/submit) */}
+          <div className="bg-white rounded-xl border border-[#E3DFD5] p-3 sm:p-4 shadow-xs flex items-center gap-3">
+            <Link
+              href="/search"
+              className="flex-1 bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] rounded-xl px-4 py-3 text-xs sm:text-sm text-gray-500 font-medium transition cursor-pointer flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <Search className="w-4 h-4 text-[#2D6A4F] group-hover:scale-110 transition-transform" />
+                <span>Search destinations, food spots, festivals, or towns in Pangasinan...</span>
+              </div>
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] bg-white border border-[#E3DFD5] px-2 py-0.5 rounded-md">
+                Filter &amp; Discover →
               </span>
-              <h1 className="text-xl sm:text-3xl font-serif font-bold text-white mt-1 drop-shadow-sm">
-                Traveler Discoveries &amp; Quests
-              </h1>
-            </div>
+            </Link>
+
             <Link
               href="/spots/new"
-              className="relative z-10 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-bold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs transition active:scale-98 cursor-pointer"
+              className="py-3 px-4 rounded-xl bg-[#2D6A4F] hover:bg-[#245740] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition active:scale-98 cursor-pointer shrink-0"
+              title="Share New Destination"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Share a Destination</span>
+              <span className="hidden sm:inline">Post Spot</span>
             </Link>
           </div>
 
-          {/* Stats & Community Info Bar */}
-          <div className="px-5 py-3 bg-white flex flex-wrap items-center justify-between gap-4 border-t border-[#E8E5DE] text-xs">
-            <p className="text-[#514532] font-medium max-w-xl">
-              Explore authentic local spots across Pangasinan, discover quiet eco-trails, and unlock verified destination bounties.
-            </p>
-            <div className="flex items-center gap-4 text-[#7D5800] font-bold">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#48C71D] animate-pulse"></span>
-                <span>3,280 Travelers Online</span>
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5 text-[#FFB703]" />
-                <span>94 Active Quests</span>
-              </span>
-            </div>
+          {/* Municipality Quick Story Highlights Row */}
+          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none">
+            {[
+              { label: '✨ For You', filter: 'all', icon: '✨' },
+              { label: '🏖️ Bolinao', filter: 'nature_outdoors', icon: '🏖️' },
+              { label: '🏝️ Hundred Islands', filter: 'nature_outdoors', icon: '🏝️' },
+              { label: '🐟 Dagupan Food', filter: 'eat_drink', icon: '🐟' },
+              { label: '🧂 Dasol Salt', filter: 'shopping_local', icon: '🧂' },
+              { label: '⛪ Manaoag Shrine', filter: 'culture_heritage', icon: '⛪' },
+              { label: '🌿 Tranquil Gems', filter: 'activities_wellness', icon: '🌿' },
+            ].map((story, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCategory(story.filter)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition active:scale-95 cursor-pointer ${
+                  category === story.filter
+                    ? 'bg-[#2D6A4F] text-white shadow-xs'
+                    : 'bg-white border border-[#E3DFD5] text-[#582F0E] hover:bg-[#FAF9F5]'
+                }`}
+              >
+                <span>{story.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -210,12 +222,24 @@ export default function ExplorePage() {
             </div>
 
             {/* Sorting & Filter Flairs */}
-            <div className="bg-white rounded-2xl p-3 sm:p-4 border border-[#E3DFD5] shadow-xs space-y-3">
+            <div className="bg-white rounded-xl p-3 sm:p-4 border border-[#E3DFD5] shadow-xs space-y-3">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    onClick={() => setSortFlair('for_you')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer active:scale-98 ${
+                      sortFlair === 'for_you'
+                        ? 'bg-[#2D6A4F] text-white shadow-xs'
+                        : 'text-[#582F0E] hover:bg-[#FAF9F5]'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
+                    <span>For You</span>
+                  </button>
+
+                  <button
                     onClick={() => setSortFlair('hot')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer active:scale-98 ${
                       sortFlair === 'hot'
                         ? 'bg-[#FFB703] text-[#582F0E] shadow-xs'
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
@@ -227,19 +251,19 @@ export default function ExplorePage() {
 
                   <button
                     onClick={() => setSortFlair('new')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer active:scale-98 ${
                       sortFlair === 'new'
                         ? 'bg-[#2D6A4F] text-white shadow-xs'
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
                     }`}
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Clock className="w-3.5 h-3.5" />
                     <span>Recent</span>
                   </button>
 
                   <button
                     onClick={() => setSortFlair('quests')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer active:scale-98 ${
                       sortFlair === 'quests'
                         ? 'bg-[#582F0E] text-white shadow-xs'
                         : 'text-[#582F0E] hover:bg-[#FAF9F5]'
