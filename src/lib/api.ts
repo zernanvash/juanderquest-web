@@ -184,6 +184,14 @@ export async function uploadSpotPhoto(file: File): Promise<UploadedAssetModel> {
   return res.data.data;
 }
 
+const DEFAULT_SPOT_IMAGES: Record<string, string> = {
+  'hundred-islands-national-park': 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80',
+  'patar-white-beach': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+  'bolinao-falls-1': 'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=1200&q=80',
+  'third-wave-cafe-dagupan': 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
+  'minor-basilica-of-manaoag': 'https://images.unsplash.com/photo-1548625361-16a9a087192a?auto=format&fit=crop&w=1200&q=80',
+};
+
 export function normalizeSpot(raw: any): SpotModel {
   return {
     id: raw.id,
@@ -200,7 +208,7 @@ export function normalizeSpot(raw: any): SpotModel {
     priceLevel: Number(raw.price_level) || 0,
     hours: raw.hours || {},
     amenities: raw.amenities || [],
-    imageUrl: raw.image_url || '',
+    imageUrl: raw.image_url || DEFAULT_SPOT_IMAGES[raw.slug] || '',
     assetIds: raw.asset_ids || [],
     sourceType: raw.source_type,
     sourceName: raw.source_name,
