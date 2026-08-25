@@ -64,8 +64,8 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
           </Link>
         </div>
 
-        {/* Large, Spacious Icon Navigation Dock */}
-        <nav className="hidden lg:flex items-center gap-2 bg-[#FAF9F5] p-1.5 rounded-2xl border border-[#E3DFD5] shadow-2xs">
+        {/* Spacious, Seamless Icon Navigation Bar (Blended White, Generous Spacing) */}
+        <nav className="hidden lg:flex items-center gap-6">
           {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
@@ -74,20 +74,20 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
                 key={item.href}
                 href={item.href}
                 title={item.label}
-                className={`relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
+                className={`relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 cursor-pointer select-none ${
                   isActive
                     ? 'bg-[#2D6A4F] text-white shadow-xs scale-105'
-                    : 'text-[#582F0E] hover:bg-white hover:text-[#2D6A4F] hover:shadow-xs active:scale-95'
+                    : 'text-[#6B5E4C] hover:text-[#2D6A4F] hover:bg-gray-100/60 active:scale-95'
                 }`}
               >
                 <Icon
-                  className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
+                  className={`w-6 h-6 shrink-0 transition-transform duration-200 ${
                     isActive ? 'text-[#FFB703]' : ''
                   }`}
                 />
 
                 {item.badge && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#FFB703] border-2 border-white shadow-xs" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#FFB703] border-2 border-white shadow-xs" />
                 )}
               </Link>
             );
