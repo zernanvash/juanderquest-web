@@ -262,8 +262,8 @@ export default function ExplorePage() {
                       key={spot.id}
                       className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition duration-200 overflow-hidden"
                     >
-                      {/* Post Main Body */}
-                      <div className="p-4 sm:p-6 space-y-3">
+                      {/* Post Header & Caption Area */}
+                      <div className="p-4 sm:p-6 pb-3 space-y-3">
                         {/* Meta Header */}
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#837560]">
                           <span className="font-extrabold text-[#2D6A4F] flex items-center gap-1">
@@ -310,30 +310,35 @@ export default function ExplorePage() {
                         <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
                           {spot.description}
                         </p>
+                      </div>
 
-                        {/* Photo Image Card with graceful fallback */}
-                        {spot.imageUrl && (
-                          <Link href={`/spots/${spot.slug}`} className="block rounded-2xl overflow-hidden border border-[#E3DFD5] group max-h-96 relative bg-[#FAF9F5] aspect-video">
-                            <img
-                              src={spot.imageUrl}
-                              alt={spot.name}
-                              loading="lazy"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLElement).style.display = 'none';
-                              }}
-                              className="w-full h-full object-cover group-hover:scale-102 transition duration-300"
-                            />
-                            {spot.questId && (
-                              <div className="absolute top-3 right-3 bg-[#FFB703] text-[#582F0E] px-3 py-1 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md">
-                                <Trophy className="w-3.5 h-3.5" />
-                                <span>Quest Available (+250 mJDQ)</span>
-                              </div>
-                            )}
-                          </Link>
-                        )}
+                      {/* Full-Bleed Edge-to-Edge Photo (Clipped to Border) */}
+                      {spot.imageUrl && (
+                        <Link
+                          href={`/spots/${spot.slug}`}
+                          className="block w-full border-y border-[#E3DFD5] group relative bg-stone-900/5 aspect-[16/10] sm:aspect-[16/9] max-h-[480px] overflow-hidden"
+                        >
+                          <img
+                            src={spot.imageUrl}
+                            alt={spot.name}
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                            className="w-full h-full object-cover group-hover:scale-103 transition duration-300"
+                          />
+                          {spot.questId && (
+                            <div className="absolute top-3 right-3 bg-[#FFB703] text-[#582F0E] px-3 py-1 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md">
+                              <Trophy className="w-3.5 h-3.5" />
+                              <span>Quest Available (+250 mJDQ)</span>
+                            </div>
+                          )}
+                        </Link>
+                      )}
 
-                        {/* Social Interaction Action Bar (Instagram-style Heart + Comments + Actions) */}
-                        <div className="flex flex-wrap items-center justify-between pt-3 border-t border-[#E3DFD5]/60 text-xs text-[#7D5800] font-bold gap-2">
+                      {/* Social Interaction Action Bar & Comments Area */}
+                      <div className="p-4 sm:p-6 pt-3 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between pt-1 text-xs text-[#7D5800] font-bold gap-2">
                           <div className="flex items-center gap-2 sm:gap-3">
                             {/* Instagram-style Heart Button */}
                             <button
