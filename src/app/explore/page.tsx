@@ -421,28 +421,6 @@ export default function ExplorePage() {
 
           {/* Right Sidebar Widgets Column (Span 4 - Clean & Uncluttered) */}
           <div className="lg:col-span-4 space-y-5">
-            {/* Submit Spot CTA Card */}
-            <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-[#E8E5DE]">
-                <Compass className="w-4 h-4 text-[#2D6A4F]" />
-                <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">
-                  Community Tourism Feed
-                </h3>
-              </div>
-
-              <p className="text-xs text-[#514532] leading-relaxed">
-                Found an undocumented eco-spot, authentic Pangasinan eatery, or heritage landmark? Share it with fellow travelers.
-              </p>
-
-              <Link
-                href="/spots/new"
-                className="w-full py-3 rounded-lg bg-[#2D6A4F] hover:bg-[#245740] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition active:scale-98 cursor-pointer"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Submit New Destination Spot</span>
-              </Link>
-            </div>
-
             {/* Overcrowding Diversion Live Bounty Card */}
             <div className="bg-amber-50/70 rounded-xl p-5 border border-amber-200/80 shadow-xs space-y-3">
               <div className="flex items-center gap-2 text-[#D95D00] font-bold text-xs">
