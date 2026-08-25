@@ -64,8 +64,8 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
           </Link>
         </div>
 
-        {/* Interactive Expanding Pill Dock (Passive: Icons Only, Hover: Expands Name Smoothly) */}
-        <nav className="hidden lg:flex items-center gap-1.5 bg-[#FAF9F5] p-1.5 rounded-2xl border border-[#E3DFD5] shadow-2xs">
+        {/* Large, Spacious Icon Navigation Dock */}
+        <nav className="hidden lg:flex items-center gap-2 bg-[#FAF9F5] p-1.5 rounded-2xl border border-[#E3DFD5] shadow-2xs">
           {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
@@ -73,35 +73,21 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group relative flex items-center h-10 px-3.5 rounded-xl text-xs font-bold transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] cursor-pointer select-none overflow-hidden ${
+                title={item.label}
+                className={`relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
                   isActive
-                    ? 'bg-[#2D6A4F] text-white shadow-xs'
-                    : 'text-[#582F0E] hover:bg-white hover:text-[#2D6A4F] hover:shadow-xs'
+                    ? 'bg-[#2D6A4F] text-white shadow-xs scale-105'
+                    : 'text-[#582F0E] hover:bg-white hover:text-[#2D6A4F] hover:shadow-xs active:scale-95'
                 }`}
               >
                 <Icon
-                  className={`w-4 h-4 shrink-0 transition-transform duration-300 group-hover:scale-115 ${
+                  className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
                     isActive ? 'text-[#FFB703]' : ''
                   }`}
                 />
 
-                {/* Expanding Label Animation */}
-                <span
-                  className={`max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 ${
-                    isActive ? 'max-w-xs opacity-100 pl-2' : 'group-hover:pl-2'
-                  } whitespace-nowrap overflow-hidden transition-all duration-300 ease-out`}
-                >
-                  {item.label}
-                </span>
-
                 {item.badge && (
-                  <span
-                    className={`ml-1.5 text-[9px] px-1.5 py-0.2 rounded-full bg-[#FFB703] text-[#582F0E] font-black shrink-0 transition-opacity duration-300 ${
-                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#FFB703] border-2 border-white shadow-xs" />
                 )}
               </Link>
             );
