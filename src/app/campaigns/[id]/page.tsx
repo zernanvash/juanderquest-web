@@ -348,21 +348,21 @@ function CampaignDetailContent({ paramsPromise }: { paramsPromise: Promise<{ id:
             )}
 
             {/* Promote & Earn Social Box */}
-            <div className="bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] text-white rounded-xl p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between">
+            <div className="bg-white rounded-xl p-6 border border-[#E3DFD5] space-y-4 shadow-xs">
+              <div className="flex items-center justify-between border-b border-[#E8E5DE] pb-3">
                 <div className="flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-[#FFB703]" />
-                  <h3 className="text-sm font-bold text-white tracking-wide">
-                    Social Media Megaphone & Referral Workstation
+                  <Share2 className="w-4 h-4 text-[#2D6A4F]" />
+                  <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">
+                    Promoter Referral Workstation
                   </h3>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 font-mono text-emerald-200">
-                  Earn +{(campaign.referralBountyMjdq / 1000).toLocaleString()} JDQ / Friend
+                <span className="text-[10px] font-bold text-[#B45309] bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded">
+                  +{(campaign.referralBountyMjdq / 1000).toLocaleString()} JDQ / Friend
                 </span>
               </div>
 
-              <p className="text-xs text-emerald-100/90 leading-relaxed">
-                Share your unique campaign link across Facebook Groups, Instagram Stories, TikTok, or Group Chats. When friends pre-register and physically attend, referral bounties credit straight into your wallet!
+              <p className="text-xs text-[#514532] leading-relaxed">
+                Share your unique campaign link across social media (Facebook, Instagram, TikTok, or Group Chats). When friends pre-register and physically attend the event, referral bounties credit straight into your wallet!
               </p>
 
               {/* Copy Link Input Bar */}
@@ -371,13 +371,13 @@ function CampaignDetailContent({ paramsPromise }: { paramsPromise: Promise<{ id:
                   type="text"
                   readOnly
                   value={myShareUrl}
-                  className="flex-1 bg-black/30 border border-white/20 rounded-lg px-3 py-2.5 text-xs font-mono text-emerald-200 truncate focus:outline-none"
+                  className="flex-1 bg-[#FAF9F5] border border-[#E3DFD5] rounded-lg px-3 py-2.5 text-xs font-mono text-[#2D6A4F] font-bold truncate focus:outline-none"
                 />
                 <button
                   onClick={handleCopyShareLink}
-                  className="py-2.5 px-4 rounded-lg bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-bold flex items-center gap-1.5 transition active:scale-98 cursor-pointer shrink-0"
+                  className="py-2.5 px-4 rounded-lg bg-[#2D6A4F] hover:bg-[#245740] text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-98 cursor-pointer shrink-0"
                 >
-                  {copiedLink ? <Check className="w-4 h-4 text-emerald-800" /> : <Copy className="w-4 h-4" />}
+                  {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
                   <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
                 </button>
               </div>
@@ -386,16 +386,16 @@ function CampaignDetailContent({ paramsPromise }: { paramsPromise: Promise<{ id:
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   onClick={handleNativeShare}
-                  className="py-2 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer active:scale-98"
+                  className="py-2 px-3.5 rounded-lg bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] text-[#582F0E] text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-98"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Share via Device</span>
+                  <Share2 className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                  <span>Share Link</span>
                 </button>
                 <a
                   href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(myShareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2 px-3 rounded-lg bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-98"
+                  className="py-2 px-3.5 rounded-lg bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/30 text-[#1877F2] text-xs font-bold flex items-center gap-1.5 transition active:scale-98"
                 >
                   <span>Facebook</span>
                 </a>
@@ -403,7 +403,7 @@ function CampaignDetailContent({ paramsPromise }: { paramsPromise: Promise<{ id:
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me at ${campaign.title} on JuanDerQuest! Claim your event slot:`)}&url=${encodeURIComponent(myShareUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2 px-3 rounded-lg bg-sky-500/80 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-98"
+                  className="py-2 px-3.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 text-xs font-bold flex items-center gap-1.5 transition active:scale-98"
                 >
                   <span>X (Twitter)</span>
                 </a>
@@ -411,18 +411,18 @@ function CampaignDetailContent({ paramsPromise }: { paramsPromise: Promise<{ id:
 
               {/* User Referral Dashboard Counter */}
               {referralStats && (
-                <div className="p-3.5 rounded-lg bg-black/25 border border-white/10 grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="p-3.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] grid grid-cols-3 gap-2 text-center text-xs pt-3">
                   <div>
-                    <span className="text-[10px] text-gray-300 block">Invited Friends</span>
-                    <span className="text-sm font-bold text-white">{referralStats.totalInvited}</span>
+                    <span className="text-[10px] text-gray-400 font-medium block">Invited Friends</span>
+                    <span className="text-sm font-bold text-[#2C221E]">{referralStats.totalInvited}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-gray-300 block">Verified Attended</span>
-                    <span className="text-sm font-bold text-emerald-400">{referralStats.totalAttended}</span>
+                    <span className="text-[10px] text-gray-400 font-medium block">Verified Attended</span>
+                    <span className="text-sm font-bold text-emerald-700">{referralStats.totalAttended}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-gray-300 block">Earnings</span>
-                    <span className="text-sm font-bold text-[#FFB703]">
+                    <span className="text-[10px] text-gray-400 font-medium block">Earned Bounty</span>
+                    <span className="text-sm font-bold text-[#B45309]">
                       +{(referralStats.totalEarnedMjdq / 1000).toLocaleString()} JDQ
                     </span>
                   </div>

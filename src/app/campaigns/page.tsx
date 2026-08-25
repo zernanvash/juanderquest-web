@@ -79,80 +79,78 @@ function CampaignsContent() {
     <div className="min-h-screen bg-[#FAF9F5] text-[#2C221E] pb-24">
       <Navigation />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6">
-        {/* Editorial Header Banner */}
-        <div className="bg-[#2D6A4F] text-white rounded-xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-          <div className="relative z-10 max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-semibold backdrop-blur-xs">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-8">
+        {/* Editorial Header Section */}
+        <div className="bg-white rounded-xl p-6 sm:p-8 border border-[#E3DFD5] shadow-xs space-y-6">
+          <div className="max-w-2xl space-y-2.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-[#2D6A4F] text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
-              <span>Municipal Growth & Pre-Event Engine</span>
+              <span>Municipal Pre-Events & Growth Campaigns</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Pangasinan Campaigns & Pre-Events
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#2C221E]">
+              Pangasinan Tourism Campaigns
             </h1>
-            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-              Discover upcoming municipal festivals, eco-raids, and cultural tours. Pre-register for early-bird reward bounties and earn referral tokens by inviting fellow travelers!
+            <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
+              Explore upcoming municipal festivals, coastal eco-raids, and cultural tours. Pre-register to lock in early-bird reward allocations and earn referral bounties by inviting fellow travelers.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 sm:pt-6 relative z-10 border-t border-white/15 mt-6">
-            <div className="bg-white/10 rounded-lg p-3 backdrop-blur-xs">
-              <span className="text-[10px] text-emerald-200 uppercase font-medium block">Active Campaigns</span>
-              <span className="text-lg font-bold text-white">{campaigns.length} Events</span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[#E8E5DE]">
+            <div className="p-3.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
+              <span className="text-[10px] text-gray-500 uppercase font-medium block">Active Campaigns</span>
+              <span className="text-base sm:text-lg font-bold text-[#2C221E]">{campaigns.length} Events Live</span>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 backdrop-blur-xs">
-              <span className="text-[10px] text-emerald-200 uppercase font-medium block">Escrow Reward Pool</span>
-              <span className="text-lg font-bold text-[#FFB703]">
+            <div className="p-3.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
+              <span className="text-[10px] text-gray-500 uppercase font-medium block">Escrow Reward Pool</span>
+              <span className="text-base sm:text-lg font-bold text-[#2D6A4F]">
                 {(campaigns.reduce((acc, c) => acc + c.totalBudgetMjdq, 0) / 1000).toLocaleString()} JDQ
               </span>
             </div>
-            <div className="col-span-2 sm:col-span-1 bg-white/10 rounded-lg p-3 backdrop-blur-xs">
-              <span className="text-[10px] text-emerald-200 uppercase font-medium block">Referral Bounties</span>
-              <span className="text-lg font-bold text-white">Up to 50 JDQ / Friend</span>
+            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
+              <span className="text-[10px] text-gray-500 uppercase font-medium block">Referral Bounties</span>
+              <span className="text-base sm:text-lg font-bold text-[#B45309]">Up to 50 JDQ / Friend</span>
             </div>
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            {/* Category Filter Chips */}
-            <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer active:scale-98 ${
-                    selectedCategory === cat.id
-                      ? 'bg-[#2D6A4F] text-white shadow-xs'
-                      : 'bg-white border border-[#E3DFD5] text-[#582F0E] hover:bg-[#FAF9F5]'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
+        {/* Filter Chips & Search Bar */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-2">
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer active:scale-98 ${
+                  selectedCategory === cat.id
+                    ? 'bg-[#2D6A4F] text-white shadow-xs'
+                    : 'bg-white border border-[#E3DFD5] text-[#582F0E] hover:bg-[#FAF9F5]'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
 
-            {/* Search Input */}
-            <div className="relative min-w-[220px]">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search event or municipality..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-[#E3DFD5] rounded-lg pl-9 pr-3 py-2 text-xs text-[#2C221E] focus:outline-none focus:border-[#2D6A4F]"
-              />
-            </div>
+          {/* Search Input */}
+          <div className="relative min-w-[220px]">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search event or town..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-[#E3DFD5] rounded-lg pl-9 pr-3 py-2 text-xs text-[#2C221E] focus:outline-none focus:border-[#2D6A4F]"
+            />
           </div>
         </div>
 
         {/* Campaign Cards Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             {[1, 2, 3, 4].map((n) => (
               <div key={n} className="bg-white rounded-xl p-6 border border-[#E3DFD5] animate-pulse space-y-4">
-                <div className="h-44 bg-gray-200 rounded-lg" />
+                <div className="h-48 bg-gray-200 rounded-lg" />
                 <div className="h-4 bg-gray-200 rounded-sm w-3/4" />
                 <div className="h-3 bg-gray-200 rounded-sm w-1/2" />
               </div>
@@ -175,7 +173,7 @@ function CampaignsContent() {
             <p className="text-xs text-gray-500">Try selecting another category or clear your search.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             {filteredCampaigns.map((camp) => {
               const timer = calculateTimeRemaining(camp.eventDate);
               const reservedPercent = Math.min(100, Math.round((camp.reservedParticipants / camp.maxParticipants) * 100));
@@ -185,14 +183,14 @@ function CampaignsContent() {
                   key={camp.id}
                   className="bg-white rounded-xl border border-[#E3DFD5] overflow-hidden flex flex-col hover:border-[#C7C2B4] transition shadow-xs"
                 >
-                  {/* Banner Image with Countdown Badge */}
-                  <div className="relative h-48 bg-gray-100 overflow-hidden">
+                  {/* Banner Image with Badges */}
+                  <div className="relative h-52 bg-gray-100 overflow-hidden">
                     <img
                       src={camp.bannerImageUrl}
                       alt={camp.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
 
                     {/* Category Chip */}
                     <div className="absolute top-3 left-3">
@@ -215,11 +213,11 @@ function CampaignsContent() {
 
                     {/* Location strip */}
                     <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs">
-                      <div className="flex items-center gap-1.5 font-medium drop-shadow-xs">
-                        <MapPin className="w-3.5 h-3.5 text-[#FFB703]" />
-                        <span>{camp.locationName}</span>
+                      <div className="flex items-center gap-1.5 font-medium drop-shadow-xs truncate">
+                        <MapPin className="w-3.5 h-3.5 text-[#FFB703] shrink-0" />
+                        <span className="truncate">{camp.locationName}</span>
                       </div>
-                      <span className="text-[10px] text-gray-200">
+                      <span className="text-[10px] text-gray-200 shrink-0 ml-2">
                         {new Date(camp.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
@@ -235,7 +233,7 @@ function CampaignsContent() {
                       <h2 className="text-base sm:text-lg font-bold text-[#2C221E] leading-snug">
                         {camp.title}
                       </h2>
-                      <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-[#514532] line-clamp-2 leading-relaxed">
                         {camp.description}
                       </p>
                     </div>
@@ -256,10 +254,10 @@ function CampaignsContent() {
                       </div>
                     </div>
 
-                    {/* Pre-Registration Progress Capacity */}
+                    {/* Pre-Registration Capacity Bar */}
                     <div className="space-y-1.5 pt-1">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-gray-500 font-medium">Reserved Capacity</span>
+                        <span className="text-gray-500 font-medium">Reserved Quota</span>
                         <span className="font-bold text-[#582F0E]">
                           {camp.reservedParticipants} / {camp.maxParticipants} slots ({reservedPercent}%)
                         </span>
@@ -275,7 +273,7 @@ function CampaignsContent() {
                     {/* Action Button */}
                     <Link
                       href={`/campaigns/${camp.id}`}
-                      className="w-full py-3 px-4 rounded-lg bg-[#2D6A4F] hover:bg-[#245740] text-white text-xs font-bold flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer mt-2"
+                      className="w-full py-3 px-4 rounded-lg bg-[#2D6A4F] hover:bg-[#245740] text-white text-xs font-bold flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer mt-1"
                     >
                       <span>View Event & Pre-Register</span>
                       <ChevronRight className="w-4 h-4" />
