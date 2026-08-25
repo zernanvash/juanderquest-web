@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Compass,
   ArrowRight,
+  ArrowLeft,
   Heart,
   Flame,
   AlertTriangle,
@@ -146,8 +147,18 @@ function SearchContent() {
     <Navigation>
       <div className="max-w-6xl mx-auto space-y-6 pb-16">
         {/* Search Header Bar */}
-        <div className="bg-white rounded-xl border border-[#E3DFD5] p-5 sm:p-6 shadow-xs space-y-4">
-          <form onSubmit={handleSearchSubmit} className="relative flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-[#E3DFD5] p-4 sm:p-6 shadow-xs space-y-4">
+          <form onSubmit={handleSearchSubmit} className="relative flex items-center gap-2 sm:gap-3">
+            {/* Back Button */}
+            <button
+              type="button"
+              onClick={() => router.back()}
+              title="Go Back"
+              className="w-11 h-11 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:bg-white hover:border-[#2D6A4F] text-[#582F0E] flex items-center justify-center shrink-0 transition active:scale-95 cursor-pointer shadow-2xs group"
+            >
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+
             <div className="relative flex-1">
               <Search className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -162,7 +173,7 @@ function SearchContent() {
                 <button
                   type="button"
                   onClick={() => setQuery('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
