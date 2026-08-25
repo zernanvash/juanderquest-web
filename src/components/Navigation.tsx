@@ -24,13 +24,14 @@ import {
   Bell
 } from 'lucide-react';
 
-export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname();
   const { user, wallet, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navItems = [
     { label: 'Community Feed', href: '/explore', icon: Compass, flair: 'Feed' },
+    { label: 'Events & Campaigns', href: '/campaigns', icon: Sparkles, badge: 'Pre-Events', flair: 'Campaigns' },
     { label: 'Quest Trails', href: '/quests', icon: Zap, flair: 'Bounties' },
     { label: 'Interactive Map', href: '/map', icon: MapPin },
     { label: 'Governance DAO', href: '/vote', icon: Vote, badge: 'DAO' },
@@ -77,7 +78,7 @@ export const Navigation: React.FC<{ children: React.ReactNode }> = ({ children }
 
         {/* Global Nav Links (Desktop Center) */}
         <nav className="hidden xl:flex items-center gap-1 bg-[#FAF9F5] p-1 rounded-2xl border border-[#E3DFD5]">
-          {navItems.slice(0, 5).map((item) => {
+          {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (

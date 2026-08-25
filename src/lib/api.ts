@@ -136,14 +136,34 @@ export interface WalletModel {
 }
 
 export interface SpotModel {
-  id: string; slug: string; name: string; description: string;
-  category: string; subcategory: string; tags: string[];
-  municipality: string; address: string; gpsLat: number; gpsLng: number;
-  priceLevel: number; hours: Record<string, string>; amenities: string[];
-  imageUrl: string; assetIds?: string[]; sourceType: string; sourceName: string; trustLevel: string;
-  questId?: string; distanceKm?: number; recommendationScore?: number;
-  recommendationReasons: string[]; saved: boolean; trendScore: number;
-  crowdStatus: 'quiet'|'moderate'|'estimated_busy'|'unknown'; crowdConfidence: string; crowdUpdatedAt?: string;
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  subcategory: string;
+  tags: string[];
+  municipality: string;
+  address: string;
+  gpsLat: number;
+  gpsLng: number;
+  priceLevel: number;
+  hours: Record<string, string>;
+  amenities: string[];
+  imageUrl: string;
+  assetIds?: string[];
+  sourceType: string;
+  sourceName: string;
+  trustLevel: string;
+  questId?: string;
+  distanceKm?: number;
+  recommendationScore?: number;
+  recommendationReasons: string[];
+  saved: boolean;
+  trendScore: number;
+  crowdStatus: 'quiet' | 'moderate' | 'estimated_busy' | 'unknown';
+  crowdConfidence: string;
+  crowdUpdatedAt?: string;
 }
 
 export interface UploadedAssetModel {
@@ -165,7 +185,36 @@ export async function uploadSpotPhoto(file: File): Promise<UploadedAssetModel> {
 }
 
 export function normalizeSpot(raw: any): SpotModel {
-  return { id:raw.id,slug:raw.slug,name:raw.name,description:raw.description,category:raw.category,subcategory:raw.subcategory,tags:raw.tags||[],municipality:raw.municipality,address:raw.address,gpsLat:Number(raw.gps_lat),gpsLng:Number(raw.gps_lng),priceLevel:Number(raw.price_level)||0,hours:raw.hours||{},amenities:raw.amenities||[],imageUrl:raw.image_url||'',assetIds:raw.asset_ids||[],sourceType:raw.source_type,sourceName:raw.source_name,trustLevel:raw.trust_level,questId:raw.quest_id,distanceKm:raw.distance_km===undefined?undefined:Number(raw.distance_km),recommendationScore:Number(raw.recommendation_score)||0,recommendationReasons:raw.recommendation_reasons||[],saved:!!raw.saved,trendScore:Number(raw.trend_score)||0,crowdStatus:raw.crowd_status||'unknown',crowdConfidence:raw.crowd_confidence||'none',crowdUpdatedAt:raw.crowd_updated_at||undefined };
+  return {
+    id: raw.id,
+    slug: raw.slug,
+    name: raw.name,
+    description: raw.description,
+    category: raw.category,
+    subcategory: raw.subcategory,
+    tags: raw.tags || [],
+    municipality: raw.municipality,
+    address: raw.address,
+    gpsLat: Number(raw.gps_lat),
+    gpsLng: Number(raw.gps_lng),
+    priceLevel: Number(raw.price_level) || 0,
+    hours: raw.hours || {},
+    amenities: raw.amenities || [],
+    imageUrl: raw.image_url || '',
+    assetIds: raw.asset_ids || [],
+    sourceType: raw.source_type,
+    sourceName: raw.source_name,
+    trustLevel: raw.trust_level,
+    questId: raw.quest_id,
+    distanceKm: raw.distance_km === undefined ? undefined : Number(raw.distance_km),
+    recommendationScore: Number(raw.recommendation_score) || 0,
+    recommendationReasons: raw.recommendation_reasons || [],
+    saved: !!raw.saved,
+    trendScore: Number(raw.trend_score) || 0,
+    crowdStatus: raw.crowd_status || 'unknown',
+    crowdConfidence: raw.crowd_confidence || 'none',
+    crowdUpdatedAt: raw.crowd_updated_at || undefined,
+  };
 }
 
 // ---- Mappers ----
@@ -379,6 +428,7 @@ export function normalizeWallet(raw: BackendWallet): WalletModel {
     balanceJdq: Number(raw.balance_jdq) || 0,
   };
 }
+
 // Fee split derived from the authoritative /proposals/config values.
 export function computeVoteFeeSplit(config: Pick<GovernanceConfigModel, 'proposalVoteFeeMjdq' | 'burnBps'>) {
   const fee = config.proposalVoteFeeMjdq;
@@ -433,5 +483,170 @@ export async function fetchRoute(params: {
     avoid_congested: params.avoidCongested !== false,
   });
   if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to calculate route');
+  return res.data.data;
+}
+
+// ---- Campaign & Pre-Event / Pre-Quest Types & Helpers ----
+
+export interface CampaignModel {
+  id: string;
+  hostId: string;
+  hostName: string;
+  title: string;
+  category: 'eco' | 'cultural' | 'food_trade' | 'sports_adventure';
+  locationName: string;
+  municipality: string;
+  bannerImageUrl: string;
+  description: string;
+  eventDate: string;
+  startDate: string;
+  endDate: string;
+  totalBudgetMjdq: number;
+  rewardPerParticipantMjdq: number;
+  referralBountyMjdq: number;
+  maxParticipants: number;
+  reservedParticipants: number;
+  completedParticipants: number;
+  preQuestRequirements: string[];
+  gpsLat?: number;
+  gpsLng?: number;
+  gpsRadiusMeters?: number;
+  status: 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+}
+
+export function normalizeCampaign(raw: any): CampaignModel {
+  return {
+    id: raw.id,
+    hostId: raw.host_id,
+    hostName: raw.host_name,
+    title: raw.title,
+    category: raw.category,
+    locationName: raw.location_name,
+    municipality: raw.municipality || raw.location_name.split(',')[0].trim(),
+    bannerImageUrl: raw.banner_image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=80',
+    description: raw.description,
+    eventDate: raw.event_date || raw.created_at,
+    startDate: raw.start_date || raw.event_date || raw.created_at,
+    endDate: raw.end_date || raw.event_date || raw.created_at,
+    totalBudgetMjdq: Number(raw.total_budget_mjdq) || 0,
+    rewardPerParticipantMjdq: Number(raw.reward_per_participant_mjdq) || 0,
+    referralBountyMjdq: Number(raw.referral_bounty_mjdq) || 0,
+    maxParticipants: Number(raw.max_participants) || 0,
+    reservedParticipants: Number(raw.reserved_participants) || 0,
+    completedParticipants: Number(raw.completed_participants) || 0,
+    preQuestRequirements: raw.pre_quest_requirements || [],
+    gpsLat: raw.gps_lat ? Number(raw.gps_lat) : undefined,
+    gpsLng: raw.gps_lng ? Number(raw.gps_lng) : undefined,
+    gpsRadiusMeters: raw.gps_radius_meters ? Number(raw.gps_radius_meters) : undefined,
+    status: raw.status || 'active',
+    createdAt: raw.created_at,
+  };
+}
+
+export interface CampaignReservationModel {
+  id: string;
+  campaignId: string;
+  userId: string;
+  userDisplayName: string;
+  referredByUserId?: string | null;
+  referredByName?: string | null;
+  ticketCode: string;
+  status: 'reserved' | 'completed' | 'cancelled';
+  createdAt: string;
+  completedAt?: string | null;
+}
+
+export interface CampaignUserStatusModel {
+  isRegistered: boolean;
+  isCompleted: boolean;
+  ticketCode: string | null;
+  reservation: CampaignReservationModel | null;
+}
+
+export interface CampaignReferralStatsModel {
+  campaignId: string;
+  userId: string;
+  referralCode: string;
+  referralBountyPerAttendeeMjdq: number;
+  totalInvited: number;
+  totalAttended: number;
+  totalEarnedMjdq: number;
+  referredFriends: Array<{
+    userName: string;
+    status: string;
+    reservedAt: string;
+    bountyAwarded: boolean;
+  }>;
+}
+
+export async function fetchCampaigns(): Promise<CampaignModel[]> {
+  const res = await api.get('/campaigns');
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to fetch campaigns');
+  return (res.data.data || []).map(normalizeCampaign);
+}
+
+export async function fetchCampaignById(id: string): Promise<CampaignModel> {
+  const res = await api.get(`/campaigns/${id}`);
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Campaign not found');
+  return normalizeCampaign(res.data.data);
+}
+
+export async function fetchMyCampaignStatus(campaignId: string): Promise<CampaignUserStatusModel> {
+  const res = await api.get(`/campaigns/${campaignId}/my-status`);
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to fetch status');
+  return {
+    isRegistered: res.data.data.is_registered,
+    isCompleted: res.data.data.is_completed,
+    ticketCode: res.data.data.ticket_code,
+    reservation: res.data.data.reservation ? {
+      id: res.data.data.reservation.id,
+      campaignId: res.data.data.reservation.campaign_id,
+      userId: res.data.data.reservation.user_id,
+      userDisplayName: res.data.data.reservation.user_display_name,
+      referredByUserId: res.data.data.reservation.referred_by_user_id,
+      referredByName: res.data.data.reservation.referred_by_name,
+      ticketCode: res.data.data.reservation.ticket_code,
+      status: res.data.data.reservation.status,
+      createdAt: res.data.data.reservation.created_at,
+      completedAt: res.data.data.reservation.completed_at,
+    } : null,
+  };
+}
+
+export async function fetchCampaignReferralStats(campaignId: string): Promise<CampaignReferralStatsModel> {
+  const res = await api.get(`/campaigns/${campaignId}/referral-stats`);
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to fetch referral stats');
+  const d = res.data.data;
+  return {
+    campaignId: d.campaign_id,
+    userId: d.user_id,
+    referralCode: d.referral_code,
+    referralBountyPerAttendeeMjdq: d.referral_bounty_per_attendee_mjdq,
+    totalInvited: d.total_invited,
+    totalAttended: d.total_attended,
+    totalEarnedMjdq: d.total_earned_mjdq,
+    referredFriends: (d.referred_friends || []).map((r: any) => ({
+      userName: r.user_name,
+      status: r.status,
+      reservedAt: r.reserved_at,
+      bountyAwarded: r.bounty_awarded,
+    })),
+  };
+}
+
+export async function reserveCampaignSlot(campaignId: string, ref?: string): Promise<{ ticketCode: string; message?: string; reservation: any }> {
+  const res = await api.post(`/campaigns/${campaignId}/reserve`, { ref });
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to reserve slot');
+  return {
+    ticketCode: res.data.data.ticket_code,
+    message: res.data.data.message,
+    reservation: res.data.data.reservation,
+  };
+}
+
+export async function claimCampaignArrivalReward(campaignId: string): Promise<any> {
+  const res = await api.post(`/campaigns/${campaignId}/claim`);
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to claim reward');
   return res.data.data;
 }
