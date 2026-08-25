@@ -149,10 +149,10 @@ export default function ExplorePage() {
     <Navigation>
       <div className="space-y-6">
         {/* Social Media Search Bar */}
-        <div className="bg-white rounded-xl border border-[#E3DFD5] p-3 sm:p-4 shadow-xs flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-[#E3DFD5] p-3 sm:p-4 shadow-xs">
           <Link
             href="/search"
-            className="flex-1 bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] rounded-xl px-4 py-3 text-xs sm:text-sm text-gray-500 font-medium transition cursor-pointer flex items-center justify-between group"
+            className="w-full bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] rounded-xl px-4 py-3 text-xs sm:text-sm text-gray-500 font-medium transition cursor-pointer flex items-center justify-between group"
           >
             <div className="flex items-center gap-3">
               <Search className="w-4 h-4 text-[#2D6A4F] group-hover:scale-110 transition-transform" />
@@ -161,15 +161,6 @@ export default function ExplorePage() {
             <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] bg-white border border-[#E3DFD5] px-2.5 py-1 rounded-md">
               Filter &amp; Discover →
             </span>
-          </Link>
-
-          <Link
-            href="/spots/new"
-            className="py-3 px-4 rounded-xl bg-[#2D6A4F] hover:bg-[#245740] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition active:scale-98 cursor-pointer shrink-0"
-            title="Share New Destination"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Post Spot</span>
           </Link>
         </div>
 
