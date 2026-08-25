@@ -561,7 +561,7 @@ export interface CampaignUserStatusModel {
   isRegistered: boolean;
   isCompleted: boolean;
   ticketCode: string | null;
-  reservation: CampaignReservationModel | null;
+  reservation?: CampaignReservationModel | null;
 }
 
 export interface CampaignReferralStatsModel {
@@ -645,8 +645,8 @@ export async function reserveCampaignSlot(campaignId: string, ref?: string): Pro
   };
 }
 
-export async function claimCampaignArrivalReward(campaignId: string): Promise<any> {
-  const res = await api.post(`/campaigns/${campaignId}/claim`);
+export async function claimCampaignArrivalReward(campaignId: string, lat?: number, lng?: number): Promise<any> {
+  const res = await api.post(`/campaigns/${campaignId}/claim`, { lat, lng });
   if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to claim reward');
   return res.data.data;
 }

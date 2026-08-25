@@ -31,11 +31,12 @@ export const Navigation: React.FC<{ children?: React.ReactNode }> = ({ children 
 
   const navItems = [
     { label: 'Community Feed', href: '/explore', icon: Compass, flair: 'Feed' },
-    { label: 'Events & Campaigns', href: '/campaigns', icon: Sparkles, badge: 'Pre-Events', flair: 'Campaigns' },
-    { label: 'Quest Trails', href: '/quests', icon: Zap, flair: 'Bounties' },
+    { label: 'Quests & Events', href: '/quests', icon: Zap, flair: 'Bounties' },
     { label: 'Interactive Map', href: '/map', icon: MapPin },
-    { label: 'Governance DAO', href: '/vote', icon: Vote, badge: 'DAO' },
     { label: 'Merchant Shop', href: '/shop', icon: ShoppingBag },
+    { label: 'Governance DAO', href: '/vote', icon: Vote, badge: 'DAO' },
+    { label: 'Leaderboard', href: '/leaderboard', icon: Award },
+    { label: 'About Project', href: '/about', icon: ShieldCheck },
     { label: 'My Submissions', href: '/history', icon: History },
     { label: 'Traveler Profile', href: '/profile', icon: User },
   ];

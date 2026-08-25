@@ -26,7 +26,8 @@ import {
   Eye,
   CheckCircle2,
   Tag,
-  Filter
+  Filter,
+  Zap
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
@@ -517,34 +518,24 @@ export default function ExplorePage() {
             )}
           </div>
 
-          {/* Right Sidebar Widgets Column (Span 4 - Fixed & Structured) */}
+          {/* Right Sidebar Widgets Column (Span 4 - Clean & Uncluttered) */}
           <div className="lg:col-span-4 space-y-5">
-            
-            {/* About JuanDerQuest Panel */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E3DFD5] shadow-xs space-y-4">
-              <div className="flex items-center gap-2 pb-3 border-b border-[#E3DFD5]">
-                <ShieldCheck className="w-5 h-5 text-[#2D6A4F]" />
-                <h3 className="font-serif font-black text-base text-[#582F0E]">About JuanDerQuest</h3>
+            {/* Submit Spot CTA Card */}
+            <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#E8E5DE]">
+                <Compass className="w-4 h-4 text-[#2D6A4F]" />
+                <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">
+                  Community Tourism Feed
+                </h3>
               </div>
 
               <p className="text-xs text-[#514532] leading-relaxed">
-                JuanDerQuest is Pangasinan&apos;s eco-tourism network. Travelers verify their visits with GPS &amp; AR, earning prototype reward vouchers while helping distribute foot traffic to tranquil hidden gems.
+                Found an undocumented eco-spot, authentic Pangasinan eatery, or heritage landmark? Share it with fellow travelers.
               </p>
-
-              <div className="grid grid-cols-2 gap-2 text-center py-2 bg-[#FAF9F5] rounded-2xl border border-[#E3DFD5]/60">
-                <div className="p-2">
-                  <span className="block font-serif font-black text-lg text-[#582F0E]">14 LGUs</span>
-                  <span className="text-[10px] text-[#837560] font-bold">Partner Towns</span>
-                </div>
-                <div className="p-2 border-l border-[#E3DFD5]">
-                  <span className="block font-serif font-black text-lg text-[#2D6A4F]">94 Quests</span>
-                  <span className="text-[10px] text-[#837560] font-bold">Active Bounties</span>
-                </div>
-              </div>
 
               <Link
                 href="/spots/new"
-                className="w-full py-3 rounded-2xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-black flex items-center justify-center gap-2 shadow-xs transition"
+                className="w-full py-3 rounded-lg bg-[#2D6A4F] hover:bg-[#245740] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition active:scale-98 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>Submit New Destination Spot</span>
@@ -552,79 +543,77 @@ export default function ExplorePage() {
             </div>
 
             {/* Overcrowding Diversion Live Bounty Card */}
-            <div className="bg-gradient-to-br from-[#FFF3E8] to-[#FFF9F5] rounded-3xl p-5 border border-[#FFD8B8] shadow-xs space-y-3">
+            <div className="bg-amber-50/70 rounded-xl p-5 border border-amber-200/80 shadow-xs space-y-3">
               <div className="flex items-center gap-2 text-[#D95D00] font-bold text-xs">
                 <AlertTriangle className="w-4 h-4" />
-                <span className="uppercase tracking-wide">Live Anti-Crowd Bounty</span>
+                <span className="uppercase tracking-wide">Live Anti-Crowd Alert</span>
               </div>
 
-              <h4 className="font-serif font-black text-base text-[#582F0E]">
-                Hundred Islands Peak Pressure Alert
+              <h4 className="text-sm font-bold text-[#582F0E]">
+                Hundred Islands Peak Pressure
               </h4>
 
               <p className="text-xs text-[#6B4B00] leading-relaxed">
-                High traveler density reported at Alaminos wharfs. Divert to tranquil nearby spots like <strong>Timmaw Cave</strong> or <strong>Tambobong Beach</strong> to unlock <strong>+1.5x mJDQ Points</strong>!
+                High tourist density reported at Alaminos Lucap wharfs. Divert to tranquil nearby spots like <strong>Timmaw Cave</strong> or <strong>Tambobong Beach</strong> to unlock <strong>+1.5x mJDQ Points</strong>!
               </p>
 
               <button
                 onClick={() => setSortFlair('quiet')}
-                className="w-full py-2.5 rounded-xl bg-[#D95D00] hover:bg-[#B34D00] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition"
+                className="w-full py-2.5 rounded-lg bg-[#D95D00] hover:bg-[#B34D00] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
               >
                 <span>Filter Tranquil Alternatives</span>
               </button>
             </div>
 
-            {/* Top Scouts Leaderboard */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E3DFD5]">
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-[#FFB703]" />
-                  <h3 className="font-serif font-bold text-sm text-[#582F0E]">Top JuanDerer Scouts</h3>
-                </div>
-                <span className="text-[10px] font-bold text-[#837560]">Weekly</span>
+            {/* Quick Portal Shortcuts */}
+            <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
+                <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">Quick Portals</h3>
               </div>
 
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2 rounded-xl bg-[#FAF9F5]">
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-[#FFB703]">1</span>
-                    <span className="font-bold text-[#582F0E]">PangasinanExplorer</span>
+                <Link
+                  href="/quests"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+                >
+                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                    <Zap className="w-3.5 h-3.5 text-[#FFB703]" />
+                    <span>Quests &amp; Event Campaigns</span>
                   </div>
-                  <span className="text-[10px] font-extrabold text-[#2D6A4F]">3,420 PTS</span>
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded-xl bg-[#FAF9F5]">
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-[#A7A7A7]">2</span>
-                    <span className="font-bold text-[#582F0E]">BolinaoWave</span>
-                  </div>
-                  <span className="text-[10px] font-extrabold text-[#2D6A4F]">2,890 PTS</span>
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded-xl bg-[#FAF9F5]">
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-[#CD7F32]">3</span>
-                    <span className="font-bold text-[#582F0E]">HeritageSeeker</span>
-                  </div>
-                  <span className="text-[10px] font-extrabold text-[#2D6A4F]">2,150 PTS</span>
-                </div>
-              </div>
-            </div>
-
-            {/* MSME Local Partner Deals */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E3DFD5]">
-                <h3 className="font-serif font-bold text-sm text-[#582F0E]">Partner Merchant Deals</h3>
-                <Link href="/shop" className="text-[10px] text-[#2D6A4F] font-extrabold hover:underline">
-                  View All Shop →
+                  <span className="text-[10px] text-[#2D6A4F] font-bold">Bounties →</span>
                 </Link>
-              </div>
 
-              <div className="space-y-2">
-                <Link href="/shop" className="block p-3 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#FFB703] transition">
-                  <span className="text-[10px] font-black uppercase text-[#2D6A4F]">Bolinao Craft Salt</span>
-                  <p className="font-bold text-xs text-[#582F0E]">20% OFF Authentic Dasol Salt Pack</p>
-                  <span className="text-[10px] text-[#837560]">Redeem with 150 PTS</span>
+                <Link
+                  href="/leaderboard"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+                >
+                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                    <Award className="w-3.5 h-3.5 text-[#B45309]" />
+                    <span>Scout Hall of Fame</span>
+                  </div>
+                  <span className="text-[10px] text-[#582F0E] font-bold">Ranks →</span>
+                </Link>
+
+                <Link
+                  href="/shop"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+                >
+                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                    <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>MSME Partner Deals</span>
+                  </div>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold">Shop →</span>
+                </Link>
+
+                <Link
+                  href="/about"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+                >
+                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    <span>About JuanDerQuest &amp; Team</span>
+                  </div>
+                  <span className="text-[10px] text-gray-500 font-bold">Story →</span>
                 </Link>
               </div>
             </div>
