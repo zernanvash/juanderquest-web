@@ -27,11 +27,15 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
     versionName: string;
     versionCode: number;
     downloadUrl: string;
+    commitHash?: string;
+    fileName?: string;
     changelog?: string;
   }>({
-    versionName: '1.0.0',
-    versionCode: 104,
+    versionName: 'alpha-latest',
+    versionCode: 105,
     downloadUrl: 'https://jdq.zernanvash.dev/api/v1/app/download',
+    commitHash: 'latest',
+    fileName: 'juanderquest-alpha-latest.apk',
     changelog: 'Automated release build with native installer and latest Pangasinan destination spots.',
   });
 
@@ -55,6 +59,9 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
             ...prev,
             versionName: res.data.versionName || prev.versionName,
             versionCode: res.data.versionCode || prev.versionCode,
+            commitHash: res.data.commitHash || prev.commitHash,
+            fileName: res.data.fileName || prev.fileName,
+            downloadUrl: res.data.downloadUrl || prev.downloadUrl,
             changelog: res.data.changelog || prev.changelog,
           }));
         }
@@ -67,6 +74,8 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
   if (!mounted) return <>{children}</>;
 
   if (isMobile && !bypass) {
+    const currentApkName = versionInfo.fileName || `juanderquest-alpha-${versionInfo.commitHash || 'latest'}.apk`;
+
     return (
       <div className="min-h-screen bg-[#FAF9F5] text-[#2B2319] flex flex-col items-center justify-start p-4 sm:p-6 selection:bg-[#FFB703]/30">
         <div className="max-w-lg w-full bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E4D9] shadow-xl text-center flex flex-col items-center mt-2 mb-8">
@@ -94,13 +103,13 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
             JuanDerQuest Mobile
           </h1>
           <p className="text-xs text-[#7D5800] font-semibold mb-3">
-            Pangasinan's Heritage & Hidden Gems Quest Platform
+            Pangasinan's Heritage &amp; Hidden Gems Quest Platform
           </p>
 
           {/* Release Meta Chip */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3F6653]/10 text-[#274E3C] text-[11px] font-bold tracking-wide mb-6 border border-[#3F6653]/20">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3F6653]/10 text-[#274E3C] text-[11px] font-bold tracking-wide mb-6 border border-[#3F6653]/20 font-mono">
             <span className="w-2 h-2 rounded-full bg-[#48C71D] animate-pulse"></span>
-            <span>v{versionInfo.versionName} • Android 8.0+ • ~82 MB</span>
+            <span>{currentApkName} • Android 8.0+ • ~82 MB</span>
           </div>
 
           {/* Description */}
@@ -111,37 +120,38 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
           {/* Primary Download CTA Button */}
           <a
             href={versionInfo.downloadUrl}
-            download="juanderquest_beta_v1.0.0.apk"
+            download={currentApkName}
             className="w-full flex flex-col items-center justify-center bg-[#2D6A4F] hover:bg-[#1B4332] active:scale-[0.98] text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition duration-200 group mb-3"
           >
             <div className="flex items-center gap-2.5 text-base">
               <Download className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
               <span>Download JuanDerQuest APK</span>
             </div>
-            <span className="text-[11px] text-[#A7D7C5] font-normal mt-0.5">
-              Direct Package File • Fast &amp; Free (v{versionInfo.versionName})
+            <span className="text-[11px] text-[#A7D7C5] font-mono mt-0.5">
+              {currentApkName}
             </span>
           </a>
 
           {/* Secondary Mirrors & Version links */}
           <div className="flex items-center justify-center gap-3 text-[11px] text-[#7D5800] font-semibold mb-6">
             <a 
-              href="https://jdq.zernanvash.dev/downloads/juanderquest-latest.apk"
-              download="juanderquest_beta_v1.0.0.apk"
-              className="hover:underline flex items-center gap-1"
+              href="https://jdq.zernanvash.dev/api/v1/app/download"
+              download={currentApkName}
+              className="hover:underline flex items-center gap-1 font-mono"
             >
-              <span>Direct Mirror (Nginx)</span>
+              <span>Direct Download</span>
             </a>
             <span>•</span>
             <a 
               href="https://jdq.zernanvash.dev/downloads/version.json"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:underline"
+              className="hover:underline font-mono"
             >
               <span>version.json</span>
             </a>
           </div>
+
 
           {/* Installation Guide Accordion */}
           <div className="w-full mb-6 text-left">
