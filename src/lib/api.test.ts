@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildSubmissionPayload, computeVoteFeeSplit, normalizeQuest, normalizeSubmission } from './api';
+import {
+  buildProposalVotePayload,
+  buildSubmissionPayload,
+  computeVoteFeeSplit,
+  normalizeQuest,
+  normalizeSubmission,
+} from './api';
 
 describe('API helpers', () => {
   it('normalizes backend quest and submission fields', () => {
@@ -15,5 +21,11 @@ describe('API helpers', () => {
 
   it('splits the configured fee without creating fractional mJDQ', () => {
     expect(computeVoteFeeSplit({ proposalVoteFeeMjdq: 1000, burnBps: 2500 })).toEqual({ fee: 1000, burn: 250, escrow: 750, feeJdq: 1 });
+  });
+
+  it('builds the paid proposal vote contract with an idempotency key', () => {
+    const payload = buildProposalVotePayload('yes');
+    expect(payload.choice).toBe('yes');
+    expect(payload.idempotency_key).toMatch(/^[0-9a-f-]{36}$/i);
   });
 });

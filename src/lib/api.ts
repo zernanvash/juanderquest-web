@@ -28,6 +28,13 @@ export const uuid = (): string =>
         return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       });
 
+export type ProposalVoteChoice = 'yes' | 'no';
+
+export const buildProposalVotePayload = (choice: ProposalVoteChoice) => ({
+  choice,
+  idempotency_key: uuid(),
+});
+
 // ---- Normalized models (backend returns snake_case; pages consume camelCase) ----
 
 export interface UserModel {

@@ -8,6 +8,7 @@ import {
   normalizeGovernanceConfig,
   normalizeWallet,
   computeVoteFeeSplit,
+  buildProposalVotePayload,
   ProposalModel,
   GovernanceConfigModel,
   WalletModel,
@@ -112,9 +113,10 @@ export default function VotePage() {
     setVoteError(null);
 
     try {
-      const res = await api.post(`/proposals/${proposal.id}/vote`, {
-        choice: voteChoice,
-      });
+      const res = await api.post(
+        `/proposals/${proposal.id}/votes`,
+        buildProposalVotePayload(voteChoice),
+      );
 
       if (res.data?.success) {
         setVotedMap((prev) => ({ ...prev, [proposal.id]: voteChoice }));
