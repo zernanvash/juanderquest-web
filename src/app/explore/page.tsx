@@ -610,7 +610,8 @@ export default function ExplorePage() {
         </div>
 
         {/* Right Sidebar Widgets Column (Span 4 - Sticky Facebook Style) */}
-        <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 lg:self-start pr-1">
+        <aside className="lg:col-span-4 lg:self-stretch pr-1">
+          <div className="space-y-5 lg:sticky lg:top-20 lg:self-start">
 
             {/* Quick Portal Shortcuts */}
             <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
@@ -664,6 +665,7 @@ export default function ExplorePage() {
                 </Link>
               </div>
             </div>
+          </div>
           </aside>
 
         </div>
