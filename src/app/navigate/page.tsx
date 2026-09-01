@@ -27,6 +27,8 @@ import {
 import { Navigation } from '@/components/Navigation';
 import { fetchRoute, RouteModel, api, SpotModel, normalizeSpot } from '@/lib/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { createUserLocationPinHtml, createDestinationPinHtml, createStepPinHtml } from '@/lib/map-icons';
+
 
 function NavigateContent() {
   const searchParams = useSearchParams();
@@ -214,8 +216,8 @@ function NavigateContent() {
         // Start location marker (Origin)
         if (userLocation) {
           const originIcon = L.divIcon({
-            className: '',
-            html: `<div class="w-8 h-8 rounded-full bg-[#582F0E] text-[#FFB703] font-bold text-xs border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transform hover:scale-110 transition duration-200">🚀</div>`,
+            className: 'leaflet-custom-marker',
+            html: createUserLocationPinHtml(),
             iconSize: [32, 32],
             iconAnchor: [16, 16],
           });
@@ -226,10 +228,10 @@ function NavigateContent() {
 
         // Destination location marker
         const destIcon = L.divIcon({
-          className: '',
-          html: `<div class="w-9 h-9 rounded-full bg-[#2D6A4F] text-white font-bold text-sm border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transform hover:scale-110 transition duration-200">📍</div>`,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
+          className: 'leaflet-custom-marker',
+          html: createDestinationPinHtml(),
+          iconSize: [38, 46],
+          iconAnchor: [19, 45],
         });
         L.marker([destination.lat, destination.lng], { icon: destIcon })
           .bindPopup(`<b>${destination.name}</b><br/>${destination.address}`)
@@ -276,8 +278,8 @@ function NavigateContent() {
       }
 
       const stepIcon = L.divIcon({
-        className: '',
-        html: `<div class="w-7 h-7 rounded-full bg-[#FFB703] text-[#582F0E] font-black text-xs border-2 border-white shadow-xl flex items-center justify-center animate-bounce">${stepIndex + 1}</div>`,
+        className: 'leaflet-custom-marker',
+        html: createStepPinHtml(stepIndex + 1),
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });

@@ -9,6 +9,8 @@ import { fetchWithCache } from '@/lib/cache';
 import { useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { createQuestPinHtml, createSpotPinHtml } from '@/lib/map-icons';
+
 import {
   MapPin,
   Compass,
@@ -121,11 +123,12 @@ export default function QuestMapPage() {
       if (filterType === 'all' || filterType === 'quests') {
         quests.forEach((q) => {
           allCoordinates.push([q.gpsLat, q.gpsLng]);
+          const isSelected = selectedItem?.type === 'quest' && selectedItem.data.id === q.id;
           const icon = L.divIcon({
-            className: '',
-            html: `<div class="w-9 h-9 rounded-full bg-[#FFB703] text-[#582F0E] font-black text-sm border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transform hover:scale-115 transition duration-200">🏆</div>`,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18],
+            className: 'leaflet-custom-marker',
+            html: createQuestPinHtml(isSelected),
+            iconSize: [38, 46],
+            iconAnchor: [19, 45],
           });
 
           L.marker([q.gpsLat, q.gpsLng], { icon })
@@ -141,11 +144,12 @@ export default function QuestMapPage() {
       if (filterType === 'all' || filterType === 'spots') {
         spots.forEach((s) => {
           allCoordinates.push([s.gpsLat, s.gpsLng]);
+          const isSelected = selectedItem?.type === 'spot' && selectedItem.data.id === s.id;
           const icon = L.divIcon({
-            className: '',
-            html: `<div class="w-8 h-8 rounded-full bg-[#2D6A4F] text-white font-bold text-xs border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transform hover:scale-115 transition duration-200">📍</div>`,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
+            className: 'leaflet-custom-marker',
+            html: createSpotPinHtml(isSelected),
+            iconSize: [36, 44],
+            iconAnchor: [18, 43],
           });
 
           L.marker([s.gpsLat, s.gpsLng], { icon })
@@ -157,6 +161,7 @@ export default function QuestMapPage() {
         });
       }
 
+
       allCoordinatesRef.current = allCoordinates;
 
       if (allCoordinates.length > 0) {
@@ -167,7 +172,8 @@ export default function QuestMapPage() {
     return () => {
       isDisposed = true;
     };
-  }, [isReady, loading, error, quests, spots, filterType]);
+  }, [isReady, loading, error, quests, spots, filterType, selectedItem]);
+
 
   if (!isReady) return null;
 

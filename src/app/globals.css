@@ -114,7 +114,12 @@ button, a, input, select, textarea {
   background: linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%);
 }
 
-/* Leaflet divIcon quest marker pin */
+/* Leaflet divIcon custom SVG marker pin */
+.leaflet-custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
 .jq-marker {
   width: 36px;
   height: 36px;
@@ -131,6 +136,7 @@ button, a, input, select, textarea {
 .jq-marker span {
   transform: rotate(45deg);
 }
+
 
 html, body {
   overflow-x: hidden;
