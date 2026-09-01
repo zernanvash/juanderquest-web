@@ -173,7 +173,7 @@ export default function AddSpotPage() {
       // Auto-upload photo if file selected but not yet uploaded
       if (selectedFile && !finalAssetId) {
         setUploading(true);
-        const uploaded = await uploadSpotPhoto(selectedFile);
+        const uploaded = await uploadSpotMedia(selectedFile);
         finalAssetId = uploaded.asset_id;
         setUploadedAssetId(uploaded.asset_id);
         setUploadedPhotoUrl(uploaded.url);
@@ -200,7 +200,7 @@ export default function AddSpotPage() {
 
       if (res.data?.success) {
         invalidateCache('spots');
-        router.push('/explore?submitted=review');
+        router.push('/thank-you?type=spot');
       } else {
         setSubmitError('Failed to create destination spot.');
       }
@@ -246,7 +246,7 @@ export default function AddSpotPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-[#D5C4AC]/50 p-6 md:p-8 space-y-6 shadow-sm">
           {submitError && (
-            <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2">
+            <div role="alert" aria-live="assertive" className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{submitError}</span>
             </div>

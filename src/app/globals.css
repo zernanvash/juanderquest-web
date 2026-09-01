@@ -172,3 +172,7 @@ html, body {
     transition-duration: 0.01ms !important;
   }
 }
+
+.skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 100; border-radius: .75rem; background: #fff; padding: .75rem 1rem; font-weight: 800; color: #1B4332; box-shadow: 0 4px 18px rgba(0,0,0,.2); }
+.skip-link:focus { top: 1rem; }
+[id] { scroll-margin-top: 5rem; }

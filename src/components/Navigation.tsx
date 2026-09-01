@@ -59,7 +59,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
         <div className="flex items-center gap-3">
           <Link href="/explore" className="flex items-center group" title="JuanDerQuest">
             <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:scale-105 group-hover:border-[#2D6A4F]/40 transition transform">
-              <img src="/logo.png" alt="JuanDerQuest" className="w-7 h-7 object-contain" />
+              <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
             </div>
           </Link>
         </div>
@@ -122,6 +122,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               <button
                 onClick={logout}
                 title="Logout"
+                aria-label="Log out"
                 className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center text-[#BC4749] hover:bg-red-50 border border-transparent hover:border-red-200 transition"
               >
                 <LogOut className="w-4 h-4" />
@@ -207,7 +208,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-[#E3DFD5] mb-5">
                 <div className="flex items-center gap-2">
-                  <img src="/logo.png" alt="JuanDerQuest" className="w-7 h-7 object-contain" />
+                  <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
                   <span className="font-serif font-black text-sm text-[#582F0E]">JuanDerQuest</span>
                 </div>
                 <button
