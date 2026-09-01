@@ -147,44 +147,52 @@ export default function ExplorePage() {
     return true;
   });
 
+  // Distinct recommendation selections
+  const topRecommendation = spots[0] || null;
+  const secondRecommendation = spots.find((s) => s.id !== topRecommendation?.id && s.imageUrl) || spots[1] || null;
+  const thirdRecommendation = spots.find((s) => s.id !== topRecommendation?.id && s.id !== secondRecommendation?.id) || spots[2] || null;
+
   return (
     <Navigation>
-      <div className="space-y-6">
-        {/* Social Media Search Bar */}
-        <div className="bg-white rounded-xl border border-[#E3DFD5] p-3 sm:p-4 shadow-xs">
-          <Link
-            href="/search"
-            className="w-full bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] rounded-xl px-4 py-3 text-xs sm:text-sm text-gray-500 font-medium transition cursor-pointer flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-3">
-              <Search className="w-4 h-4 text-[#2D6A4F] group-hover:scale-110 transition-transform" />
-              <span>Search destinations, food spots, festivals, or towns in Pangasinan...</span>
-            </div>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] bg-white border border-[#E3DFD5] px-2.5 py-1 rounded-md">
-              Filter &amp; Discover →
-            </span>
-          </Link>
-        </div>
-
-        {processedSpots[0] && (
-          <article className="rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-4 shadow-xs sm:p-5">
+      <div className="space-y-5">
+        {/* Top "A place you may like" recommendation card */}
+        {topRecommendation && (
+          <article className="rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 via-white to-amber-50/40 p-4 sm:p-5 shadow-xs transition-all duration-300 ease-out hover:shadow-md">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <span className="rounded bg-emerald-100 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[#2D6A4F]">A place you may like</span>
-                <h2 className="mt-2 text-base font-black text-[#582F0E]">{processedSpots[0].name}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-[#514532]">A similar-quality Pangasinan option selected from your interests, saved places, and destination activity—not limited to the nearest location.</p>
-                <p className="mt-1 text-[11px] font-bold text-[#2D6A4F]">{processedSpots[0].municipality} · Organic recommendation</p>
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-emerald-100 text-[#2D6A4F] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#2D6A4F]" />
+                    A place you may like
+                  </span>
+                  <span className="text-[10px] text-[#837560] font-medium">· Organic recommendation</span>
+                </div>
+                <h2 className="text-base sm:text-lg font-black font-serif text-[#582F0E]">
+                  {topRecommendation.name}
+                </h2>
+                <p className="text-xs leading-relaxed text-[#514532] line-clamp-2">
+                  {topRecommendation.description}
+                </p>
+                <p className="text-[11px] font-bold text-[#2D6A4F] flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {topRecommendation.municipality} · Selected based on your interests &amp; activity
+                </p>
               </div>
-              <Link href={`/spots/${processedSpots[0].slug}`} className="shrink-0 rounded-lg bg-[#2D6A4F] px-4 py-2.5 text-center text-xs font-bold text-white hover:bg-[#1B4332]">View this place</Link>
+              <Link
+                href={`/spots/${topRecommendation.slug}`}
+                className="shrink-0 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] px-4 py-2.5 text-center text-xs font-bold text-white transition-all duration-200 shadow-xs active:scale-95"
+              >
+                View this place →
+              </Link>
             </div>
           </article>
         )}
 
-        {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Widgets) */}
+        {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Sticky Widgets) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Main Feed Column (Span 8) */}
-          <div className="lg:col-span-8 space-y-4">
+          {/* Main Feed Column (Span 8) - Facebook Style Scrolling */}
+          <div className="lg:col-span-8 space-y-4 min-w-0">
             
             {/* Share / Post Box */}
             <div className="bg-white rounded-xl p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
@@ -201,8 +209,8 @@ export default function ExplorePage() {
                   <Camera className="w-4 h-4" />
                 </div>
               </Link>
-
             </div>
+
 
             {/* Post Feed List */}
             {loading ? (
@@ -239,7 +247,8 @@ export default function ExplorePage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {processedSpots.map((spot) => {
+                {processedSpots.map((spot, index) => {
+
                   const likeState = likes[spot.id] || { count: 50, isLiked: false };
                   const isCommentsOpen = Boolean(openComments[spot.id]);
                   const customTips = userComments[spot.id] || [];
@@ -247,10 +256,11 @@ export default function ExplorePage() {
                   const allTips = [...defaultTips, ...customTips];
 
                   return (
-                    <article
-                      key={spot.id}
-                      className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden"
-                    >
+                    <React.Fragment key={spot.id}>
+                      <article
+                        className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden"
+                      >
+
 
                       {/* Compact Post Header & Caption Area */}
                       <div className="px-4 pt-3.5 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3 space-y-2">
@@ -455,14 +465,144 @@ export default function ExplorePage() {
                         )}
                       </div>
                     </article>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
-          {/* Right Sidebar Widgets Column (Span 4 - Clean & Uncluttered) */}
-          <div className="lg:col-span-4 space-y-5">
+                    {/* Interleaved Native Suggested Destination Card (Like Facebook feed ad after post #3) */}
+                    {index === 2 && secondRecommendation && (
+                      <article className="bg-gradient-to-br from-[#FAF9F5] via-white to-emerald-50/50 rounded-2xl border border-emerald-300/80 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-300 ease-out space-y-3 relative overflow-hidden">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-[#1B4332] text-white flex items-center justify-center font-black text-xs shadow-xs">
+                              <Sparkles className="w-4 h-4 text-[#FFB703]" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-[#582F0E]">A place you may like</span>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-[#2D6A4F] uppercase tracking-wider">
+                                  Suggested Spot
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-[#837560] leading-none mt-0.5">
+                                Sponsored · Recommended destination for your itinerary
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold text-[#2D6A4F] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            {secondRecommendation.municipality}
+                          </span>
+                        </div>
+
+                        {secondRecommendation.imageUrl && (
+                          <Link href={`/spots/${secondRecommendation.slug}`} className="block relative rounded-xl overflow-hidden aspect-[16/9] max-h-60 bg-stone-100 border border-[#E3DFD5] group">
+                            <img
+                              src={secondRecommendation.imageUrl}
+                              alt={secondRecommendation.name}
+                              loading="lazy"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent pointer-events-none" />
+                            <div className="absolute bottom-3 left-3 right-3 text-white">
+                              <h3 className="font-serif font-bold text-base sm:text-lg text-white drop-shadow-sm">
+                                {secondRecommendation.name}
+                              </h3>
+                              <p className="text-[11px] text-white/90 font-medium">
+                                {secondRecommendation.subcategory || secondRecommendation.category.replace('_', ' ')} · {secondRecommendation.address}
+                              </p>
+                            </div>
+                          </Link>
+                        )}
+
+                        <p className="text-xs text-[#514532] leading-relaxed">
+                          {secondRecommendation.description}
+                        </p>
+
+                        <div className="pt-2 border-t border-[#E8E5DE] flex items-center justify-between gap-3">
+                          <span className="text-[11px] font-semibold text-[#837560] flex items-center gap-1">
+                            🌿 Uncrowded &amp; community verified
+                          </span>
+                          <Link
+                            href={`/spots/${secondRecommendation.slug}`}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <span>Explore Destination</span>
+                            <span>→</span>
+                          </Link>
+                        </div>
+                      </article>
+                    )}
+
+                    {/* Interleaved Native Suggested Destination Card (Like Facebook feed ad after post #6) */}
+                    {index === 5 && thirdRecommendation && (
+                      <article className="bg-gradient-to-br from-[#FAF9F5] via-white to-amber-50/50 rounded-2xl border border-amber-300/80 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-300 ease-out space-y-3 relative overflow-hidden">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-[#582F0E] text-white flex items-center justify-center font-black text-xs shadow-xs">
+                              <Compass className="w-4 h-4 text-[#FFB703]" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-[#582F0E]">A place you may like</span>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-[#935610] uppercase tracking-wider">
+                                  Suggested Spot
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-[#837560] leading-none mt-0.5">
+                                Sponsored · Featured Pangasinan Heritage &amp; Culture Spot
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold text-[#582F0E] bg-amber-100/70 px-2 py-0.5 rounded-md border border-amber-200">
+                            {thirdRecommendation.municipality}
+                          </span>
+                        </div>
+
+                        {thirdRecommendation.imageUrl && (
+                          <Link href={`/spots/${thirdRecommendation.slug}`} className="block relative rounded-xl overflow-hidden aspect-[16/9] max-h-60 bg-stone-100 border border-[#E3DFD5] group">
+                            <img
+                              src={thirdRecommendation.imageUrl}
+                              alt={thirdRecommendation.name}
+                              loading="lazy"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent pointer-events-none" />
+                            <div className="absolute bottom-3 left-3 right-3 text-white">
+                              <h3 className="font-serif font-bold text-base sm:text-lg text-white drop-shadow-sm">
+                                {thirdRecommendation.name}
+                              </h3>
+                              <p className="text-[11px] text-white/90 font-medium">
+                                {thirdRecommendation.subcategory || thirdRecommendation.category.replace('_', ' ')} · {thirdRecommendation.address}
+                              </p>
+                            </div>
+                          </Link>
+                        )}
+
+                        <p className="text-xs text-[#514532] leading-relaxed">
+                          {thirdRecommendation.description}
+                        </p>
+
+                        <div className="pt-2 border-t border-[#E8E5DE] flex items-center justify-between gap-3">
+                          <span className="text-[11px] font-semibold text-[#837560] flex items-center gap-1">
+                            🏛️ Verified Cultural Landmark
+                          </span>
+                          <Link
+                            href={`/spots/${thirdRecommendation.slug}`}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#935610] hover:bg-[#72420B] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <span>Explore Landmark</span>
+                            <span>→</span>
+                          </Link>
+                        </div>
+                      </article>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar Widgets Column (Span 4 - Sticky Facebook Style) */}
+        <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pr-1">
+
             {/* Quick Portal Shortcuts */}
             <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
@@ -515,10 +655,10 @@ export default function ExplorePage() {
                 </Link>
               </div>
             </div>
-
-          </div>
+          </aside>
 
         </div>
+
       </div>
     </Navigation>
   );

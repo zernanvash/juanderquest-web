@@ -56,19 +56,32 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
   return (
     <div className="min-h-screen bg-[#F4F3EE] flex flex-col selection:bg-[#FFB703]/30 text-[#2B2319]">
       {/* Top Global Header Bar */}
-      <header className="h-16 bg-white border-b border-[#E3DFD5] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        {/* Brand Logo Only (Clean & Minimalist) */}
-        <div className="flex items-center gap-3">
-          <Link href="/explore" className="flex items-center group" title="JuanDerQuest">
+      <header className="h-16 bg-white border-b border-[#E3DFD5] px-3 sm:px-5 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs gap-3">
+        {/* Brand Logo & Sticky Search Bar (Facebook-style) */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 max-w-xs sm:max-w-sm md:max-w-md min-w-0">
+          <Link href="/explore" className="flex items-center group shrink-0" title="JuanDerQuest">
             <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:border-[#2D6A4F]/60 transition-colors duration-200">
               <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
             </div>
-
           </Link>
+
+          {/* Sticky Facebook-style Search Bar next to logo */}
+          <form action="/search" method="GET" className="flex-1 min-w-0">
+            <div className="relative flex items-center w-full">
+              <Search className="w-3.5 h-3.5 text-[#837560] absolute left-3 pointer-events-none" />
+              <input
+                type="text"
+                name="q"
+                placeholder="Search Pangasinan destinations..."
+                className="w-full bg-[#FAF9F5] hover:bg-[#F2EFE9] focus:bg-white border border-[#E3DFD5] focus:border-[#2D6A4F] rounded-full pl-8.5 pr-3 py-1.5 text-xs text-[#2B2319] placeholder:text-[#837560] font-medium outline-none transition-all duration-200"
+              />
+            </div>
+          </form>
         </div>
 
         {/* Spacious, Seamless Icon Navigation Bar (Blended White, Generous Spacing) */}
-        <nav className="hidden lg:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-4 lg:gap-6 px-2 shrink-0">
+
           {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
