@@ -28,8 +28,7 @@ import {
   CheckCircle2,
   Tag,
   Filter,
-  Zap,
-  ArrowRight
+  Zap
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel, isVideoMedia } from '@/lib/api';
@@ -167,35 +166,19 @@ export default function ExplorePage() {
           </Link>
         </div>
 
-        {/* Live Anti-Crowd Alert Banner */}
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-50/80 to-orange-50/60 rounded-xl p-4 sm:p-5 border border-amber-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-300/60 flex items-center justify-center text-[#D95D00] shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5 animate-pulse" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#D95D00] bg-amber-100/90 px-2 py-0.5 rounded">
-                  Live Anti-Crowd Alert
-                </span>
-                <span className="text-xs font-bold text-[#582F0E]">
-                  Hundred Islands Peak Pressure
-                </span>
+        {processedSpots[0] && (
+          <article className="rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-4 shadow-xs sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <span className="rounded bg-emerald-100 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-[#2D6A4F]">A place you may like</span>
+                <h2 className="mt-2 text-base font-black text-[#582F0E]">{processedSpots[0].name}</h2>
+                <p className="mt-1 text-xs leading-relaxed text-[#514532]">A similar-quality Pangasinan option selected from your interests, saved places, and destination activity—not limited to the nearest location.</p>
+                <p className="mt-1 text-[11px] font-bold text-[#2D6A4F]">{processedSpots[0].municipality} · Organic recommendation</p>
               </div>
-              <p className="text-xs text-[#6B4B00] leading-relaxed max-w-3xl">
-                High tourist density reported at Alaminos Lucap wharfs. Divert to tranquil nearby spots like <strong>Timmaw Cave</strong> or <strong>Tambobong Beach</strong> to unlock <strong>+1.5x mJDQ Points</strong>!
-              </p>
+              <Link href={`/spots/${processedSpots[0].slug}`} className="shrink-0 rounded-lg bg-[#2D6A4F] px-4 py-2.5 text-center text-xs font-bold text-white hover:bg-[#1B4332]">View this place</Link>
             </div>
-          </div>
-
-          <Link
-            href="/search?crowd=quiet"
-            className="py-2.5 px-4 rounded-lg bg-[#D95D00] hover:bg-[#B34D00] text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-98 cursor-pointer shrink-0 shadow-xs"
-          >
-            <span>Filter Tranquil Alternatives</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+          </article>
+        )}
 
         {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Widgets) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
