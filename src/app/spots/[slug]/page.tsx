@@ -200,8 +200,8 @@ export default function SpotDetailPage() {
             {slides.map((imgUrl, idx) => (
               <div
                 key={idx}
-                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                  activeSlide === idx ? 'opacity-100 z-0' : 'opacity-0 -z-10'
+                className={`absolute inset-0 transition-opacity duration-700 ease-out ${
+                  activeSlide === idx ? 'opacity-100 z-0' : 'opacity-0 -z-10 pointer-events-none'
                 }`}
               >
                 {isVideoMedia(imgUrl) ? (
@@ -220,10 +220,11 @@ export default function SpotDetailPage() {
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
                     }}
-                    className="w-full h-full object-cover transform scale-100 hover:scale-105 transition-transform duration-10000 ease-out"
+                    className="w-full h-full object-cover"
                   />
                 )}
               </div>
+
             ))}
 
 

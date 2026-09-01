@@ -249,8 +249,9 @@ export default function ExplorePage() {
                   return (
                     <article
                       key={spot.id}
-                      className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition duration-200 overflow-hidden"
+                      className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden"
                     >
+
                       {/* Compact Post Header & Caption Area */}
                       <div className="px-4 pt-3.5 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3 space-y-2">
                         {/* Meta Header */}
@@ -336,8 +337,9 @@ export default function ExplorePage() {
                               onError={(e) => {
                                 (e.currentTarget as HTMLElement).style.display = 'none';
                               }}
-                              className="w-full h-full object-cover group-hover:scale-103 transition duration-300"
+                              className="w-full h-full object-cover"
                             />
+
                             {spot.questId && (
                               <div className="absolute top-3 right-3 bg-[#FFB703] text-[#582F0E] px-2.5 py-0.5 rounded-full text-[11px] font-black flex items-center gap-1 shadow-md">
                                 <Trophy className="w-3 h-3" />

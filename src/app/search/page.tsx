@@ -299,7 +299,7 @@ function SearchContent() {
             {filteredSpots.map((spot) => (
               <div
                 key={spot.id}
-                className="bg-white rounded-xl border border-[#E3DFD5] overflow-hidden flex flex-col justify-between hover:border-[#2D6A4F]/60 transition shadow-xs group"
+                className="bg-white rounded-xl border border-[#E3DFD5] overflow-hidden flex flex-col justify-between hover:border-[#2D6A4F]/60 transition-all duration-300 ease-out shadow-xs hover:shadow-md group"
               >
                 <div>
                   {/* Photo Container */}
@@ -307,9 +307,10 @@ function SearchContent() {
                     <img
                       src={spot.imageUrl}
                       alt={spot.name}
-                      className="w-full h-full object-cover group-hover:scale-103 transition duration-300"
+                      className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
 
                     {/* Category Chip */}
                     <div className="absolute top-3 left-3">

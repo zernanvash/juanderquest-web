@@ -60,9 +60,10 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
         {/* Brand Logo Only (Clean & Minimalist) */}
         <div className="flex items-center gap-3">
           <Link href="/explore" className="flex items-center group" title="JuanDerQuest">
-            <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:scale-105 group-hover:border-[#2D6A4F]/40 transition transform">
+            <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:border-[#2D6A4F]/60 transition-colors duration-200">
               <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
             </div>
+
           </Link>
         </div>
 
