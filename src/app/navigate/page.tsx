@@ -230,9 +230,10 @@ function NavigateContent() {
         const destIcon = L.divIcon({
           className: 'leaflet-custom-marker',
           html: createDestinationPinHtml(),
-          iconSize: [38, 46],
-          iconAnchor: [19, 45],
+          iconSize: [36, 46],
+          iconAnchor: [18, 44],
         });
+
         L.marker([destination.lat, destination.lng], { icon: destIcon })
           .bindPopup(`<b>${destination.name}</b><br/>${destination.address}`)
           .addTo(group);

@@ -127,8 +127,8 @@ export default function QuestMapPage() {
           const icon = L.divIcon({
             className: 'leaflet-custom-marker',
             html: createQuestPinHtml(isSelected),
-            iconSize: [38, 46],
-            iconAnchor: [19, 45],
+            iconSize: [36, 46],
+            iconAnchor: [18, 44],
           });
 
           L.marker([q.gpsLat, q.gpsLng], { icon })
@@ -148,9 +148,10 @@ export default function QuestMapPage() {
           const icon = L.divIcon({
             className: 'leaflet-custom-marker',
             html: createSpotPinHtml(isSelected),
-            iconSize: [36, 44],
-            iconAnchor: [18, 43],
+            iconSize: [36, 46],
+            iconAnchor: [18, 44],
           });
+
 
           L.marker([s.gpsLat, s.gpsLng], { icon })
             .on('click', () => {
