@@ -28,8 +28,11 @@ import {
   CheckCircle2,
   Tag,
   Filter,
-  Zap
+  Zap,
+  Vote,
+  History
 } from 'lucide-react';
+
 import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel, isVideoMedia } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -148,51 +151,183 @@ export default function ExplorePage() {
   });
 
   // Distinct recommendation selections
-  const topRecommendation = spots[0] || null;
-  const secondRecommendation = spots.find((s) => s.id !== topRecommendation?.id && s.imageUrl) || spots[1] || null;
-  const thirdRecommendation = spots.find((s) => s.id !== topRecommendation?.id && s.id !== secondRecommendation?.id) || spots[2] || null;
+  const algorithmRecommendedSpot = spots.find((s) => s.slug !== 'hundred-islands-national-park' && s.imageUrl) || spots[1] || spots[0];
+  const secondRecommendation = spots.find((s) => s.id !== algorithmRecommendedSpot?.id && s.slug !== 'hundred-islands-national-park' && s.imageUrl) || spots[2] || null;
+  const thirdRecommendation = spots.find((s) => s.id !== algorithmRecommendedSpot?.id && s.id !== secondRecommendation?.id) || spots[3] || null;
 
   return (
     <Navigation>
       <div className="space-y-5">
-        {/* Top "A place you may like" recommendation card */}
-        {topRecommendation && (
-          <article className="rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 via-white to-amber-50/40 p-4 sm:p-5 shadow-xs transition-all duration-300 ease-out hover:shadow-md">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-emerald-100 text-[#2D6A4F] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#2D6A4F]" />
-                    A place you may like
-                  </span>
-                  <span className="text-[10px] text-[#837560] font-medium">· Organic recommendation</span>
-                </div>
-                <h2 className="text-base sm:text-lg font-black font-serif text-[#582F0E]">
-                  {topRecommendation.name}
-                </h2>
-                <p className="text-xs leading-relaxed text-[#514532] line-clamp-2">
-                  {topRecommendation.description}
-                </p>
-                <p className="text-[11px] font-bold text-[#2D6A4F] flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {topRecommendation.municipality} · Selected based on your interests &amp; activity
-                </p>
-              </div>
-              <Link
-                href={`/spots/${topRecommendation.slug}`}
-                className="shrink-0 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] px-4 py-2.5 text-center text-xs font-bold text-white transition-all duration-200 shadow-xs active:scale-95"
-              >
-                View this place →
-              </Link>
-            </div>
-          </article>
-        )}
-
-        {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Sticky Widgets) */}
+        {/* Structured Multi-Column Post Stream (4 Cols Sticky Left Panel / 8 Cols Infinite Feed) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Main Feed Column (Span 8) - Facebook Style Scrolling */}
-          <div className="lg:col-span-8 space-y-4 min-w-0">
+          {/* Left Panel: Function Buttons & Quick Portals (Span 4 on Desktop, Sticky) */}
+          <aside className="lg:col-span-4 space-y-4 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pr-1 order-2 lg:order-1">
+            {/* User Mini Card */}
+            {user && (
+              <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#2D6A4F] text-white font-black flex items-center justify-center text-sm shrink-0 overflow-hidden">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{user.displayName.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-black text-[#582F0E] truncate">{user.displayName}</h4>
+                  <p className="text-[11px] text-[#2D6A4F] font-bold">Pangasinan Scout</p>
+                </div>
+                <Link
+                  href="/profile"
+                  className="text-[11px] font-bold text-[#2D6A4F] hover:underline"
+                >
+                  Profile →
+                </Link>
+              </div>
+            )}
+
+            {/* Quick Portals & Function Buttons Panel */}
+            <div className="bg-white rounded-xl p-4 sm:p-5 border border-[#E3DFD5] shadow-xs space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
+                <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
+                  Quick Portals
+                </h3>
+                <span className="text-[10px] text-[#837560] font-semibold">Shortcuts</span>
+              </div>
+
+              {/* Function Buttons List */}
+              <div className="space-y-1.5 text-xs">
+                <Link
+                  href="/quests"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/60 border border-[#E3DFD5] hover:border-[#2D6A4F] transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <Zap className="w-3.5 h-3.5 text-[#935610]" />
+                    </div>
+                    <span>Quests &amp; Event Campaigns</span>
+                  </div>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold">Bounties →</span>
+                </Link>
+
+                <Link
+                  href="/map"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/60 border border-[#E3DFD5] hover:border-[#2D6A4F] transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                      <MapPin className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                    </div>
+                    <span>Interactive Map &amp; Routing</span>
+                  </div>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold">Explore →</span>
+                </Link>
+
+                <Link
+                  href="/leaderboard"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/60 border border-[#E3DFD5] hover:border-[#2D6A4F] transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <Award className="w-3.5 h-3.5 text-[#B45309]" />
+                    </div>
+                    <span>Scout Hall of Fame</span>
+                  </div>
+                  <span className="text-[10px] text-[#582F0E] font-bold">Ranks →</span>
+                </Link>
+
+                <Link
+                  href="/shop"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/60 border border-[#E3DFD5] hover:border-[#2D6A4F] transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                      <Tag className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                    </div>
+                    <span>MSME Partner Deals</span>
+                  </div>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold">Shop →</span>
+                </Link>
+
+                <Link
+                  href="/vote"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/60 border border-[#E3DFD5] hover:border-[#2D6A4F] transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                      <Vote className="w-3.5 h-3.5 text-blue-700" />
+                    </div>
+                    <span>Community Governance</span>
+                  </div>
+                  <span className="text-[10px] text-blue-700 font-bold">Vote →</span>
+                </Link>
+
+                <Link
+                  href="/history"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/60 border border-[#E3DFD5] hover:border-[#2D6A4F] transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    <div className="w-7 h-7 rounded-lg bg-stone-200 flex items-center justify-center shrink-0">
+                      <History className="w-3.5 h-3.5 text-[#582F0E]" />
+                    </div>
+                    <span>My Submissions &amp; Activity</span>
+                  </div>
+                  <span className="text-[10px] text-[#837560] font-bold">Logs →</span>
+                </Link>
+
+                <Link
+                  href="/about"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/60 border border-[#E3DFD5] hover:border-[#2D6A4F] transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    <div className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
+                    </div>
+                    <span>About JuanDerQuest</span>
+                  </div>
+                  <span className="text-[10px] text-gray-500 font-bold">Story →</span>
+                </Link>
+              </div>
+
+              {/* Primary Function Action Button */}
+              <div className="pt-2 border-t border-[#E8E5DE]">
+                <Link
+                  href="/spots/new"
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold flex items-center justify-center gap-2 transition shadow-xs active:scale-95"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Share New Destination</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Category Quick Filter */}
+            <div className="bg-white rounded-xl p-4 sm:p-5 border border-[#E3DFD5] shadow-xs space-y-2.5">
+              <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                Filter by Category
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setCategory(c.id)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      category === c.id
+                        ? 'bg-[#2D6A4F] text-white shadow-2xs'
+                        : 'bg-[#FAF9F5] text-[#582F0E] border border-[#E3DFD5] hover:bg-white'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Feed Column (Span 8 on Desktop) - Infinite Scroll Stream */}
+          <div className="lg:col-span-8 space-y-4 min-w-0 order-1 lg:order-2">
             
             {/* Share / Post Box */}
             <div className="bg-white rounded-xl p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
@@ -210,7 +345,6 @@ export default function ExplorePage() {
                 </div>
               </Link>
             </div>
-
 
             {/* Post Feed List */}
             {loading ? (
@@ -247,6 +381,137 @@ export default function ExplorePage() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Special Algorithm-Curated Post ("A place you may like") right on top of Hundred Islands */}
+                {algorithmRecommendedSpot && (
+                  <article className="bg-white rounded-2xl border-2 border-emerald-500/35 hover:border-emerald-500/60 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden">
+                    {/* Special Algorithm Header */}
+                    <div className="px-4 pt-3.5 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3 space-y-2 bg-gradient-to-r from-emerald-50/80 via-white to-amber-50/40 border-b border-[#E3DFD5]/60">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-[#1B4332] text-[#FFB703] flex items-center justify-center font-black text-xs shadow-xs border border-[#2D6A4F]/40">
+                            <Compass className="w-4 h-4 text-[#FFB703]" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-black text-[#582F0E]">JuanDerQuest Algorithm</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-[#2D6A4F] font-black text-[9px] uppercase tracking-wider">
+                                <Sparkles className="w-2.5 h-2.5 text-[#2D6A4F]" />
+                                Special Post
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-[#837560] leading-none mt-0.5">
+                              Curated for you · Based on traveler preferences &amp; activity
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-[#2D6A4F] bg-white px-2.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
+                          A place you may like
+                        </span>
+                      </div>
+
+                      {/* Intro Caption */}
+                      <p className="text-xs text-[#514532] pt-0.5">
+                        ✨ A high-quality Pangasinan destination chosen by the recommendation engine:
+                      </p>
+
+                      {/* Spot Title & Municipality */}
+                      <div className="flex items-baseline justify-between pt-0.5">
+                        <Link href={`/spots/${algorithmRecommendedSpot.slug}`} className="block group">
+                          <h2 className="text-base sm:text-lg font-bold font-serif text-[#582F0E] group-hover:text-[#2D6A4F] transition leading-snug">
+                            {algorithmRecommendedSpot.name}
+                          </h2>
+                        </Link>
+                        <span className="font-bold text-[#2D6A4F] text-[11px] flex items-center gap-1 shrink-0">
+                          <MapPin className="w-3 h-3" />
+                          {algorithmRecommendedSpot.municipality}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Photo */}
+                    {algorithmRecommendedSpot.imageUrl && (
+                      <Link
+                        href={`/spots/${algorithmRecommendedSpot.slug}`}
+                        className="block w-full border-y border-[#E3DFD5] group relative bg-stone-900/5 aspect-[16/10] sm:aspect-[16/9] max-h-[480px] overflow-hidden"
+                      >
+                        <img
+                          src={algorithmRecommendedSpot.imageUrl}
+                          alt={algorithmRecommendedSpot.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                        {algorithmRecommendedSpot.questId && (
+                          <div className="absolute top-3 right-3 bg-[#FFB703] text-[#582F0E] px-2.5 py-0.5 rounded-full text-[11px] font-black flex items-center gap-1 shadow-md">
+                            <Trophy className="w-3 h-3" />
+                            <span>Quest Available (+250 mJDQ)</span>
+                          </div>
+                        )}
+                      </Link>
+                    )}
+
+                    {/* Post Content & Description */}
+                    <div className="px-4 py-3 sm:px-5 space-y-2">
+                      <p className="text-xs text-[#514532] leading-relaxed">
+                        {algorithmRecommendedSpot.description}
+                      </p>
+
+                      {/* Quick Action Buttons */}
+                      <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#E8E5DE]">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleLike(algorithmRecommendedSpot.id)}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition duration-150 transform active:scale-90 ${
+                              likes[algorithmRecommendedSpot.id]?.isLiked
+                                ? 'bg-rose-50 text-rose-600'
+                                : 'text-[#837560] hover:bg-stone-100'
+                            }`}
+                          >
+                            <Heart
+                              className={`w-4 h-4 ${
+                                likes[algorithmRecommendedSpot.id]?.isLiked
+                                  ? 'fill-rose-600 text-rose-600'
+                                  : 'text-[#837560]'
+                              }`}
+                            />
+                            <span className="text-xs font-bold">
+                              {likes[algorithmRecommendedSpot.id]?.count || 88}
+                            </span>
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleComments(algorithmRecommendedSpot.id)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[#837560] hover:bg-stone-100 transition duration-150"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            <span className="text-xs font-bold">Travel Tips</span>
+                          </button>
+                        </div>
+
+                        <Link
+                          href={`/spots/${algorithmRecommendedSpot.slug}`}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs active:scale-95"
+                        >
+                          <span>Explore Destination</span>
+                          <span>→</span>
+                        </Link>
+                      </div>
+
+                      {/* Community Tips Drawer if open */}
+                      {openComments[algorithmRecommendedSpot.id] && (
+                        <div className="pt-3 border-t border-[#E8E5DE] space-y-2 text-xs">
+                          <div className="space-y-1.5">
+                            {mockCommunityTips.default.map((tip, tIdx) => (
+                              <div key={tIdx} className="bg-[#FAF9F5] p-2.5 rounded-lg border border-[#E3DFD5] text-[#582F0E]">
+                                <p>{tip}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                )}
+
                 {processedSpots.map((spot, index) => {
 
                   const likeState = likes[spot.id] || { count: 50, isLiked: false };
@@ -600,64 +865,8 @@ export default function ExplorePage() {
           )}
         </div>
 
-        {/* Right Sidebar Widgets Column (Span 4 - Sticky Facebook Style) */}
-        <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pr-1">
-
-            {/* Quick Portal Shortcuts */}
-            <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
-                <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">Quick Portals</h3>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <Link
-                  href="/quests"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <Zap className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>Quests &amp; Event Campaigns</span>
-                  </div>
-                  <span className="text-[10px] text-[#2D6A4F] font-bold">Bounties →</span>
-                </Link>
-
-                <Link
-                  href="/leaderboard"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <Award className="w-3.5 h-3.5 text-[#B45309]" />
-                    <span>Scout Hall of Fame</span>
-                  </div>
-                  <span className="text-[10px] text-[#582F0E] font-bold">Ranks →</span>
-                </Link>
-
-                <Link
-                  href="/shop"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>MSME Partner Deals</span>
-                  </div>
-                  <span className="text-[10px] text-[#2D6A4F] font-bold">Shop →</span>
-                </Link>
-
-                <Link
-                  href="/about"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    <span>About JuanDerQuest &amp; Team</span>
-                  </div>
-                  <span className="text-[10px] text-gray-500 font-bold">Story →</span>
-                </Link>
-              </div>
-            </div>
-          </aside>
-
         </div>
+
 
       </div>
     </Navigation>
