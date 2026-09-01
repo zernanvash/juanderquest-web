@@ -177,19 +177,37 @@ export interface UploadedAssetModel {
   asset_id: string;
   url: string;
   mime_type: string;
+  media_type: 'image' | 'video';
   width: number;
   height: number;
   size_bytes: number;
 }
 
-export async function uploadSpotPhoto(file: File): Promise<UploadedAssetModel> {
+export function isVideoMedia(url?: string, mimeType?: string, mediaType?: string): boolean {
+  if (mediaType === 'video') return true;
+  if (mimeType && mimeType.startsWith('video/')) return true;
+  if (!url) return false;
+  const cleanUrl = url.toLowerCase().split('?')[0];
+  return (
+    cleanUrl.endsWith('.mp4') ||
+    cleanUrl.endsWith('.webm') ||
+    cleanUrl.endsWith('.mov') ||
+    cleanUrl.endsWith('.m4v') ||
+    cleanUrl.includes('spot_video')
+  );
+}
+
+export async function uploadSpotMedia(file: File): Promise<UploadedAssetModel> {
   const formData = new FormData();
-  formData.append('photo', file);
-  const res = await api.post('/spot-photos', formData, {
+  formData.append('media', file);
+  const res = await api.post('/spot-media', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data.data;
 }
+
+export const uploadSpotPhoto = uploadSpotMedia;
+
 
 const DEFAULT_SPOT_IMAGES: Record<string, string> = {
   'hundred-islands-national-park': 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80',

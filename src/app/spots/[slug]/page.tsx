@@ -27,9 +27,11 @@ import {
   Coins,
   CheckCircle2,
   Compass,
+  Film,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { api, normalizeSpot, SpotModel } from '@/lib/api';
+import { api, normalizeSpot, SpotModel, isVideoMedia } from '@/lib/api';
+
 import { fetchWithCache } from '@/lib/cache';
 import { SpotDetailSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -194,7 +196,7 @@ export default function SpotDetailPage() {
           {/* 1. IMMERSIVE FULL-VIEWPORT HERO PHOTO SHOWCASE (LANDING VIEW)             */}
           {/* ========================================================================= */}
           <section className="relative w-full h-[88vh] sm:h-[92vh] bg-[#0D1B2A] overflow-hidden flex flex-col justify-between select-none">
-            {/* Background Slideshow Images with Smooth Cross-Fade */}
+            {/* Background Slideshow Images / Videos with Smooth Cross-Fade */}
             {slides.map((imgUrl, idx) => (
               <div
                 key={idx}
@@ -202,16 +204,28 @@ export default function SpotDetailPage() {
                   activeSlide === idx ? 'opacity-100 z-0' : 'opacity-0 -z-10'
                 }`}
               >
-                <img
-                  src={imgUrl}
-                  alt={`${spot.name} - View ${idx + 1}`}
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
-                  }}
-                  className="w-full h-full object-cover transform scale-100 hover:scale-105 transition-transform duration-10000 ease-out"
-                />
+                {isVideoMedia(imgUrl) ? (
+                  <video
+                    src={imgUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={imgUrl}
+                    alt={`${spot.name} - View ${idx + 1}`}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
+                    }}
+                    className="w-full h-full object-cover transform scale-100 hover:scale-105 transition-transform duration-10000 ease-out"
+                  />
+                )}
               </div>
             ))}
+
 
             {/* Dark Gradient Layers for Typography Contrast & Seamless Bottom Fade */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/55 z-1 pointer-events-none" />

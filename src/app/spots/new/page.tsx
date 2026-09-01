@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Camera,
+  Film,
   MapPin,
   LocateFixed,
   Upload,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { useRequireAuth } from '@/lib/auth';
-import { api, uploadSpotPhoto } from '@/lib/api';
+import { api, uploadSpotMedia, isVideoMedia } from '@/lib/api';
 import { invalidateCache } from '@/lib/cache';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -49,13 +50,14 @@ export default function AddSpotPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>(['family', 'scenic']);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(['parking', 'restroom']);
 
-  // Photo Upload State
+  // Media Upload State (Photos & Videos)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedAssetId, setUploadedAssetId] = useState<string | null>(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+  const [uploadedMediaType, setUploadedMediaType] = useState<'image' | 'video'>('image');
 
   // Form Submission State
   const [submitting, setSubmitting] = useState(false);
@@ -71,20 +73,30 @@ export default function AddSpotPage() {
 
     setUploadError(null);
 
-    // Validate size (max 8 MB)
-    if (file.size > 8 * 1024 * 1024) {
-      setUploadError('File size exceeds maximum limit of 8 MB.');
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|mov|m4v)$/i);
+
+    // Validate size (max 30 MB for video, 8 MB for photo)
+    if (isVideo && file.size > 30 * 1024 * 1024) {
+      setUploadError('Video file size exceeds maximum limit of 30 MB.');
+      return;
+    }
+    if (!isVideo && file.size > 8 * 1024 * 1024) {
+      setUploadError('Photo file size exceeds maximum limit of 8 MB.');
       return;
     }
 
     // Validate client-side MIME type
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type.toLowerCase())) {
-      setUploadError('Unsupported file type. Please upload a JPEG, PNG, or WebP photo.');
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'];
+    const fileType = file.type.toLowerCase();
+
+    if (!validImageTypes.includes(fileType) && !validVideoTypes.includes(fileType) && !isVideo) {
+      setUploadError('Unsupported file format. Please upload a photo (JPEG, PNG, WebP) or video clip (MP4, WebM, MOV).');
       return;
     }
 
     setSelectedFile(file);
+    setUploadedMediaType(isVideo ? 'video' : 'image');
     setPreviewUrl(URL.createObjectURL(file));
     setUploadedAssetId(null);
     setUploadedPhotoUrl(null);
@@ -96,16 +108,18 @@ export default function AddSpotPage() {
     setUploadError(null);
 
     try {
-      const asset = await uploadSpotPhoto(selectedFile);
+      const asset = await uploadSpotMedia(selectedFile);
       setUploadedAssetId(asset.asset_id);
       setUploadedPhotoUrl(asset.url);
+      setUploadedMediaType(asset.media_type || (selectedFile.type.startsWith('video/') ? 'video' : 'image'));
     } catch (err: any) {
-      const errMsg = err.response?.data?.error?.message || 'Failed to upload photo. Please try again.';
+      const errMsg = err.response?.data?.error?.message || 'Failed to upload media. Please try again.';
       setUploadError(errMsg);
     } finally {
       setUploading(false);
     }
   };
+
 
   const handleCaptureGps = () => {
     if (!navigator.geolocation) {
@@ -238,36 +252,62 @@ export default function AddSpotPage() {
             </div>
           )}
 
-          {/* Photo Upload Section */}
+          {/* Photo / Video Upload Section */}
           <div className="space-y-3">
             <label className="block text-xs font-black text-[#582F0E] uppercase tracking-wider">
-              Destination Photo (JPEG, PNG, WebP — max 8 MB)
+              Destination Media (Photo up to 8 MB or Video Clip up to 30 MB)
             </label>
 
             <div className="border-2 border-dashed border-[#D5C4AC] rounded-3xl p-6 text-center bg-[#FAF9F5] space-y-4">
               {previewUrl ? (
-                <div className="relative max-w-md mx-auto rounded-2xl overflow-hidden shadow-md">
-                  <img src={previewUrl} alt="Preview" className="w-full h-56 object-cover" />
+                <div className="relative max-w-md mx-auto rounded-2xl overflow-hidden shadow-md bg-black">
+                  {uploadedMediaType === 'video' || isVideoMedia(previewUrl) ? (
+                    <video
+                      src={previewUrl}
+                      controls
+                      playsInline
+                      className="w-full h-56 object-cover"
+                    />
+                  ) : (
+                    <img src={previewUrl} alt="Preview" className="w-full h-56 object-cover" />
+                  )}
+
                   {uploadedAssetId && (
                     <div className="absolute top-3 right-3 bg-[#48C71D] text-white px-3 py-1 rounded-full text-xs font-black flex items-center gap-1 shadow-md">
-                      <CheckCircle2 className="w-4 h-4" /> Photo Uploaded
+                      <CheckCircle2 className="w-4 h-4" /> {uploadedMediaType === 'video' ? 'Video' : 'Photo'} Uploaded
+                    </div>
+                  )}
+
+                  {uploadedMediaType === 'video' && !uploadedAssetId && (
+                    <div className="absolute top-3 left-3 bg-[#0F172A]/80 text-white px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1">
+                      <Film className="w-3 h-3 text-[#FFB703]" />
+                      <span>Video Clip</span>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="space-y-2 py-4">
-                  <Camera className="w-12 h-12 text-[#2D6A4F] mx-auto opacity-60" />
+                  <div className="flex items-center justify-center gap-2 opacity-60 text-[#2D6A4F]">
+                    <Camera className="w-10 h-10" />
+                    <span className="text-xl font-bold">/</span>
+                    <Film className="w-10 h-10" />
+                  </div>
                   <p className="text-xs text-[#514532] font-semibold">
-                    Select a photo from your device to upload.
+                    Select a photo or short video clip (MP4, WebM, MOV) from your device.
                   </p>
                 </div>
               )}
 
               <div className="flex flex-wrap items-center justify-center gap-3">
-                <label className="cursor-pointer inline-flex items-center gap-2 bg-[#2D6A4F] text-white font-extrabold text-xs px-5 py-3 rounded-2xl hover:bg-[#1B4332] transition">
+                <label className="cursor-pointer inline-flex items-center gap-2 bg-[#2D6A4F] text-white font-extrabold text-xs px-5 py-3 rounded-2xl hover:bg-[#1B4332] transition shadow-xs">
                   <Upload className="w-4 h-4" />
-                  <span>{previewUrl ? 'Change Photo' : 'Select Photo'}</span>
-                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
+                  <span>{previewUrl ? 'Change Media' : 'Select Photo / Video'}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
                 </label>
 
                 {selectedFile && !uploadedAssetId && (
@@ -278,7 +318,7 @@ export default function AddSpotPage() {
                     className="inline-flex items-center gap-2 bg-[#FFB703] text-[#582F0E] font-black text-xs px-5 py-3 rounded-2xl shadow-md hover:bg-amber-400 transition"
                   >
                     {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    <span>{uploading ? 'Uploading...' : 'Upload Now'}</span>
+                    <span>{uploading ? 'Uploading...' : 'Upload Media Now'}</span>
                   </button>
                 )}
               </div>
@@ -291,6 +331,7 @@ export default function AddSpotPage() {
               )}
             </div>
           </div>
+
 
           {/* Name & Municipality */}
           <div className="grid md:grid-cols-2 gap-4">
