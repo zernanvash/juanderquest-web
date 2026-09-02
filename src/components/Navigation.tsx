@@ -100,7 +100,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
         </div>
 
         {/* Spacious, Seamless Icon Navigation Bar with Minimized Expanding Search Pill */}
-        <nav className="hidden md:flex flex-1 items-center justify-evenly gap-2 lg:gap-4 xl:gap-6 px-3 lg:px-6 min-w-0">
+        <nav className="hidden md:flex flex-1 items-center justify-center gap-1 lg:gap-2 px-2 min-w-0 max-w-3xl">
           {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
