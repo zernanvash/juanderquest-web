@@ -605,68 +605,69 @@ export default function ExplorePage() {
                   </React.Fragment>
                 );
               })}
+
             </div>
           )}
         </div>
 
-        {/* Right Sidebar Widgets Column (Span 4 - Sticky Facebook Style) */}
-        <aside className="lg:col-span-4 lg:self-stretch pr-1">
-          <div className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+        {/* Right Sidebar Widgets Column (Sticky Facebook Style) */}
+        <aside
+          style={{ position: 'sticky', top: '5rem' }}
+          className="lg:col-span-4 lg:self-start space-y-5 pr-1"
+        >
+          {/* Quick Portal Shortcuts */}
+          <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
+              <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">Quick Portals</h3>
+            </div>
 
-            {/* Quick Portal Shortcuts */}
-            <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
-                <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">Quick Portals</h3>
-              </div>
+            <div className="space-y-2 text-xs">
+              <Link
+                href="/quests"
+                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+              >
+                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                  <Zap className="w-3.5 h-3.5 text-[#FFB703]" />
+                  <span>Quests &amp; Event Campaigns</span>
+                </div>
+                <span className="text-[10px] text-[#2D6A4F] font-bold">Bounties →</span>
+              </Link>
 
-              <div className="space-y-2 text-xs">
-                <Link
-                  href="/quests"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <Zap className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>Quests &amp; Event Campaigns</span>
-                  </div>
-                  <span className="text-[10px] text-[#2D6A4F] font-bold">Bounties →</span>
-                </Link>
+              <Link
+                href="/leaderboard"
+                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+              >
+                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                  <Award className="w-3.5 h-3.5 text-[#B45309]" />
+                  <span>Scout Hall of Fame</span>
+                </div>
+                <span className="text-[10px] text-[#582F0E] font-bold">Ranks →</span>
+              </Link>
 
-                <Link
-                  href="/leaderboard"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <Award className="w-3.5 h-3.5 text-[#B45309]" />
-                    <span>Scout Hall of Fame</span>
-                  </div>
-                  <span className="text-[10px] text-[#582F0E] font-bold">Ranks →</span>
-                </Link>
+              <Link
+                href="/shop"
+                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+              >
+                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                  <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>MSME Partner Deals</span>
+                </div>
+                <span className="text-[10px] text-[#2D6A4F] font-bold">Shop →</span>
+              </Link>
 
-                <Link
-                  href="/shop"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>MSME Partner Deals</span>
-                  </div>
-                  <span className="text-[10px] text-[#2D6A4F] font-bold">Shop →</span>
-                </Link>
-
-                <Link
-                  href="/about"
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    <span>About JuanDerQuest &amp; Team</span>
-                  </div>
-                  <span className="text-[10px] text-gray-500 font-bold">Story →</span>
-                </Link>
-              </div>
+              <Link
+                href="/about"
+                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
+              >
+                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>About JuanDerQuest &amp; Team</span>
+                </div>
+                <span className="text-[10px] text-gray-500 font-bold">Story →</span>
+              </Link>
             </div>
           </div>
-          </aside>
+        </aside>
 
         </div>
 
@@ -674,3 +675,4 @@ export default function ExplorePage() {
     </Navigation>
   );
 }
+
