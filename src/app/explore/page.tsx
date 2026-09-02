@@ -156,7 +156,7 @@ export default function ExplorePage() {
     <Navigation>
       <div className="space-y-5">
         {/* Top "A place you may like" recommendation card */}
-        {topRecommendation && (
+        {false && topRecommendation && (
           <article className="rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 via-white to-amber-50/40 p-4 sm:p-5 shadow-xs transition-all duration-300 ease-out hover:shadow-md">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 space-y-1">
@@ -264,6 +264,15 @@ export default function ExplorePage() {
 
                       {/* Compact Post Header & Caption Area */}
                       <div className="px-4 pt-3.5 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3 space-y-2">
+                        {index === 0 && (
+                          <div className="flex flex-wrap items-center gap-2 border-b border-emerald-100 pb-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#2D6A4F]">
+                              <Sparkles className="h-3 w-3" />
+                              A place you may like
+                            </span>
+                            <span className="text-[10px] font-medium text-[#837560]">Organic · Selected for your interests</span>
+                          </div>
+                        )}
                         {/* Meta Header */}
                         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#837560] leading-none">
                           <span className="font-bold text-[#2D6A4F] flex items-center gap-1">
@@ -467,7 +476,7 @@ export default function ExplorePage() {
                     </article>
 
                     {/* Interleaved Native Suggested Destination Card (Like Facebook feed ad after post #3) */}
-                    {index === 2 && secondRecommendation && (
+                    {false && index === 2 && secondRecommendation && (
                       <article className="bg-gradient-to-br from-[#FAF9F5] via-white to-emerald-50/50 rounded-2xl border border-emerald-300/80 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-300 ease-out space-y-3 relative overflow-hidden">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
@@ -531,7 +540,7 @@ export default function ExplorePage() {
                     )}
 
                     {/* Interleaved Native Suggested Destination Card (Like Facebook feed ad after post #6) */}
-                    {index === 5 && thirdRecommendation && (
+                    {false && index === 5 && thirdRecommendation && (
                       <article className="bg-gradient-to-br from-[#FAF9F5] via-white to-amber-50/50 rounded-2xl border border-amber-300/80 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-300 ease-out space-y-3 relative overflow-hidden">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
@@ -601,7 +610,8 @@ export default function ExplorePage() {
         </div>
 
         {/* Right Sidebar Widgets Column (Span 4 - Sticky Facebook Style) */}
-        <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pr-1">
+        <aside className="lg:col-span-4 lg:self-stretch pr-1">
+          <div className="space-y-5 lg:sticky lg:top-20 lg:self-start">
 
             {/* Quick Portal Shortcuts */}
             <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
@@ -655,6 +665,7 @@ export default function ExplorePage() {
                 </Link>
               </div>
             </div>
+          </div>
           </aside>
 
         </div>
