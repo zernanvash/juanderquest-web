@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -30,6 +31,16 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
   const pathname = usePathname();
   const { user, wallet, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    if (pathname !== '/search') {
+      setIsSearching(false);
+    }
+  }, [pathname]);
+
+  const isSearchActive = pathname === '/search' || isSearching;
+
 
   const navItems = [
     { label: 'Community Feed', href: '/explore', icon: Compass, flair: 'Feed' },
@@ -58,27 +69,37 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
       {/* Top Global Header Bar */}
       <header className="h-16 bg-white border-b border-[#E3DFD5] px-3 sm:px-5 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs gap-3">
         {/* Brand Logo & Sticky Search Bar (Facebook-style) */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 max-w-xs sm:max-w-sm md:max-w-md min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           <Link href="/explore" className="flex items-center group shrink-0" title="JuanDerQuest">
             <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:border-[#2D6A4F]/60 transition-colors duration-200">
               <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
             </div>
           </Link>
 
-          {/* Sticky Facebook-style Search Trigger Bar next to logo */}
-          <Link
-            href="/search"
-            className="flex-1 min-w-0 block group"
-            title="Search Pangasinan destinations"
+          {/* Sticky Facebook-style Search Trigger Bar next to logo (Smoothly animates out on /search) */}
+          <div
+            className={`transition-all duration-300 ease-out overflow-hidden flex items-center min-w-0 ${
+              isSearchActive
+                ? 'max-w-0 opacity-0 pointer-events-none -translate-x-2.5 scale-95'
+                : 'flex-1 max-w-xs sm:max-w-sm md:max-w-md opacity-100 scale-100 translate-x-0'
+            }`}
           >
-            <div className="relative flex items-center w-full bg-[#FAF9F5] group-hover:bg-[#F2EFE9] border border-[#E3DFD5] group-hover:border-[#2D6A4F]/60 rounded-full pl-8.5 pr-3 py-1.5 text-xs text-[#837560] font-medium transition-all duration-200 cursor-pointer shadow-2xs">
-              <Search className="w-3.5 h-3.5 text-[#837560] group-hover:text-[#2D6A4F] absolute left-3 pointer-events-none transition-colors" />
-              <span className="truncate select-none">
-                Search Pangasinan destinations...
-              </span>
-            </div>
-          </Link>
+            <Link
+              href="/search"
+              onClick={() => setIsSearching(true)}
+              className="w-full block group min-w-0"
+              title="Search Pangasinan destinations"
+            >
+              <div className="relative flex items-center w-full bg-[#FAF9F5] group-hover:bg-[#F2EFE9] border border-[#E3DFD5] group-hover:border-[#2D6A4F]/60 rounded-full pl-8.5 pr-3 py-1.5 text-xs text-[#837560] font-medium transition-all duration-200 cursor-pointer shadow-2xs">
+                <Search className="w-3.5 h-3.5 text-[#837560] group-hover:text-[#2D6A4F] absolute left-3 pointer-events-none transition-colors" />
+                <span className="truncate select-none whitespace-nowrap">
+                  Search Pangasinan destinations...
+                </span>
+              </div>
+            </Link>
+          </div>
         </div>
+
 
 
         {/* Spacious, Seamless Icon Navigation Bar (Blended White, Generous Spacing) */}
