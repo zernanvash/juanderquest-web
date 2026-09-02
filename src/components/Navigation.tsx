@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,21 +25,42 @@ import {
   Bell
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { SearchOverlay } from '@/components/SearchOverlay';
+
 
 export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: boolean }> = ({ children, fullBleed = false }) => {
 
   const pathname = usePathname();
   const { user, wallet, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Close search overlay when pathname changes
   useEffect(() => {
-    if (pathname !== '/search') {
-      setIsSearching(false);
-    }
+    setIsSearchOpen(false);
+    setSearchQuery('');
   }, [pathname]);
 
-  const isSearchActive = pathname === '/search' || isSearching;
+  // Global Ctrl+K / Cmd+K shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => {
+          const next = !prev;
+          if (next) {
+            setTimeout(() => searchInputRef.current?.focus(), 60);
+          }
+          return next;
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
 
 
   const navItems = [
@@ -68,43 +89,17 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
     <div className="min-h-screen bg-[#F4F3EE] flex flex-col selection:bg-[#FFB703]/30 text-[#2B2319]">
       {/* Top Global Header Bar */}
       <header className="h-16 bg-white border-b border-[#E3DFD5] px-3 sm:px-5 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs gap-3">
-        {/* Brand Logo & Sticky Search Bar (Facebook-style) */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+        {/* Brand Logo (Clean & Minimalist) */}
+        <div className="flex items-center gap-3 shrink-0">
           <Link href="/explore" className="flex items-center group shrink-0" title="JuanDerQuest">
             <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:border-[#2D6A4F]/60 transition-colors duration-200">
               <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
             </div>
           </Link>
-
-          {/* Sticky Facebook-style Search Trigger Bar next to logo (Smoothly animates out on /search) */}
-          <div
-            className={`transition-all duration-300 ease-out overflow-hidden flex items-center min-w-0 ${
-              isSearchActive
-                ? 'max-w-0 opacity-0 pointer-events-none -translate-x-2.5 scale-95'
-                : 'flex-1 max-w-xs sm:max-w-sm md:max-w-md opacity-100 scale-100 translate-x-0'
-            }`}
-          >
-            <Link
-              href="/search"
-              onClick={() => setIsSearching(true)}
-              className="w-full block group min-w-0"
-              title="Search Pangasinan destinations"
-            >
-              <div className="relative flex items-center w-full bg-[#FAF9F5] group-hover:bg-[#F2EFE9] border border-[#E3DFD5] group-hover:border-[#2D6A4F]/60 rounded-full pl-8.5 pr-3 py-1.5 text-xs text-[#837560] font-medium transition-all duration-200 cursor-pointer shadow-2xs">
-                <Search className="w-3.5 h-3.5 text-[#837560] group-hover:text-[#2D6A4F] absolute left-3 pointer-events-none transition-colors" />
-                <span className="truncate select-none whitespace-nowrap">
-                  Search Pangasinan destinations...
-                </span>
-              </div>
-            </Link>
-          </div>
         </div>
 
-
-
-        {/* Spacious, Seamless Icon Navigation Bar (Blended White, Generous Spacing) */}
-        <nav className="hidden md:flex items-center gap-4 lg:gap-6 px-2 shrink-0">
-
+        {/* Spacious, Seamless Icon Navigation Bar with Minimized Expanding Search Pill */}
+        <nav className="hidden md:flex items-center gap-2 lg:gap-3 px-2 shrink-0">
           {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
@@ -113,14 +108,14 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                 key={item.href}
                 href={item.href}
                 title={item.label}
-                className={`relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 cursor-pointer select-none ${
+                className={`relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
                   isActive
                     ? 'bg-[#2D6A4F] text-white shadow-xs scale-105'
                     : 'text-[#6B5E4C] hover:text-[#2D6A4F] hover:bg-gray-100/60 active:scale-95'
                 }`}
               >
                 <Icon
-                  className={`w-6 h-6 shrink-0 transition-transform duration-200 ${
+                  className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
                     isActive ? 'text-[#FFB703]' : ''
                   }`}
                 />
@@ -131,7 +126,64 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               </Link>
             );
           })}
+
+          {/* Minimized Expanding Search Bar placed after tabs */}
+          <div className="relative flex items-center ml-1">
+            {!isSearchOpen ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSearchOpen(true);
+                  setTimeout(() => searchInputRef.current?.focus(), 60);
+                }}
+                className="flex items-center gap-2 h-10 px-3.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] hover:border-[#2D6A4F]/60 text-xs text-[#837560] font-medium transition-all duration-300 ease-out cursor-pointer shadow-2xs group select-none"
+                title="Search destinations (⌘K)"
+              >
+                <Search className="w-4 h-4 text-[#837560] group-hover:text-[#2D6A4F] transition-colors" />
+                <span className="hidden lg:inline">Search...</span>
+                <kbd className="hidden xl:inline px-1.5 py-0.5 text-[9px] font-mono bg-white rounded border border-[#E3DFD5] text-[#837560]">
+                  ⌘K
+                </kbd>
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative flex items-center w-64 lg:w-80 xl:w-96 transition-all duration-300 ease-out">
+                  <Search className="w-4 h-4 text-[#2D6A4F] absolute left-3 pointer-events-none" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search Pangasinan destinations, food..."
+                    className="w-full h-10 bg-white border-2 border-[#2D6A4F] rounded-xl pl-9.5 pr-8 text-xs text-[#2B2319] placeholder:text-[#837560] font-medium outline-none shadow-xs transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 text-stone-400 hover:text-stone-600 cursor-pointer p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200 text-[#582F0E] flex items-center justify-center text-xs font-bold transition cursor-pointer"
+                  title="Close Search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
+
 
         {/* User Pill, Wallet & Actions */}
         <div className="flex items-center gap-3">
@@ -188,7 +240,19 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
         </div>
       </header>
 
+      {/* Dynamic Anywhere-Accessible Search Overlay */}
+      <SearchOverlay
+        isOpen={isSearchOpen}
+        onClose={() => {
+          setIsSearchOpen(false);
+          setSearchQuery('');
+        }}
+        query={searchQuery}
+        setQuery={setSearchQuery}
+      />
+
       {/* Main Content Area */}
+
       {children && (
         <main
           className={
