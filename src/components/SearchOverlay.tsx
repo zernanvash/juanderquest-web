@@ -13,7 +13,8 @@ import {
   Check,
   ChevronDown,
   RotateCcw,
-  Tag
+  Tag,
+  Search
 } from 'lucide-react';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
@@ -112,9 +113,27 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Prevent background page scrolling while modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, [isOpen]);
+
   // Filtered spots calculation
+  const hasTyped = query.trim().length > 0;
+
   const filteredSpots = useMemo(() => {
+    if (!hasTyped) return [];
     const qLower = query.toLowerCase().trim();
+
     return spots.filter((spot) => {
       const matchQuery =
         !qLower ||
@@ -175,10 +194,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-[#2D6A4F]" />
                 Filter Destinations
               </span>
-              <span className="text-[10px] bg-emerald-50 text-[#2D6A4F] border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
-                {filteredSpots.length} {filteredSpots.length === 1 ? 'destination' : 'destinations'} found
-              </span>
+              {hasTyped ? (
+                <span className="text-[10px] bg-emerald-50 text-[#2D6A4F] border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
+                  {filteredSpots.length} {filteredSpots.length === 1 ? 'destination' : 'destinations'} found
+                </span>
+              ) : (
+                <span className="text-[10px] bg-stone-100 text-stone-500 border border-stone-200 px-2 py-0.5 rounded-full font-medium">
+                  Type above to search
+                </span>
+              )}
             </div>
+
 
             {hasActiveFilters && (
               <button
@@ -283,7 +309,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
         {/* Live Matching Results Grid */}
         <div className="max-h-[58vh] overflow-y-auto p-4 sm:p-6 bg-[#FCFBF8]/60">
-          {loading ? (
+          {!hasTyped ? (
+            <div className="py-16 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center mx-auto shadow-2xs text-[#2D6A4F]">
+                <Search className="w-6 h-6" />
+              </div>
+              <h4 className="font-serif font-bold text-base text-[#582F0E]">Type to search destinations</h4>
+              <p className="text-xs text-[#837560] max-w-sm mx-auto leading-relaxed">
+                Type a town (e.g. Bolinao, Alaminos), beach, landmark, or food in the search bar above to see instant results.
+              </p>
+            </div>
+          ) : loading ? (
             <div className="py-16 text-center text-xs text-[#837560] space-y-3">
               <div className="w-7 h-7 border-2 border-[#2D6A4F] border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="font-semibold text-[#582F0E]">Discovering Pangasinan destinations...</p>
@@ -297,6 +333,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               <p className="text-xs text-[#837560] max-w-sm mx-auto leading-relaxed">
                 We couldn&apos;t find any spots matching your current filters. Try relaxing the municipality, category, or search term.
               </p>
+
               <button
                 type="button"
                 onClick={resetAllFilters}
@@ -385,8 +422,11 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               <span>to close</span>
             </span>
             <span className="text-stone-300">·</span>
-            <span className="hidden sm:inline">Click any destination to explore immediately</span>
+            <span className="hidden sm:inline">
+              {hasTyped ? 'Click any destination to explore immediately' : 'Search anywhere across JuanDerQuest'}
+            </span>
           </div>
+
 
           <Link
             href="/search"
