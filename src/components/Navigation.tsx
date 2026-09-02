@@ -137,14 +137,16 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                   setIsSearchOpen(true);
                   setTimeout(() => searchInputRef.current?.focus(), 60);
                 }}
-                className="flex items-center gap-2 h-10 px-3.5 rounded-full bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/60 text-xs text-[#6B5E4C] hover:text-[#2D6A4F] font-medium transition-all duration-300 ease-out cursor-pointer shadow-2xs hover:shadow-xs group select-none active:scale-95"
-                title="Search destinations (⌘K)"
+                className="flex items-center gap-2 h-10 px-3.5 rounded-full bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/60 text-xs text-[#6B5E4C] hover:text-[#2D6A4F] font-medium transition-all duration-300 ease-out cursor-pointer shadow-2xs hover:shadow-xs group select-none active:scale-95 relative"
+                title="Search destinations (Ctrl+K)"
               >
                 <Search className="w-3.5 h-3.5 text-[#837560] group-hover:text-[#2D6A4F] group-hover:scale-110 transition-all" />
                 <span className="hidden lg:inline text-xs font-semibold">Search...</span>
-                <kbd className="hidden xl:inline px-1.5 py-0.5 text-[9px] font-mono font-semibold bg-stone-100 text-[#837560] rounded border border-stone-200/80 shadow-2xs">
-                  ⌘K
-                </kbd>
+
+                {/* Info Hover Tooltip */}
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 px-2 py-0.5 bg-[#1B4332] text-white text-[10px] font-medium rounded-md whitespace-nowrap shadow-md z-50">
+                  Ctrl+K
+                </span>
               </button>
             ) : (
               <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
