@@ -136,35 +136,40 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                   setIsSearchOpen(true);
                   setTimeout(() => searchInputRef.current?.focus(), 60);
                 }}
-                className="flex items-center gap-2 h-10 px-3.5 rounded-xl bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] hover:border-[#2D6A4F]/60 text-xs text-[#837560] font-medium transition-all duration-300 ease-out cursor-pointer shadow-2xs group select-none"
+                className="flex items-center gap-2 h-10 px-3.5 rounded-full bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/60 text-xs text-[#6B5E4C] hover:text-[#2D6A4F] font-medium transition-all duration-300 ease-out cursor-pointer shadow-2xs hover:shadow-xs group select-none active:scale-95"
                 title="Search destinations (⌘K)"
               >
-                <Search className="w-4 h-4 text-[#837560] group-hover:text-[#2D6A4F] transition-colors" />
-                <span className="hidden lg:inline">Search...</span>
-                <kbd className="hidden xl:inline px-1.5 py-0.5 text-[9px] font-mono bg-white rounded border border-[#E3DFD5] text-[#837560]">
+                <Search className="w-3.5 h-3.5 text-[#837560] group-hover:text-[#2D6A4F] group-hover:scale-110 transition-all" />
+                <span className="hidden lg:inline text-xs font-semibold">Search...</span>
+                <kbd className="hidden xl:inline px-1.5 py-0.5 text-[9px] font-mono font-semibold bg-stone-100 text-[#837560] rounded border border-stone-200/80 shadow-2xs">
                   ⌘K
                 </kbd>
               </button>
             ) : (
-              <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
-                <div className="relative flex items-center w-64 lg:w-80 xl:w-96 transition-all duration-300 ease-out">
-                  <Search className="w-4 h-4 text-[#2D6A4F] absolute left-3 pointer-events-none" />
+              <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative flex items-center w-72 lg:w-96 xl:w-[28rem] transition-all duration-300 ease-out">
+                  <Search className="w-4 h-4 text-[#2D6A4F] absolute left-3.5 pointer-events-none" />
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search Pangasinan destinations, food..."
-                    className="w-full h-10 bg-white border-2 border-[#2D6A4F] rounded-xl pl-9.5 pr-8 text-xs text-[#2B2319] placeholder:text-[#837560] font-medium outline-none shadow-xs transition-all"
+                    placeholder="Search Pangasinan spots, food, tags..."
+                    className="w-full h-10 bg-white border-2 border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/10 rounded-full pl-10 pr-9 text-xs text-[#2B2319] placeholder:text-[#837560]/70 font-medium outline-none shadow-sm transition-all"
                   />
-                  {searchQuery && (
+                  {searchQuery ? (
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 text-stone-400 hover:text-stone-600 cursor-pointer p-0.5"
+                      className="absolute right-3 w-5 h-5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center cursor-pointer transition"
+                      title="Clear query"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3 h-3" />
                     </button>
+                  ) : (
+                    <kbd className="absolute right-3.5 text-[9px] font-mono text-stone-400 pointer-events-none uppercase font-bold">
+                      ESC
+                    </kbd>
                   )}
                 </div>
 
@@ -174,8 +179,8 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                     setIsSearchOpen(false);
                     setSearchQuery('');
                   }}
-                  className="w-8 h-8 rounded-lg bg-stone-100 hover:bg-stone-200 text-[#582F0E] flex items-center justify-center text-xs font-bold transition cursor-pointer"
-                  title="Close Search"
+                  className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-[#582F0E] flex items-center justify-center text-xs font-bold transition cursor-pointer active:scale-95 shadow-2xs"
+                  title="Close Search (ESC)"
                 >
                   <X className="w-4 h-4" />
                 </button>
