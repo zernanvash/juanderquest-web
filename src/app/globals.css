@@ -138,11 +138,16 @@ button, a, input, select, textarea {
 }
 
 
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
+html,
+body {
+  max-width: 100%;
   -webkit-font-smoothing: antialiased;
 }
+
+body {
+  overflow-x: clip;
+}
+
 
 /* Smooth, hardware-accelerated media rendering without raster distortion or wonky zoom */
 img, video {

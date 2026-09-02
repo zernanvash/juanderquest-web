@@ -88,10 +88,8 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
   return (
     <div className="min-h-screen bg-[#F4F3EE] flex flex-col selection:bg-[#FFB703]/30 text-[#2B2319]">
       {/* Top Global Header Bar (Sticky Top) */}
-      <header
-        style={{ position: 'sticky', top: 0, zIndex: 50 }}
-        className="h-16 bg-white/95 backdrop-blur-md border-b border-[#E3DFD5] px-3 sm:px-5 lg:px-8 flex items-center justify-between shadow-xs gap-3"
-      >
+      <header className="sticky top-0 z-50 shrink-0 h-16 bg-white/95 backdrop-blur-md border-b border-[#E3DFD5] px-3 sm:px-5 lg:px-8 flex items-center justify-between shadow-xs gap-3">
+
         {/* Brand Logo (Clean & Minimalist) */}
         <div className="flex items-center gap-3 shrink-0">
           <Link href="/explore" className="flex items-center group shrink-0" title="JuanDerQuest">

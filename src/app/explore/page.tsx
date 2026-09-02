@@ -611,10 +611,8 @@ export default function ExplorePage() {
         </div>
 
         {/* Right Sidebar Widgets Column (Sticky Facebook Style) */}
-        <aside
-          style={{ position: 'sticky', top: '5rem' }}
-          className="lg:col-span-4 lg:self-start space-y-5 pr-1"
-        >
+        <aside className="lg:col-span-4 lg:sticky lg:top-20 lg:self-start space-y-5 pr-1">
+
           {/* Quick Portal Shortcuts */}
           <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
