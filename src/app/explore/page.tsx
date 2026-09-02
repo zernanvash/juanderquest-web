@@ -44,14 +44,6 @@ import { fetchWithCache } from '@/lib/cache';
 import { SpotCardSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-const categories = [
-  { id: 'all', label: 'All Destinations' },
-  { id: 'eat_drink', label: '🍜 Food & Culinary' },
-  { id: 'nature_outdoors', label: '🏖️ Nature & Beaches' },
-  { id: 'culture_heritage', label: '🏛️ Heritage & Shrines' },
-  { id: 'activities_wellness', label: '🧗 Outdoor & Eco' },
-  { id: 'shopping_local', label: '🛍️ Local MSME Crafts' },
-];
 
 const mockCommunityTips: Record<string, string[]> = {
   default: [
@@ -204,89 +196,6 @@ export default function ExplorePage() {
           {/* Main Feed Column (Mobile: order-1, Desktop: Center Column 6 cols) */}
           <div className="order-1 lg:order-none lg:col-span-6 lg:col-start-4 space-y-4 min-w-0">
             
-            {/* Category Filter Chips Bar (Flex-Wrap, Zero-Scrollbar per Skill Rules) */}
-            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-[#E3DFD5] shadow-xs space-y-2.5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {categories.map((cat) => {
-                  const isActive = category === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setCategory(cat.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                        isActive
-                          ? 'bg-[#2D6A4F] text-white shadow-xs'
-                          : 'bg-[#FAF9F5] hover:bg-white text-[#6B5E4C] hover:text-[#2D6A4F] border border-[#E3DFD5]'
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Stream Flair Switcher & Live Counter */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#F2EFE9] text-xs px-0.5">
-                <div className="flex flex-wrap items-center gap-1">
-                  <button
-                    onClick={() => setSortFlair('for_you')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer active:scale-95 ${
-                      sortFlair === 'for_you'
-                        ? 'bg-[#2D6A4F]/10 text-[#2D6A4F]'
-                        : 'text-[#837560] hover:text-[#2C221E]'
-                    }`}
-                  >
-                    ✨ For You
-                  </button>
-                  <button
-                    onClick={() => setSortFlair('hot')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer active:scale-95 ${
-                      sortFlair === 'hot'
-                        ? 'bg-[#2D6A4F]/10 text-[#2D6A4F]'
-                        : 'text-[#837560] hover:text-[#2C221E]'
-                    }`}
-                  >
-                    🔥 Popular
-                  </button>
-                  <button
-                    onClick={() => setSortFlair('quests')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer active:scale-95 ${
-                      sortFlair === 'quests'
-                        ? 'bg-[#2D6A4F]/10 text-[#2D6A4F]'
-                        : 'text-[#837560] hover:text-[#2C221E]'
-                    }`}
-                  >
-                    ⚡ Quests
-                  </button>
-                  <button
-                    onClick={() => setSortFlair('quiet')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer active:scale-95 ${
-                      sortFlair === 'quiet'
-                        ? 'bg-[#2D6A4F]/10 text-[#2D6A4F]'
-                        : 'text-[#837560] hover:text-[#2C221E]'
-                    }`}
-                  >
-                    🌿 Quiet
-                  </button>
-                  {savedCount > 0 && (
-                    <button
-                      onClick={() => setSortFlair(sortFlair === 'saved' ? 'for_you' : 'saved')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer active:scale-95 ${
-                        sortFlair === 'saved'
-                          ? 'bg-amber-100 text-[#854D0E]'
-                          : 'text-[#837560] hover:text-[#854D0E]'
-                      }`}
-                    >
-                      🔖 Saved ({savedCount})
-                    </button>
-                  )}
-                </div>
-
-                <span className="text-[11px] text-[#837560] font-medium hidden sm:inline">
-                  {processedSpots.length} destination{processedSpots.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
 
             {/* Share / Post Box with Quick Action Buttons */}
             <div className="bg-white rounded-2xl p-4 border border-[#E3DFD5] shadow-xs space-y-3">
@@ -385,7 +294,7 @@ export default function ExplorePage() {
                               </div>
                               <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                                 <Link
-                                  href={`/explore?category=${spot.category || 'all'}`}
+                                  href={`/search?muni=${encodeURIComponent(spot.municipality)}`}
                                   className="font-bold text-[#2C221E] hover:underline cursor-pointer truncate"
                                 >
                                   p/{spot.municipality.toLowerCase().replace(/\s+/g, '')}
@@ -735,58 +644,7 @@ export default function ExplorePage() {
         {/* Left Actions Column (Order 3 on mobile, Left Column on desktop) */}
         <aside className="order-3 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1 lg:sticky lg:top-20 lg:self-start space-y-3.5">
 
-          {/* Traveler Scout Passport / Status Card */}
-          <div className="bg-white rounded-2xl p-4 border border-[#E3DFD5] shadow-xs space-y-3">
-            {user ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#2D6A4F] text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
-                    {user.displayName?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-[#582F0E] truncate">{user.displayName || 'Pangasinan Traveler'}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-[#1B4332]">Scout Tier I</span>
-                      <span className="text-[10px] text-[#837560] font-semibold">· Level 3</span>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DE] flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-[#837560] flex items-center gap-1.5">
-                    <Coins className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>Balance</span>
-                  </span>
-                  <span className="text-xs font-black text-[#2D6A4F]">1,250 mJDQ</span>
-                </div>
-
-                <Link
-                  href="/profile"
-                  className="block w-full text-center py-2 px-3 rounded-xl bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] text-xs font-bold text-[#582F0E] transition shadow-2xs"
-                >
-                  View Passport &amp; Badges →
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-2.5 text-center py-1">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-[#2D6A4F] mx-auto flex items-center justify-center shadow-2xs">
-                  <Compass className="w-5 h-5 text-[#2D6A4F]" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-[#582F0E]">Pangasinan Explorer</h4>
-                  <p className="text-[11px] text-[#837560] leading-snug mt-1">
-                    Sign in to collect Soulbound NFT badges, earn $mJDQ$ points, and redeem local merchant perks.
-                  </p>
-                </div>
-                <Link
-                  href="/login"
-                  className="inline-block w-full py-2 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs"
-                >
-                  Join JuanDerQuest
-                </Link>
-              </div>
-            )}
-          </div>
 
           {/* Reddit-style Feeds & Navigation Rail */}
           <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-[#E3DFD5] shadow-xs space-y-1">
@@ -880,27 +738,27 @@ export default function ExplorePage() {
 
             {openCircuits && (
               <div className="space-y-0.5 pt-1 text-xs animate-fadeIn">
-                <button
-                  onClick={() => setCategory('nature_outdoors')}
+                <Link
+                  href="/search?cat=nature_outdoors"
                   className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-[#FAF9F5] text-[#514532] hover:text-[#2D6A4F] transition text-left cursor-pointer"
                 >
                   <span className="truncate">🌊 Western Coast (Bolinao, Alaminos)</span>
-                  <span className="text-[10px] text-[#837560]">Beaches</span>
-                </button>
-                <button
-                  onClick={() => setCategory('culture_heritage')}
+                  <span className="text-[10px] text-[#837560]">Beaches →</span>
+                </Link>
+                <Link
+                  href="/search?cat=culture_heritage"
                   className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-[#FAF9F5] text-[#514532] hover:text-[#2D6A4F] transition text-left cursor-pointer"
                 >
                   <span className="truncate">🏛️ Central Heritage (Lingayen, Dagupan)</span>
-                  <span className="text-[10px] text-[#837560]">History</span>
-                </button>
-                <button
-                  onClick={() => setCategory('activities_wellness')}
+                  <span className="text-[10px] text-[#837560]">History →</span>
+                </Link>
+                <Link
+                  href="/search?cat=activities_wellness"
                   className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-[#FAF9F5] text-[#514532] hover:text-[#2D6A4F] transition text-left cursor-pointer"
                 >
                   <span className="truncate">🌄 Eastern Ecotourism (San Nicolas, Tayug)</span>
-                  <span className="text-[10px] text-[#837560]">Trek</span>
-                </button>
+                  <span className="text-[10px] text-[#837560]">Trek →</span>
+                </Link>
               </div>
             )}
           </div>
