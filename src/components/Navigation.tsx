@@ -100,7 +100,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
         </div>
 
         {/* Spacious, Seamless Icon Navigation Bar with Minimized Expanding Search Pill */}
-        <nav className="hidden md:flex items-center gap-2 lg:gap-3 px-2 shrink-0">
+        <nav className="hidden md:flex flex-1 items-center justify-evenly gap-2 lg:gap-4 xl:gap-6 px-3 lg:px-6 min-w-0">
           {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
@@ -109,7 +109,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                 key={item.href}
                 href={item.href}
                 title={item.label}
-                className={`relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
+                className={`relative flex items-center justify-center w-14 lg:w-16 xl:w-20 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
                   isActive
                     ? 'bg-[#2D6A4F] text-white shadow-xs scale-105'
                     : 'text-[#6B5E4C] hover:text-[#2D6A4F] hover:bg-gray-100/60 active:scale-95'
