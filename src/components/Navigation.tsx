@@ -261,7 +261,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
           className={
             fullBleed
               ? 'flex-1 w-full relative h-[calc(100dvh-64px)] overflow-hidden flex flex-col'
-              : 'flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-12 lg:pb-10'
+              : 'flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-12 lg:pb-10'
           }
         >
           {children}
