@@ -188,11 +188,11 @@ export default function ExplorePage() {
           </article>
         )}
 
-        {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Sticky Widgets) */}
+        {/* Three-column discovery layout: actions / feed / recommendations */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Main Feed Column (Span 8) - Facebook Style Scrolling */}
-          <div className="lg:col-span-8 space-y-4 min-w-0">
+          {/* Main Feed Column */}
+          <div className="lg:col-span-6 lg:col-start-4 space-y-4 min-w-0">
             
             {/* Share / Post Box */}
             <div className="bg-white rounded-xl p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
@@ -264,7 +264,7 @@ export default function ExplorePage() {
 
                       {/* Compact Post Header & Caption Area */}
                       <div className="px-4 pt-3.5 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3 space-y-2">
-                        {index === 0 && (
+                        {false && index === 0 && (
                           <div className="flex flex-wrap items-center gap-2 border-b border-emerald-100 pb-2">
                             <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#2D6A4F]">
                               <Sparkles className="h-3 w-3" />
@@ -610,8 +610,8 @@ export default function ExplorePage() {
           )}
         </div>
 
-        {/* Right Sidebar Widgets Column (Sticky Facebook Style) */}
-        <aside className="lg:col-span-4 lg:sticky lg:top-20 lg:self-start space-y-5 pr-1">
+        {/* Left Actions Column */}
+        <aside className="lg:col-span-3 lg:col-start-1 lg:row-start-1 lg:sticky lg:top-20 lg:self-start space-y-5">
 
           {/* Quick Portal Shortcuts */}
           <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
@@ -665,6 +665,51 @@ export default function ExplorePage() {
               </Link>
             </div>
           </div>
+        </aside>
+
+        {/* Right Personalized Discovery Column */}
+        <aside className="lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:sticky lg:top-20 lg:self-start space-y-5">
+          {topRecommendation && (
+            <article className="overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-xs">
+              {topRecommendation.imageUrl && (
+                <Link href={`/spots/${topRecommendation.slug}`} className="block aspect-[4/3] overflow-hidden bg-stone-100">
+                  <img
+                    src={topRecommendation.imageUrl}
+                    alt={`${topRecommendation.name} recommended destination`}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                  />
+                </Link>
+              )}
+              <div className="space-y-3 p-4">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[#2D6A4F]">
+                    <Sparkles className="h-3 w-3" />
+                    A place you may like
+                  </span>
+                  <h2 className="mt-2 font-serif text-base font-black leading-snug text-[#582F0E]">
+                    {topRecommendation.name}
+                  </h2>
+                  <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#2D6A4F]">
+                    <MapPin className="h-3 w-3" />
+                    {topRecommendation.municipality}
+                  </p>
+                </div>
+                <p className="line-clamp-3 text-xs leading-relaxed text-[#514532]">
+                  {topRecommendation.description}
+                </p>
+                <p className="text-[10px] font-medium text-[#837560]">
+                  Suggested from your interests and recent activity
+                </p>
+                <Link
+                  href={`/spots/${topRecommendation.slug}`}
+                  className="flex w-full items-center justify-center rounded-lg bg-[#2D6A4F] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#1B4332] active:scale-95"
+                >
+                  Explore this place
+                </Link>
+              </div>
+            </article>
+          )}
         </aside>
 
         </div>
