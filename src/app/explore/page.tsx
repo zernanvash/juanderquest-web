@@ -37,6 +37,8 @@ import { useAuth } from '@/lib/auth';
 import { fetchWithCache } from '@/lib/cache';
 import { SpotCardSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useSavedLibrary } from '@/lib/saved-library';
+import { publicTravelerProfiles, communityChoicePreview } from '@/lib/community';
 
 const categories = [
   { id: 'all', label: 'All Destinations' },
@@ -67,7 +69,7 @@ export default function ExplorePage() {
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [userComments, setUserComments] = useState<Record<string, string[]>>({});
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
-  const [savedPosts, setSavedPosts] = useState<Record<string, boolean>>({});
+  const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
 
   const loadSpots = useCallback(async (forceRefresh = false) => {
     setLoading(true);
@@ -137,8 +139,10 @@ export default function ExplorePage() {
   };
 
   const toggleSave = (spotId: string) => {
-    setSavedPosts((prev) => ({ ...prev, [spotId]: !prev[spotId] }));
+    toggleSaved('spots', spotId);
   };
+
+  const savedSpotHighlights = spots.filter((s) => savedLibrary.spots.includes(s.id)).slice(0, 3);
 
   // Filter & Sort Logic
   const processedSpots = spots.filter((s) => {
@@ -155,44 +159,183 @@ export default function ExplorePage() {
   return (
     <Navigation>
       <div className="space-y-5">
-        {/* Top "A place you may like" recommendation card */}
-        {false && topRecommendation && (
-          <article className="rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 via-white to-amber-50/40 p-4 sm:p-5 shadow-xs transition-all duration-300 ease-out hover:shadow-md">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-emerald-100 text-[#2D6A4F] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#2D6A4F]" />
-                    A place you may like
-                  </span>
-                  <span className="text-[10px] text-[#837560] font-medium">· Organic recommendation</span>
-                </div>
-                <h2 className="text-base sm:text-lg font-black font-serif text-[#582F0E]">
-                  {topRecommendation.name}
-                </h2>
-                <p className="text-xs leading-relaxed text-[#514532] line-clamp-2">
-                  {topRecommendation.description}
-                </p>
-                <p className="text-[11px] font-bold text-[#2D6A4F] flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {topRecommendation.municipality} · Selected based on your interests &amp; activity
-                </p>
-              </div>
-              <Link
-                href={`/spots/${topRecommendation.slug}`}
-                className="shrink-0 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] px-4 py-2.5 text-center text-xs font-bold text-white transition-all duration-200 shadow-xs active:scale-95"
-              >
-                View this place →
-              </Link>
-            </div>
-          </article>
-        )}
-
-        {/* Structured Multi-Column Post Stream (8 Cols Feed / 4 Cols Sticky Widgets) */}
+        {/* Structured 3-Column Post Stream (Left: Portals & Scouts, Center: Feed, Right: Personalized & Leaderboard) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* Main Feed Column (Span 8) - Facebook Style Scrolling */}
-          <div className="lg:col-span-8 space-y-4 min-w-0">
+
+          {/* Left Actions & Discovery Column */}
+          <aside className="lg:col-span-3 lg:col-start-1 lg:row-start-1 lg:sticky lg:top-20 lg:self-start space-y-5">
+            
+            {/* Quick Portal Shortcuts */}
+            <div className="bg-white rounded-2xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
+                <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">Quick Portals</h3>
+                <span className="text-[10px] font-bold text-[#837560]">Hub</span>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <Link
+                  href="/quests"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100/80 text-[#B45309]">
+                      <Zap className="w-3.5 h-3.5 fill-[#FFB703] text-[#B45309]" />
+                    </div>
+                    <span>Quests &amp; Trails</span>
+                  </div>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold group-hover:translate-x-0.5 transition-transform">Bounties →</span>
+                </Link>
+
+                <Link
+                  href="/saved"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/90 hover:border-[#FFB703] hover:bg-amber-50 transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-200/70 text-[#7D5800]">
+                      <Bookmark className="w-3.5 h-3.5 fill-current text-[#B45309]" />
+                    </div>
+                    <span>Saved Library</span>
+                  </div>
+                  <span className="rounded-full bg-amber-200/90 px-2 py-0.5 text-[10px] font-black text-[#582F0E]">
+                    {savedLibrary.spots.length + savedLibrary.quests.length}
+                  </span>
+                </Link>
+
+                <Link
+                  href="/community-choice/leaderboard"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100/70 text-[#7D5800]">
+                      <Trophy className="w-3.5 h-3.5 text-[#B45309]" />
+                    </div>
+                    <span>Community Choice</span>
+                  </div>
+                  <span className="text-[10px] text-[#7D5800] font-bold group-hover:translate-x-0.5 transition-transform">Awards →</span>
+                </Link>
+
+                <Link
+                  href="/leaderboard"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-[#582F0E]">
+                      <Award className="w-3.5 h-3.5 text-[#B45309]" />
+                    </div>
+                    <span>Scout Hall of Fame</span>
+                  </div>
+                  <span className="text-[10px] text-[#582F0E] font-bold group-hover:translate-x-0.5 transition-transform">Ranks →</span>
+                </Link>
+
+                <Link
+                  href="/shop"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-[#2D6A4F]">
+                      <Tag className="w-3.5 h-3.5" />
+                    </div>
+                    <span>MSME Partner Deals</span>
+                  </div>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold group-hover:translate-x-0.5 transition-transform">Shop →</span>
+                </Link>
+
+                <Link
+                  href="/about"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
+                >
+                  <div className="flex items-center gap-2.5 font-bold text-[#2C221E]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </div>
+                    <span>About JuanDerQuest</span>
+                  </div>
+                  <span className="text-[10px] text-gray-500 font-bold group-hover:translate-x-0.5 transition-transform">Story →</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Saved Places Continuation Block */}
+            {savedSpotHighlights.length > 0 && (
+              <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-[#B45309]">
+                      Itinerary Planning
+                    </span>
+                    <h4 className="text-xs font-black text-[#582F0E]">Saved Destinations</h4>
+                  </div>
+                  <Link href="/saved" className="text-[10px] font-bold text-[#2D6A4F] hover:underline">
+                    Library ({savedLibrary.spots.length}) →
+                  </Link>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  {savedSpotHighlights.map((spot) => (
+                    <Link
+                      key={spot.id}
+                      href={`/spots/${spot.slug}`}
+                      className="flex items-center gap-2.5 rounded-xl border border-amber-200/70 bg-white/90 p-2 text-xs transition hover:border-[#FFB703] hover:shadow-2xs group"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100/70 text-[#B45309]">
+                        <Bookmark className="h-4 w-4 fill-current text-[#B45309]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                          {spot.name}
+                        </p>
+                        <p className="flex items-center gap-1 text-[10px] text-[#837560]">
+                          <MapPin className="h-2.5 w-2.5 text-[#2D6A4F]" />
+                          {spot.municipality}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Community Scouts Discovery */}
+            <div className="bg-white rounded-2xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
+                <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">Community Scouts</h3>
+                <span className="text-[10px] font-bold text-[#837560]">Public Passports</span>
+              </div>
+
+              <div className="space-y-1.5">
+                {publicTravelerProfiles.slice(0, 3).map((profile) => (
+                  <Link
+                    key={profile.id}
+                    href={`/users/${profile.id}`}
+                    className="flex items-center justify-between gap-2.5 rounded-xl p-2.5 hover:bg-[#FAF9F5] border border-transparent hover:border-[#E3DFD5] transition group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] text-[11px] font-black text-white shadow-2xs group-hover:ring-2 group-hover:ring-[#FFB703]/50 transition">
+                        {profile.initials}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                            {profile.displayName}
+                          </span>
+                          <CheckCircle2 className="h-3 w-3 text-[#2D6A4F] shrink-0" />
+                        </div>
+                        <span className="block truncate text-[10px] text-[#837560]">
+                          {profile.title} · Lv. {profile.scoutLevel}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform">
+                      →
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Feed Column (Span 6) - Facebook Style Scrolling */}
+          <div className="lg:col-span-6 lg:col-start-4 space-y-4 min-w-0">
             
             {/* Share / Post Box */}
             <div className="bg-white rounded-xl p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
@@ -406,12 +549,14 @@ export default function ExplorePage() {
                             {/* Bookmark / Save */}
                             <button
                               onClick={() => toggleSave(spot.id)}
-                              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition ${
-                                savedPosts[spot.id] ? 'bg-amber-50 text-[#FFB703]' : 'hover:bg-[#FAF9F5] text-[#582F0E]'
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition active:scale-95 cursor-pointer ${
+                                isSaved('spots', spot.id)
+                                  ? 'bg-amber-100/80 text-[#7D5800] font-bold border border-amber-300/80 shadow-2xs'
+                                  : 'hover:bg-[#FAF9F5] text-[#582F0E]'
                               }`}
                             >
-                              <Bookmark className="w-3.5 h-3.5" />
-                              <span>{savedPosts[spot.id] ? 'Saved' : 'Save'}</span>
+                              <Bookmark className={`w-3.5 h-3.5 ${isSaved('spots', spot.id) ? 'fill-current text-[#B45309]' : 'text-[#837560]'}`} />
+                              <span>{isSaved('spots', spot.id) ? 'Saved' : 'Save'}</span>
                             </button>
                           </div>
 
@@ -610,61 +755,98 @@ export default function ExplorePage() {
           )}
         </div>
 
-        {/* Right Sidebar Widgets Column (Sticky Facebook Style) */}
-        <aside className="lg:col-span-4 lg:sticky lg:top-20 lg:self-start space-y-5 pr-1">
+        {/* Right Personalized Discovery Column (Span 3) */}
+        <aside className="lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:sticky lg:top-20 lg:self-start space-y-5">
+          {topRecommendation && (
+            <article className="overflow-hidden rounded-2xl border border-emerald-200/90 bg-white shadow-xs hover:shadow-md transition-all duration-300">
+              {topRecommendation.imageUrl && (
+                <Link href={`/spots/${topRecommendation.slug}`} className="block aspect-[16/10] overflow-hidden bg-stone-100 group">
+                  <img
+                    src={topRecommendation.imageUrl}
+                    alt={`${topRecommendation.name} recommended destination`}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </Link>
+              )}
+              <div className="space-y-2.5 p-4">
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#2D6A4F]">
+                  <Sparkles className="h-3 w-3" />
+                  A place you may like
+                </span>
+                <div>
+                  <h2 className="font-serif text-base font-black leading-snug text-[#582F0E]">
+                    {topRecommendation.name}
+                  </h2>
+                  <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-[#2D6A4F]">
+                    <MapPin className="h-3 w-3" />
+                    {topRecommendation.municipality} · Pangasinan
+                  </p>
+                </div>
+                <p className="line-clamp-2 text-xs leading-relaxed text-[#514532]">
+                  {topRecommendation.description}
+                </p>
+                <Link
+                  href={`/spots/${topRecommendation.slug}`}
+                  className="flex w-full items-center justify-center rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] px-3 py-2 text-xs font-bold text-white transition shadow-xs active:scale-95"
+                >
+                  Explore Destination
+                </Link>
+              </div>
+            </article>
+          )}
 
-          {/* Quick Portal Shortcuts */}
-          <div className="bg-white rounded-xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
+          {/* Community Choice Standings Widget */}
+          <section className="rounded-2xl border border-[#E3DFD5] bg-white p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
-              <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">Quick Portals</h3>
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-[#B45309]">
+                  Community Choice
+                </span>
+                <h3 className="text-xs font-black text-[#582F0E]">Monthly Standings</h3>
+              </div>
+              <Trophy className="h-4 w-4 text-[#FFB703] fill-[#FFB703]" />
             </div>
 
-            <div className="space-y-2 text-xs">
-              <Link
-                href="/quests"
-                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-              >
-                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                  <Zap className="w-3.5 h-3.5 text-[#FFB703]" />
-                  <span>Quests &amp; Event Campaigns</span>
-                </div>
-                <span className="text-[10px] text-[#2D6A4F] font-bold">Bounties →</span>
-              </Link>
-
-              <Link
-                href="/leaderboard"
-                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-              >
-                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                  <Award className="w-3.5 h-3.5 text-[#B45309]" />
-                  <span>Scout Hall of Fame</span>
-                </div>
-                <span className="text-[10px] text-[#582F0E] font-bold">Ranks →</span>
-              </Link>
-
-              <Link
-                href="/shop"
-                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-              >
-                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                  <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>MSME Partner Deals</span>
-                </div>
-                <span className="text-[10px] text-[#2D6A4F] font-bold">Shop →</span>
-              </Link>
-
-              <Link
-                href="/about"
-                className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] transition"
-              >
-                <div className="flex items-center gap-2 font-bold text-[#2C221E]">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>About JuanDerQuest &amp; Team</span>
-                </div>
-                <span className="text-[10px] text-gray-500 font-bold">Story →</span>
-              </Link>
+            <div className="space-y-2 pt-0.5">
+              {communityChoicePreview.entries.slice(0, 3).map((entry) => {
+                const medal = entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉';
+                return (
+                  <Link
+                    key={entry.slug}
+                    href={`/spots/${entry.slug}`}
+                    className="block rounded-xl bg-[#FAF9F5] border border-[#E3DFD5]/80 p-2.5 transition hover:bg-white hover:border-[#2D6A4F]/40 group"
+                  >
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm">{medal}</span>
+                        <span className="truncate text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                          {entry.name}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-black text-[#2D6A4F]">{entry.share}%</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-200">
+                      <div
+                        className="h-full rounded-full bg-[#2D6A4F]"
+                        style={{ width: `${entry.share}%` }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
-          </div>
+
+            <Link
+              href="/community-choice/leaderboard"
+              className="mt-2 flex w-full items-center justify-center rounded-xl border border-[#E3DFD5] bg-[#FAF9F5] hover:bg-white px-3 py-2 text-[10px] font-bold text-[#2D6A4F] transition"
+            >
+              Full Leaderboard &amp; Ballots →
+            </Link>
+            <p className="text-center text-[9px] text-[#837560] leading-tight">
+              Equal-weight ballots · No pay-to-win
+            </p>
+          </section>
         </aside>
 
         </div>

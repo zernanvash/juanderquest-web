@@ -10,7 +10,14 @@
  * 100% free of glossy gradients, shiny glassmorphism, or raw Unicode emojis.
  */
 
-export function createQuestPinHtml(isSelected: boolean = false): string {
+function savedBadgeHtml(isSaved: boolean): string {
+  if (!isSaved) return '';
+  return `<span aria-hidden="true" style="position:absolute;right:-7px;top:-7px;z-index:2;display:flex;width:18px;height:18px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #FAF9F5;background:#FFB703;color:#582F0E;box-shadow:0 2px 5px rgba(0,0,0,.25)">
+    <svg width="9" height="11" viewBox="0 0 12 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5h8a.5.5 0 0 1 .5.5v10.65a.5.5 0 0 1-.78.414L6 10.56l-3.72 2.504a.5.5 0 0 1-.78-.414V2a.5.5 0 0 1 .5-.5Z"/></svg>
+  </span>`;
+}
+
+export function createQuestPinHtml(isSelected: boolean = false, isSaved: boolean = false): string {
   const scale = isSelected ? 'scale-115 -translate-y-1' : 'hover:scale-110 hover:-translate-y-0.5';
   const strokeColor = isSelected ? '#FFB703' : '#FAF9F5';
   const shadow = isSelected
@@ -19,6 +26,7 @@ export function createQuestPinHtml(isSelected: boolean = false): string {
 
   return `
     <div class="group relative flex flex-col items-center cursor-pointer transition-transform duration-200 ease-out transform ${scale}" style="width: 36px; height: 46px;">
+      ${savedBadgeHtml(isSaved)}
       <svg width="36" height="46" viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: ${shadow};">
         <!-- Matte Trail Pin Body (Warm Timber Bark) -->
         <path d="M18 1C8.611 1 1 8.611 1 18C1 28.5 15.6 42.5 16.9 43.8C17.5 44.4 18.5 44.4 19.1 43.8C20.4 42.5 35 28.5 35 18C35 8.611 27.389 1 18 1Z" 
@@ -48,7 +56,7 @@ export function createQuestPinHtml(isSelected: boolean = false): string {
   `.trim();
 }
 
-export function createSpotPinHtml(isSelected: boolean = false): string {
+export function createSpotPinHtml(isSelected: boolean = false, isSaved: boolean = false): string {
   const scale = isSelected ? 'scale-115 -translate-y-1' : 'hover:scale-110 hover:-translate-y-0.5';
   const strokeColor = isSelected ? '#52B788' : '#FAF9F5';
   const shadow = isSelected
@@ -57,6 +65,7 @@ export function createSpotPinHtml(isSelected: boolean = false): string {
 
   return `
     <div class="group relative flex flex-col items-center cursor-pointer transition-transform duration-200 ease-out transform ${scale}" style="width: 36px; height: 46px;">
+      ${savedBadgeHtml(isSaved)}
       <svg width="36" height="46" viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: ${shadow};">
         <!-- Matte Pine Green Pin Body -->
         <path d="M18 1C8.611 1 1 8.611 1 18C1 28.5 15.6 42.5 16.9 43.8C17.5 44.4 18.5 44.4 19.1 43.8C20.4 42.5 35 28.5 35 18C35 8.611 27.389 1 18 1Z" 

@@ -9,6 +9,7 @@ import { useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { QuestCardSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useSavedLibrary } from '@/lib/saved-library';
 import {
   Compass,
   MapPin,
@@ -24,7 +25,8 @@ import {
   Search,
   Zap,
   Flame,
-  Users
+  Users,
+  Bookmark
 } from 'lucide-react';
 
 function calculateTimeRemaining(targetDate: string) {
@@ -40,6 +42,7 @@ function calculateTimeRemaining(targetDate: string) {
 
 function QuestsContent() {
   const { isReady } = useRequireAuth();
+  const { toggle: toggleSaved, isSaved } = useSavedLibrary();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -295,13 +298,27 @@ function QuestsContent() {
                     className="bg-white rounded-xl border border-[#E3DFD5] hover:border-[#2D6A4F]/50 p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group"
                   >
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-md bg-[#FAF9F5] text-[#2D6A4F] border border-[#E3DFD5]">
                           {quest.category.replace('_', ' ')}
                         </span>
-                        <div className="flex items-center gap-1.5 bg-[#FFB703] text-[#582F0E] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
-                          <Award className="w-3.5 h-3.5" />
-                          <span>+{quest.rewardPoints} PTS</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleSaved('quests', quest.id)}
+                            aria-label={isSaved('quests', quest.id) ? `Remove ${quest.title} from saved quests` : `Save ${quest.title}`}
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all active:scale-95 cursor-pointer ${
+                              isSaved('quests', quest.id)
+                                ? 'border-amber-300 bg-amber-100/90 text-[#7D5800] shadow-2xs'
+                                : 'border-[#E3DFD5] bg-white text-[#837560] hover:text-[#2D6A4F] hover:border-[#2D6A4F]/40'
+                            }`}
+                          >
+                            <Bookmark className={`h-3.5 w-3.5 ${isSaved('quests', quest.id) ? 'fill-current text-[#B45309]' : ''}`} />
+                          </button>
+                          <div className="flex items-center gap-1.5 bg-[#FFB703] text-[#582F0E] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
+                            <Award className="w-3.5 h-3.5" />
+                            <span>+{quest.rewardPoints} PTS</span>
+                          </div>
                         </div>
                       </div>
 

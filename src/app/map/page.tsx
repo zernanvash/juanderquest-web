@@ -10,6 +10,7 @@ import { useRequireAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { createQuestPinHtml, createSpotPinHtml } from '@/lib/map-icons';
+import { useSavedLibrary } from '@/lib/saved-library';
 
 import {
   MapPin,
@@ -25,17 +26,19 @@ import {
   Layers,
   ChevronRight,
   Maximize2,
-  AlertTriangle
+  AlertTriangle,
+  Bookmark
 } from 'lucide-react';
 
 const MAP_CENTER: [number, number] = [16.03, 120.33];
 
 export default function QuestMapPage() {
   const { isReady } = useRequireAuth();
+  const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
   const [quests, setQuests] = useState<QuestModel[]>([]);
   const [spots, setSpots] = useState<SpotModel[]>([]);
   const [selectedItem, setSelectedItem] = useState<{ type: 'quest' | 'spot'; data: QuestModel | SpotModel } | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'quests' | 'spots'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'quests' | 'spots' | 'saved'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +77,10 @@ export default function QuestMapPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('filter') === 'saved') setFilterType('saved');
+  }, []);
 
   // Fit map to all loaded marker coordinates
   const handleFitBounds = useCallback(async () => {
@@ -120,13 +127,13 @@ export default function QuestMapPage() {
       const allCoordinates: [number, number][] = [];
 
       // Add Quests markers (Gold Badge)
-      if (filterType === 'all' || filterType === 'quests') {
-        quests.forEach((q) => {
+      if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
+        quests.filter((q) => filterType !== 'saved' || isSaved('quests', q.id)).forEach((q) => {
           allCoordinates.push([q.gpsLat, q.gpsLng]);
           const isSelected = selectedItem?.type === 'quest' && selectedItem.data.id === q.id;
           const icon = L.divIcon({
             className: 'leaflet-custom-marker',
-            html: createQuestPinHtml(isSelected),
+            html: createQuestPinHtml(isSelected, isSaved('quests', q.id)),
             iconSize: [36, 46],
             iconAnchor: [18, 44],
           });
@@ -141,13 +148,13 @@ export default function QuestMapPage() {
       }
 
       // Add Destination Spots markers (Emerald Badge)
-      if (filterType === 'all' || filterType === 'spots') {
-        spots.forEach((s) => {
+      if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
+        spots.filter((s) => filterType !== 'saved' || isSaved('spots', s.id)).forEach((s) => {
           allCoordinates.push([s.gpsLat, s.gpsLng]);
           const isSelected = selectedItem?.type === 'spot' && selectedItem.data.id === s.id;
           const icon = L.divIcon({
             className: 'leaflet-custom-marker',
-            html: createSpotPinHtml(isSelected),
+            html: createSpotPinHtml(isSelected, isSaved('spots', s.id)),
             iconSize: [36, 46],
             iconAnchor: [18, 44],
           });
@@ -173,7 +180,7 @@ export default function QuestMapPage() {
     return () => {
       isDisposed = true;
     };
-  }, [isReady, loading, error, quests, spots, filterType, selectedItem]);
+  }, [isReady, loading, error, quests, spots, filterType, selectedItem, savedLibrary, isSaved]);
 
 
   if (!isReady) return null;
@@ -212,16 +219,17 @@ export default function QuestMapPage() {
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex items-center gap-1 bg-[#FAF9F5] p-1 rounded-lg border border-[#E3DFD5]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-[#FAF9F5] p-1 rounded-lg border border-[#E3DFD5]">
                 {[
                   { id: 'all', label: 'All Markers' },
+                  { id: 'saved', label: `Saved (${savedLibrary.spots.length + savedLibrary.quests.length})` },
                   { id: 'quests', label: '🏆 Quests Only' },
                   { id: 'spots', label: '📍 Destination Spots' },
                 ].map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setFilterType(f.id as any)}
-                    className={`flex-1 py-1.5 px-2 rounded-md text-[11px] font-bold transition cursor-pointer text-center ${
+                    className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-bold transition cursor-pointer text-center ${
                       filterType === f.id
                         ? 'bg-[#2D6A4F] text-white shadow-xs'
                         : 'text-[#582F0E] hover:bg-white'
@@ -230,6 +238,10 @@ export default function QuestMapPage() {
                     {f.label}
                   </button>
                 ))}
+              </div>
+              <div className="flex items-center gap-1.5 text-[9px] font-medium text-[#837560]">
+                <Bookmark className="h-3 w-3 fill-[#FFB703] text-[#B45309]" />
+                Gold bookmark badges mark your saved pins.
               </div>
             </div>
           </div>
@@ -303,7 +315,7 @@ export default function QuestMapPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-2 pt-1">
                   <Link
                     href={`/navigate?name=${encodeURIComponent('title' in selectedItem.data ? selectedItem.data.title : selectedItem.data.name)}&lat=${selectedItem.data.gpsLat}&lng=${selectedItem.data.gpsLng}&address=${encodeURIComponent('locationName' in selectedItem.data ? selectedItem.data.locationName : selectedItem.data.address)}`}
                     className="py-2.5 px-3 rounded-lg bg-[#2D6A4F] hover:bg-[#245740] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition active:scale-95"
@@ -329,6 +341,14 @@ export default function QuestMapPage() {
                       <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => toggleSaved(selectedItem.type === 'quest' ? 'quests' : 'spots', selectedItem.data.id)}
+                    title={isSaved(selectedItem.type === 'quest' ? 'quests' : 'spots', selectedItem.data.id) ? 'Remove from saved' : 'Save for later'}
+                    className={`flex w-10 items-center justify-center rounded-lg border transition ${isSaved(selectedItem.type === 'quest' ? 'quests' : 'spots', selectedItem.data.id) ? 'border-amber-300 bg-amber-50 text-[#B45309]' : 'border-[#E3DFD5] bg-[#FAF9F5] text-[#837560] hover:text-[#2D6A4F]'}`}
+                  >
+                    <Bookmark className={`h-4 w-4 ${isSaved(selectedItem.type === 'quest' ? 'quests' : 'spots', selectedItem.data.id) ? 'fill-current' : ''}`} />
+                  </button>
                 </div>
               </div>
             </div>
