@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
   MapPin,
@@ -9,15 +9,16 @@ import {
   X,
   Compass,
   ArrowRight,
-  Filter,
-  Check,
-  ChevronDown,
   RotateCcw,
-  Tag,
-  Search
+  Search,
+  AlertCircle,
+  RefreshCw,
+  Check,
+  ChevronDown
 } from 'lucide-react';
 import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
+import { DestinationMedia } from '@/components/DestinationMedia';
 
 const municipalities = [
   'All Municipalities',
@@ -49,7 +50,6 @@ const popularSearches = [
   'Dasol Salt Beds',
   'Manaoag Minor Basilica',
   'Bangus Grill',
-  'Timmaw Cave',
 ];
 
 interface SearchOverlayProps {
@@ -70,36 +70,43 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   const [selectedCrowdFilter, setSelectedCrowdFilter] = useState<'all' | 'quiet' | 'quests'>('all');
   const [spots, setSpots] = useState<SpotModel[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Load spots for search index
-  useEffect(() => {
-    if (!isOpen) return;
+  const loadSpotsData = useCallback(async (force = false) => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const { data: rawSpots } = await fetchWithCache(
+        'spots_search_feed',
+        async () => {
+          const res = await api.get('/spots');
+          if (!res.data?.success) throw new Error('Could not load destinations from server');
+          return (res.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
+        },
+        { ttlMs: 120_000, forceRefresh: force }
+      );
+      setSpots(rawSpots);
+    } catch {
+      setLoadError('Failed to load destinations. Please check connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    let active = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const { data: rawSpots } = await fetchWithCache(
-          'spots_search_feed',
-          async () => {
-            const res = await api.get('/spots');
-            if (!res.data?.success) throw new Error('Spots unavailable');
-            return (res.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
-          },
-          { ttlMs: 120_000 }
-        );
-        if (active) setSpots(rawSpots);
-      } catch {
-        // Fallback gracefully
-      } finally {
-        if (active) setLoading(false);
+  useEffect(() => {
+    if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      loadSpotsData();
+    } else {
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
       }
     }
-    load();
-    return () => {
-      active = false;
-    };
-  }, [isOpen]);
+  }, [isOpen, loadSpotsData]);
 
   // Handle ESC key to close
   useEffect(() => {
@@ -113,25 +120,19 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Prevent background page scrolling while modal is open
+  // Lock body scroll while open without disabling touch action
   useEffect(() => {
     if (!isOpen) return;
     const originalOverflow = document.body.style.overflow;
-    const originalTouchAction = document.body.style.touchAction;
     document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
 
     return () => {
       document.body.style.overflow = originalOverflow;
-      document.body.style.touchAction = originalTouchAction;
     };
   }, [isOpen]);
 
-  // Filtered spots calculation
-  const hasTyped = query.trim().length > 0;
-
+  // Filtered spots calculation (Supports filter-only search without typing!)
   const filteredSpots = useMemo(() => {
-    if (!hasTyped) return [];
     const qLower = query.toLowerCase().trim();
 
     return spots.filter((spot) => {
@@ -182,11 +183,15 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-3xl border border-[#E3DFD5] shadow-2xl overflow-hidden ring-1 ring-black/5 animate-in fade-in-0 zoom-in-98 duration-200 ease-out">
-        
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search and filter Pangasinan destinations"
+        className="w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-3xl border border-[#E3DFD5] shadow-2xl overflow-hidden ring-1 ring-black/5 animate-in fade-in-0 zoom-in-98 duration-200 ease-out"
+      >
         {/* Controls & Filter Bar Header */}
         <div className="p-4 sm:p-6 bg-gradient-to-b from-[#FAF9F5] via-white to-white border-b border-[#E3DFD5] space-y-4">
-          
           {/* Top Filter Status & Action Bar */}
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
@@ -194,17 +199,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-[#2D6A4F]" />
                 Filter Destinations
               </span>
-              {hasTyped ? (
-                <span className="text-[10px] bg-emerald-50 text-[#2D6A4F] border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
-                  {filteredSpots.length} {filteredSpots.length === 1 ? 'destination' : 'destinations'} found
-                </span>
-              ) : (
-                <span className="text-[10px] bg-stone-100 text-stone-500 border border-stone-200 px-2 py-0.5 rounded-full font-medium">
-                  Type above to search
-                </span>
-              )}
+              <span className="text-[10px] bg-emerald-50 text-[#2D6A4F] border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
+                {loading ? 'Searching...' : `${filteredSpots.length} ${filteredSpots.length === 1 ? 'destination' : 'destinations'} found`}
+              </span>
             </div>
-
 
             {hasActiveFilters && (
               <button
@@ -219,7 +217,11 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           </div>
 
           {/* Interactive Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+          <div
+            role="group"
+            aria-label="Category filters"
+            className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs"
+          >
             {categoryFilters.map((cat) => {
               const isSelected = selectedCategory === cat.id;
               return (
@@ -227,7 +229,8 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer shrink-0 select-none ${
+                  aria-pressed={isSelected}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer shrink-0 select-none min-h-[36px] ${
                     isSelected
                       ? 'bg-[#2D6A4F] text-white shadow-xs scale-102 ring-2 ring-[#2D6A4F]/20'
                       : 'bg-[#FAF9F5] text-[#582F0E] border border-[#E3DFD5] hover:bg-white hover:border-[#2D6A4F]/50 active:scale-95'
@@ -241,14 +244,17 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
           {/* Secondary Controls: Municipality Selector & Crowd Toggles */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#E8E5DE]/80">
-            
             {/* Municipality Dropdown */}
             <div className="relative flex items-center min-w-[210px]">
+              <label htmlFor="search-municipality-select" className="sr-only">
+                Filter by Municipality
+              </label>
               <MapPin className="w-3.5 h-3.5 text-[#2D6A4F] absolute left-3 pointer-events-none" />
               <select
+                id="search-municipality-select"
                 value={selectedMunicipality}
                 onChange={(e) => setSelectedMunicipality(e.target.value)}
-                className="w-full appearance-none bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/60 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-[#582F0E] font-bold focus:outline-none focus:border-[#2D6A4F] focus:ring-2 focus:ring-[#2D6A4F]/10 transition cursor-pointer shadow-2xs"
+                className="w-full appearance-none bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/60 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-[#582F0E] font-bold focus:outline-none focus:border-[#2D6A4F] focus:ring-2 focus:ring-[#2D6A4F]/10 transition cursor-pointer shadow-2xs min-h-[36px]"
               >
                 {municipalities.map((muni) => (
                   <option key={muni} value={muni}>
@@ -260,11 +266,12 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             </div>
 
             {/* Quick Feature Toggles */}
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 text-xs flex-wrap">
               <button
                 type="button"
                 onClick={() => setSelectedCrowdFilter((prev) => (prev === 'quiet' ? 'all' : 'quiet'))}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 select-none ${
+                aria-pressed={selectedCrowdFilter === 'quiet'}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 select-none min-h-[36px] ${
                   selectedCrowdFilter === 'quiet'
                     ? 'bg-emerald-100/90 text-[#2D6A4F] border border-emerald-300 shadow-2xs'
                     : 'bg-[#FAF9F5] text-[#837560] border border-[#E3DFD5] hover:bg-white hover:border-[#2D6A4F]/40'
@@ -277,7 +284,8 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedCrowdFilter((prev) => (prev === 'quests' ? 'all' : 'quests'))}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 select-none ${
+                aria-pressed={selectedCrowdFilter === 'quests'}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 select-none min-h-[36px] ${
                   selectedCrowdFilter === 'quests'
                     ? 'bg-amber-100/90 text-[#935610] border border-amber-300 shadow-2xs'
                     : 'bg-[#FAF9F5] text-[#837560] border border-[#E3DFD5] hover:bg-white hover:border-amber-400/40'
@@ -292,7 +300,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           {/* Popular Tag Shortcut Chips */}
           {!query && (
             <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#837560]">
-              <span className="font-semibold text-stone-400 mr-0.5">Popular Pangasinan:</span>
+              <span className="font-semibold text-stone-400 mr-0.5">Popular:</span>
               {popularSearches.map((term) => (
                 <button
                   key={term}
@@ -309,20 +317,26 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
 
         {/* Live Matching Results Grid */}
         <div className="max-h-[58vh] overflow-y-auto p-4 sm:p-6 bg-[#FCFBF8]/60">
-          {!hasTyped ? (
-            <div className="py-16 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center mx-auto shadow-2xs text-[#2D6A4F]">
-                <Search className="w-6 h-6" />
-              </div>
-              <h4 className="font-serif font-bold text-base text-[#582F0E]">Type to search destinations</h4>
-              <p className="text-xs text-[#837560] max-w-sm mx-auto leading-relaxed">
-                Type a town (e.g. Bolinao, Alaminos), beach, landmark, or food in the search bar above to see instant results.
-              </p>
-            </div>
-          ) : loading ? (
+          {loading ? (
             <div className="py-16 text-center text-xs text-[#837560] space-y-3">
               <div className="w-7 h-7 border-2 border-[#2D6A4F] border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="font-semibold text-[#582F0E]">Discovering Pangasinan destinations...</p>
+            </div>
+          ) : loadError ? (
+            <div className="py-16 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto text-[#BC4749]">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <h4 className="font-serif font-bold text-base text-[#582F0E]">Could not load destinations</h4>
+              <p className="text-xs text-[#837560] max-w-sm mx-auto leading-relaxed">{loadError}</p>
+              <button
+                type="button"
+                onClick={() => loadSpotsData(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2D6A4F] text-white text-xs font-bold hover:bg-[#1B4332] transition shadow-xs cursor-pointer active:scale-95"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry connection</span>
+              </button>
             </div>
           ) : filteredSpots.length === 0 ? (
             <div className="py-16 text-center space-y-3">
@@ -331,9 +345,8 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               </div>
               <h4 className="font-serif font-bold text-base text-[#582F0E]">No matching destinations</h4>
               <p className="text-xs text-[#837560] max-w-sm mx-auto leading-relaxed">
-                We couldn&apos;t find any spots matching your current filters. Try relaxing the municipality, category, or search term.
+                We couldn&apos;t find any spots matching your current filters. Try selecting another municipality, category, or clearing the search query.
               </p>
-
               <button
                 type="button"
                 onClick={resetAllFilters}
@@ -353,20 +366,15 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                 >
                   {/* Photo Container */}
                   <div className="w-24 h-24 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-[#E3DFD5]/80 relative shadow-2xs">
-                    {spot.imageUrl ? (
-                      <img
-                        src={spot.imageUrl}
-                        alt={spot.name}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-stone-100">
-                        <MapPin className="w-6 h-6 text-[#2D6A4F]" />
-                      </div>
-                    )}
+                    <DestinationMedia
+                      src={spot.imageUrl}
+                      alt={spot.name}
+                      destinationName={spot.name}
+                      municipality={spot.municipality}
+                      className="w-full h-full object-cover"
+                    />
                     {spot.crowdStatus === 'quiet' && (
-                      <span className="absolute bottom-1 left-1 bg-[#1B4332]/90 backdrop-blur-2xs text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
+                      <span className="absolute bottom-1 left-1 bg-[#1B4332]/90 backdrop-blur-2xs text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs z-10">
                         🌿 Quiet
                       </span>
                     )}
@@ -382,7 +390,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                         {spot.questId && (
                           <span className="text-[10px] font-black text-[#935610] bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/80 flex items-center gap-1">
                             <Trophy className="w-2.5 h-2.5" />
-                            +250 mJDQ
+                            Quest available
                           </span>
                         )}
                       </div>
@@ -423,10 +431,9 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             </span>
             <span className="text-stone-300">·</span>
             <span className="hidden sm:inline">
-              {hasTyped ? 'Click any destination to explore immediately' : 'Search anywhere across JuanDerQuest'}
+              Filter by category, town, or type to search
             </span>
           </div>
-
 
           <Link
             href="/search"
@@ -437,7 +444,6 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
             <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
-
       </div>
     </div>
   );

@@ -1,258 +1,131 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { 
-  Download, 
-  ExternalLink, 
-  ShieldCheck, 
-  MapPin, 
-  Compass, 
-  Camera, 
-  Gift, 
-  RefreshCw, 
-  CheckCircle2, 
-  HelpCircle,
-  Sparkles,
-  Smartphone,
-  ChevronDown
-} from 'lucide-react';
+import { Download, X, Sparkles, Smartphone, ChevronRight } from 'lucide-react';
+
+const BANNER_DISMISSED_KEY = 'jdq_mobile_banner_dismissed_v1';
 
 export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isMobile, setIsMobile] = useState(false);
-  const [bypass, setBypass] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(true); // Default dismissed to avoid layout flash before hydration
+  const [isAndroid, setIsAndroid] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [versionInfo, setVersionInfo] = useState<{
     versionName: string;
-    versionCode: number;
     downloadUrl: string;
-    commitHash?: string;
     fileName?: string;
-    changelog?: string;
   }>({
     versionName: 'alpha-latest',
-    versionCode: 105,
     downloadUrl: 'https://jdq.zernanvash.dev/api/v1/app/download',
-    commitHash: 'latest',
-    fileName: 'juanderquest-alpha-latest.apk',
-    changelog: 'Automated release build with native installer and latest Pangasinan destination spots.',
+    fileName: 'juanderquest-latest.apk',
   });
 
   useEffect(() => {
-    setMounted(true);
-    const checkMobile = () => {
-      const widthMobile = window.innerWidth < 768;
-      const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      setIsMobile(widthMobile || uaMobile);
-    };
+    // Check dismissal preference safely
+    try {
+      const dismissed = localStorage.getItem(BANNER_DISMISSED_KEY);
+      if (!dismissed) {
+        setIsDismissed(false);
+      }
+    } catch {
+      // Storage unavailable / private mode
+      setIsDismissed(false);
+    }
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
+    const ua = navigator.userAgent || '';
+    const android = /Android/i.test(ua);
+    const ios = /iPhone|iPad|iPod/i.test(ua);
+    setIsAndroid(android);
+    setIsIOS(ios);
 
     // Fetch dynamic version if available
     fetch('https://jdq.zernanvash.dev/api/v1/app/version')
       .then((res) => res.json())
       .then((res) => {
         if (res.success && res.data) {
-          setVersionInfo((prev) => ({
-            ...prev,
-            versionName: res.data.versionName || prev.versionName,
-            versionCode: res.data.versionCode || prev.versionCode,
-            commitHash: res.data.commitHash || prev.commitHash,
-            fileName: res.data.fileName || prev.fileName,
-            downloadUrl: res.data.downloadUrl || prev.downloadUrl,
-            changelog: res.data.changelog || prev.changelog,
-          }));
+          setVersionInfo({
+            versionName: res.data.versionName || 'alpha-latest',
+            downloadUrl: res.data.downloadUrl || 'https://jdq.zernanvash.dev/api/v1/app/download',
+            fileName: res.data.fileName || 'juanderquest-latest.apk',
+          });
         }
       })
       .catch(() => {});
-
-    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (!mounted) return <>{children}</>;
+  const handleDismiss = useCallback(() => {
+    setIsDismissed(true);
+    try {
+      localStorage.setItem(BANNER_DISMISSED_KEY, 'true');
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
 
-  if (isMobile && !bypass) {
-    const currentApkName = versionInfo.fileName || `juanderquest-alpha-${versionInfo.commitHash || 'latest'}.apk`;
+  // Show banner only on mobile devices if not dismissed
+  const showBanner = !isDismissed && (isAndroid || isIOS);
 
-    return (
-      <div className="min-h-screen bg-[#FAF9F5] text-[#2B2319] flex flex-col items-center justify-start p-4 sm:p-6 selection:bg-[#FFB703]/30">
-        <div className="max-w-lg w-full bg-white rounded-3xl p-6 sm:p-8 border border-[#E8E4D9] shadow-xl text-center flex flex-col items-center mt-2 mb-8">
-          
-          {/* Official App Logo */}
-          <div className="relative mb-4">
-            <div className="w-24 h-24 rounded-3xl bg-[#FAF9F5] border border-[#E8E4D9] shadow-md flex items-center justify-center p-3 overflow-hidden">
+  return (
+    <>
+      {showBanner && (
+        <aside
+          role="region"
+          aria-label="JuanDerQuest mobile app notice"
+          className="relative z-30 bg-[#2D6A4F] text-white px-3 sm:px-4 py-2 text-xs flex items-center justify-between gap-2 shadow-xs border-b border-[#1B4332] animate-in fade-in duration-200"
+        >
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-7 h-7 rounded-lg bg-white/15 p-1 shrink-0 flex items-center justify-center">
               <Image
                 src="/logo.png"
-                alt="JuanDerQuest App Logo"
-                width={80}
-                height={80}
-                className="object-contain drop-shadow-sm"
-                priority
+                alt="JuanDerQuest"
+                width={20}
+                height={20}
+                className="w-5 h-5 object-contain"
               />
             </div>
-            <div className="absolute -bottom-2 -right-2 bg-[#2D6A4F] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full border-2 border-white shadow-sm flex items-center gap-1">
-              <Sparkles className="w-2.5 h-2.5" />
-              <span>BETA</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-extrabold text-white text-[11px] sm:text-xs truncate">
+                  JuanDerQuest Mobile
+                </span>
+                <span className="bg-[#FFB703] text-[#582F0E] text-[9px] font-black px-1.5 py-0.2 rounded-full shrink-0">
+                  {versionInfo.versionName}
+                </span>
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-[#D8F3DC] truncate">
+                {isAndroid
+                  ? 'Get the native Android app for AR & GPS quests'
+                  : 'Web browsing mode active • iOS app coming soon'}
+              </p>
             </div>
           </div>
 
-          {/* Header Title & Version Badge */}
-          <h1 className="text-2xl font-extrabold text-[#582F0E] tracking-tight font-serif mb-1">
-            JuanDerQuest Mobile
-          </h1>
-          <p className="text-xs text-[#7D5800] font-semibold mb-3">
-            Pangasinan's Heritage &amp; Hidden Gems Quest Platform
-          </p>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isAndroid ? (
+              <a
+                href={versionInfo.downloadUrl}
+                download={versionInfo.fileName}
+                className="inline-flex items-center gap-1 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xs transition active:scale-95 shrink-0"
+              >
+                <Download className="w-3 h-3" />
+                <span>Get APK</span>
+              </a>
+            ) : null}
 
-          {/* Release Meta Chip */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3F6653]/10 text-[#274E3C] text-[11px] font-bold tracking-wide mb-6 border border-[#3F6653]/20 font-mono">
-            <span className="w-2 h-2 rounded-full bg-[#48C71D] animate-pulse"></span>
-            <span>{currentApkName} • Android 8.0+ • ~82 MB</span>
-          </div>
-
-          {/* Description */}
-          <p className="text-xs sm:text-sm text-[#514532] leading-relaxed mb-6 text-center max-w-sm">
-            For real-time GPS radius verification, camera AR marker scanning, and off-chain reward points, download the official native Android application.
-          </p>
-
-          {/* Primary Download CTA Button */}
-          <a
-            href={versionInfo.downloadUrl}
-            download={currentApkName}
-            className="w-full flex flex-col items-center justify-center bg-[#2D6A4F] hover:bg-[#1B4332] active:scale-[0.98] text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition duration-200 group mb-3"
-          >
-            <div className="flex items-center gap-2.5 text-base">
-              <Download className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
-              <span>Download JuanDerQuest APK</span>
-            </div>
-            <span className="text-[11px] text-[#A7D7C5] font-mono mt-0.5">
-              {currentApkName}
-            </span>
-          </a>
-
-          {/* Secondary Mirrors & Version links */}
-          <div className="flex items-center justify-center gap-3 text-[11px] text-[#7D5800] font-semibold mb-6">
-            <a 
-              href="https://jdq.zernanvash.dev/api/v1/app/download"
-              download={currentApkName}
-              className="hover:underline flex items-center gap-1 font-mono"
-            >
-              <span>Direct Download</span>
-            </a>
-            <span>•</span>
-            <a 
-              href="https://jdq.zernanvash.dev/downloads/version.json"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline font-mono"
-            >
-              <span>version.json</span>
-            </a>
-          </div>
-
-
-          {/* Installation Guide Accordion */}
-          <div className="w-full mb-6 text-left">
             <button
-              onClick={() => setShowGuide(!showGuide)}
-              className="w-full flex items-center justify-between p-3.5 rounded-xl bg-[#FAF9F5] border border-[#E8E4D9] text-xs font-bold text-[#582F0E] hover:bg-[#F2EFE9] transition"
+              type="button"
+              onClick={handleDismiss}
+              aria-label="Dismiss app banner"
+              className="p-1 rounded-md text-[#D8F3DC] hover:text-white hover:bg-white/10 transition"
             >
-              <div className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-[#7D5800]" />
-                <span>How to Install APK on Android (3 Steps)</span>
-              </div>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showGuide ? 'rotate-180' : ''}`} />
+              <X className="w-3.5 h-3.5" />
             </button>
-
-            {showGuide && (
-              <div className="mt-2 p-4 rounded-xl bg-[#FAF9F5] border border-[#E8E4D9] text-xs space-y-3 animate-fadeIn">
-                <div className="flex items-start gap-2.5">
-                  <div className="w-5 h-5 rounded-full bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">1</div>
-                  <p className="text-[#514532]">
-                    Tap <strong className="text-[#2D6A4F]">Download APK</strong> above to save the file.
-                  </p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="w-5 h-5 rounded-full bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</div>
-                  <p className="text-[#514532]">
-                    When your browser warns <em>"File might be harmful"</em>, tap <strong className="text-[#2D6A4F]">Download anyway</strong> (standard Android notice for direct downloads).
-                  </p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="w-5 h-5 rounded-full bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</div>
-                  <p className="text-[#514532]">
-                    Open the notification and tap <strong className="text-[#2D6A4F]">Install</strong>. Updates will download over-the-air in the app!
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
+        </aside>
+      )}
 
-          {/* Features Grid */}
-          <div className="w-full text-left mb-6">
-            <h2 className="text-xs font-extrabold text-[#7D5800] uppercase tracking-wider mb-3 px-1">
-              App Features &amp; Capabilities
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E8E4D9] flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-bold text-[#582F0E]">Pangasinan Hidden Gems</h3>
-                  <p className="text-[11px] text-[#6E6250]">Discover secluded beaches, caves, and heritage shrines.</p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E8E4D9] flex items-start gap-2.5">
-                <Compass className="w-4 h-4 text-[#7D5800] shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-bold text-[#582F0E]">GPS Proximity Quests</h3>
-                  <p className="text-[11px] text-[#6E6250]">Live radius check-ins with anti-overcrowding diversion.</p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E8E4D9] flex items-start gap-2.5">
-                <Gift className="w-4 h-4 text-[#FFB703] shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-bold text-[#582F0E]">Merchant Vouchers</h3>
-                  <p className="text-[11px] text-[#6E6250]">Earn reward points and redeem local discounts.</p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E8E4D9] flex items-start gap-2.5">
-                <RefreshCw className="w-4 h-4 text-[#3F6653] shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-bold text-[#582F0E]">In-App OTA Updates</h3>
-                  <p className="text-[11px] text-[#6E6250]">1-tap seamless background updates without re-installs.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Web Mode Bypass */}
-          <div className="pt-4 border-t border-[#EFEEEA] w-full flex flex-col items-center">
-            <button
-              onClick={() => setBypass(true)}
-              className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#7D5800] hover:text-[#582F0E] transition py-2 px-4 rounded-lg hover:bg-[#FAF9F5]"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Continue to Web Test Mode (Desktop UI)</span>
-            </button>
-            <span className="text-[10px] text-[#8C7F6B] mt-0.5">
-              For evaluation, admin tools, and desktop browser testing
-            </span>
-          </div>
-
-          {/* Academic Footer */}
-          <div className="mt-6 pt-4 border-t border-[#EFEEEA] w-full text-[10px] text-[#8C7F6B] leading-relaxed">
-            <p className="font-semibold text-[#582F0E]">JuanDerQuest Capstone Project</p>
-            <p>School of Information Technology Education • Universidad de Dagupan</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
+      {/* Main page content is ALWAYS rendered */}
+      {children}
+    </>
+  );
 };
