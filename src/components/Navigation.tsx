@@ -260,7 +260,9 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
         <main
           className={
             fullBleed
-              ? 'flex-1 w-full relative h-[calc(100dvh-64px)] overflow-hidden flex flex-col'
+              ? 'flex-none min-h-0 w-full relative h-[calc(100dvh-64px)] overflow-hidden flex flex-col'
+              : pathname === '/explore'
+              ? 'w-full flex-1 min-h-0 px-2 sm:px-3 py-2 lg:flex-none lg:h-[calc(100dvh-64px)] lg:overflow-hidden'
               : 'flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-12 lg:pb-10'
           }
         >
@@ -269,7 +271,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
       )}
 
       {/* Global Footer (Rendered on standard non-fullscreen views) */}
-      {!fullBleed && <Footer />}
+      {!fullBleed && pathname !== '/explore' && <Footer />}
 
 
       {/* Floating Bottom Navigation Bar (Mobile / Tablet < 1024px) */}

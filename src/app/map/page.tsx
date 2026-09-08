@@ -31,6 +31,9 @@ import {
 } from 'lucide-react';
 
 const MAP_CENTER: [number, number] = [16.03, 120.33];
+// One map per browser session; retain its rendered tiles and camera between route visits.
+let retainedMap: LeafletMap | null = null;
+let retainedHost: HTMLDivElement | null = null;
 
 export default function QuestMapPage() {
   const { isReady } = useRequireAuth();
@@ -46,6 +49,7 @@ export default function QuestMapPage() {
   const mapInstanceRef = useRef<LeafletMap | null>(null);
   const markersLayerRef = useRef<any>(null);
   const allCoordinatesRef = useRef<[number, number][]>([]);
+  const fittedRef = useRef(false);
 
   const fetchData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
@@ -82,6 +86,8 @@ export default function QuestMapPage() {
     if (new URLSearchParams(window.location.search).get('filter') === 'saved') setFilterType('saved');
   }, []);
 
+  useEffect(() => { setSelectedItem(null); }, [filterType]);
+
   // Fit map to all loaded marker coordinates
   const handleFitBounds = useCallback(async () => {
     if (!mapInstanceRef.current || allCoordinatesRef.current.length === 0) return;
@@ -91,7 +97,7 @@ export default function QuestMapPage() {
 
   useEffect(() => {
     const container = mapContainerRef.current;
-    if (!container || !isReady || loading || error) return;
+    if (!container || !isReady) return;
 
     let isDisposed = false;
 
@@ -100,7 +106,17 @@ export default function QuestMapPage() {
       if (isDisposed || !mapContainerRef.current) return;
 
       if (!mapInstanceRef.current) {
-        const map = L.map(mapContainerRef.current, {
+        if (retainedMap && retainedHost) {
+          container.appendChild(retainedHost);
+          mapInstanceRef.current = retainedMap;
+          fittedRef.current = true;
+          markersLayerRef.current = L.featureGroup().addTo(retainedMap);
+          retainedMap.invalidateSize({ pan: false });
+        } else {
+        const host = document.createElement('div');
+        host.style.cssText = 'width:100%;height:100%';
+        container.appendChild(host);
+        const map = L.map(host, {
           center: MAP_CENTER,
           zoom: 10,
           zoomControl: false, // Custom placed or default off
@@ -109,7 +125,7 @@ export default function QuestMapPage() {
         // Add subtle zoom control at bottom-right
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; OpenStreetMap contributors',
         }).addTo(map);
@@ -118,6 +134,9 @@ export default function QuestMapPage() {
 
         markersLayerRef.current = L.featureGroup().addTo(map);
         mapInstanceRef.current = map;
+        retainedMap = map;
+        retainedHost = host;
+        }
       }
 
       const map = mapInstanceRef.current;
@@ -172,8 +191,9 @@ export default function QuestMapPage() {
 
       allCoordinatesRef.current = allCoordinates;
 
-      if (allCoordinates.length > 0) {
+      if (allCoordinates.length > 0 && !fittedRef.current) {
         map.fitBounds(L.latLngBounds(allCoordinates).pad(0.12));
+        fittedRef.current = true;
       }
     })();
 
@@ -182,13 +202,26 @@ export default function QuestMapPage() {
     };
   }, [isReady, loading, error, quests, spots, filterType, selectedItem, savedLibrary, isSaved]);
 
+  useEffect(() => {
+    if (!isReady) return;
+    const observer = new ResizeObserver(() => mapInstanceRef.current?.invalidateSize({ pan: false }));
+    if (mapContainerRef.current) observer.observe(mapContainerRef.current);
+    return () => {
+      observer.disconnect();
+      markersLayerRef.current?.remove();
+      markersLayerRef.current = null;
+      mapInstanceRef.current = null;
+      retainedHost?.remove();
+    };
+  }, [isReady]);
+
 
   if (!isReady) return null;
 
   return (
     <Navigation fullBleed>
       <ErrorBoundary fallbackTitle="Unable to display Pangasinan Map">
-        <div className="relative w-full h-full flex-1 bg-stone-100 overflow-hidden select-none">
+        <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
           {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
 
@@ -351,6 +384,12 @@ export default function QuestMapPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {filterType === 'saved' && !loading && !error && !quests.some(q => isSaved('quests', q.id)) && !spots.some(s => isSaved('spots', s.id)) && (
+            <div role="status" className="absolute bottom-24 left-4 right-4 z-10 rounded-xl border border-amber-200 bg-white p-4 text-sm shadow-md sm:right-auto">
+              No saved places or quests in this map yet. <Link href="/explore" className="font-bold text-[#2D6A4F]">Find a place to save</Link>
             </div>
           )}
 

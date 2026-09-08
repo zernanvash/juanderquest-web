@@ -23,7 +23,7 @@ export default function CommunityChoiceLeaderboardPage() {
 
   return (
     <Navigation>
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-4">
         
         {/* Hero Header with Community Emblem */}
         <header className="relative overflow-hidden rounded-3xl border border-[#E3DFD5] bg-gradient-to-br from-white via-[#FAF9F5] to-amber-50/60 p-6 sm:p-8 shadow-xs">
@@ -65,7 +65,7 @@ export default function CommunityChoiceLeaderboardPage() {
         </header>
 
         {/* 3 Metric Stat Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="rounded-2xl border border-[#E3DFD5] bg-white p-4 shadow-xs flex items-center gap-3.5">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100/70 text-[#2D6A4F]">
               <CalendarDays className="h-5 w-5" />
@@ -73,7 +73,7 @@ export default function CommunityChoiceLeaderboardPage() {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#837560]">Voting Cycle</p>
               <p className="text-sm font-black text-[#582F0E]">{communityChoicePreview.round}</p>
-              <p className="text-[10px] text-[#2D6A4F] font-semibold">Active Voting Window</p>
+              <p className="text-[10px] text-[#2D6A4F] font-semibold">Preview season</p>
             </div>
           </div>
 
@@ -110,8 +110,8 @@ export default function CommunityChoiceLeaderboardPage() {
             <span className="text-[11px] text-[#837560] font-medium">Top Community Picks</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {topThree.map((entry) => {
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            {[topThree[1], topThree[0], topThree[2]].filter(Boolean).map((entry) => {
               const isFirst = entry.rank === 1;
               const isSecond = entry.rank === 2;
               const medalEmoji = isFirst ? '🥇' : isSecond ? '🥈' : '🥉';
@@ -125,11 +125,11 @@ export default function CommunityChoiceLeaderboardPage() {
                 <Link
                   key={entry.slug}
                   href={`/spots/${entry.slug}`}
-                  className={`group relative overflow-hidden rounded-2xl border p-5 shadow-xs hover:shadow-md transition-all duration-300 ease-out flex flex-col justify-between ${rankColor}`}
+                  className={`group relative overflow-hidden rounded-2xl border p-5 shadow-xs hover:shadow-md transition-all duration-300 ease-out flex flex-col justify-between ${rankColor} ${isFirst ? 'order-first sm:order-none sm:pt-12 ring-2 ring-amber-300' : ''}`}
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl drop-shadow-2xs">{medalEmoji}</span>
+                      <Trophy className={`h-10 w-10 ${isFirst ? 'text-amber-500' : 'text-stone-400'}`} />
                       <span className="rounded-full bg-white/90 border border-[#E3DFD5] px-2.5 py-0.5 text-[10px] font-black text-[#582F0E]">
                         Rank #{entry.rank}
                       </span>
@@ -158,10 +158,12 @@ export default function CommunityChoiceLeaderboardPage() {
                         />
                       </div>
                       <p className="text-[10px] text-[#837560] font-semibold text-right">
-                        {entry.votes.toLocaleString()} verified ballots
+                        {entry.votes.toLocaleString()} sample ballots
                       </p>
                     </div>
                   </div>
+
+                  <div className={`mt-4 rounded-t-xl bg-amber-100 text-center font-black text-amber-800 ${isFirst ? 'py-7 text-4xl' : 'py-3 text-2xl'}`}>#{entry.rank}</div>
 
                   <div className="mt-4 pt-3 border-t border-[#F2EFE9] flex items-center justify-between text-xs font-bold text-[#2D6A4F] group-hover:underline">
                     <span>Explore Place</span>
@@ -256,7 +258,7 @@ export default function CommunityChoiceLeaderboardPage() {
               <span>Zero Pay-to-Win Staking</span>
             </div>
             <p className="text-[11px] text-[#514532] leading-relaxed">
-              Ballots are 100% free and equal. Big wallets cannot buy extra vote power; every Pangasinan resident and visitor holds equal voice.
+              Each eligible traveler receives equal ballot weight. Fees and participation benefits will be displayed when a voting round opens.
             </p>
           </div>
 
@@ -266,7 +268,7 @@ export default function CommunityChoiceLeaderboardPage() {
               <span>LGU Tourism Spotlight</span>
             </div>
             <p className="text-[11px] text-[#514532] leading-relaxed">
-              Winning destinations receive verified community spotlight badges, featured municipal campaigns, and eco-preservation micro-grants.
+              Community recognition and destination improvement funding are planned features. Awards and grants have not been activated for this preview.
             </p>
           </div>
         </section>

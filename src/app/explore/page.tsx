@@ -158,12 +158,12 @@ export default function ExplorePage() {
 
   return (
     <Navigation>
-      <div className="space-y-5">
+      <div className="space-y-5 lg:h-full lg:min-h-0">
         {/* Structured 3-Column Post Stream (Left: Portals & Scouts, Center: Feed, Right: Personalized & Leaderboard) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="explore-columns grid grid-cols-1 gap-3 items-start lg:h-full lg:min-h-0">
 
           {/* Left Actions & Discovery Column */}
-          <aside className="lg:col-span-3 lg:col-start-1 lg:row-start-1 lg:sticky lg:top-20 lg:self-start space-y-5">
+          <aside aria-label="Explore shortcuts" tabIndex={0} className="explore-scroll space-y-3">
             
             {/* Quick Portal Shortcuts */}
             <div className="bg-white rounded-2xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
@@ -335,7 +335,7 @@ export default function ExplorePage() {
           </aside>
 
           {/* Main Feed Column (Span 6) - Facebook Style Scrolling */}
-          <div className="lg:col-span-6 lg:col-start-4 space-y-4 min-w-0">
+          <div role="region" aria-label="Destination feed" tabIndex={0} className="explore-scroll space-y-4 min-w-0">
             
             {/* Share / Post Box */}
             <div className="bg-white rounded-xl p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
@@ -756,7 +756,7 @@ export default function ExplorePage() {
         </div>
 
         {/* Right Personalized Discovery Column (Span 3) */}
-        <aside className="lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:sticky lg:top-20 lg:self-start space-y-5">
+        <aside aria-label="Destination recommendations" tabIndex={0} className="explore-scroll space-y-3">
           {topRecommendation && (
             <article className="overflow-hidden rounded-2xl border border-emerald-200/90 bg-white shadow-xs hover:shadow-md transition-all duration-300">
               {topRecommendation.imageUrl && (
