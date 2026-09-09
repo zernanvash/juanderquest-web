@@ -1,4 +1,4 @@
-export const MAP_TILE_URL = '/map-tiles/{z}/{x}/{y}.png';
+export const MAP_TILE_URL = '/map-tiles/{z}/{x}/{y}.png?style=osm-standard-v1';
 export const MAP_TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 export const MAP_TILE_MAX_ZOOM = 19;
