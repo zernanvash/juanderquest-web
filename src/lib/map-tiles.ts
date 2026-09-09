@@ -1,6 +1,6 @@
 export const MAP_TILE_URL = '/map-tiles/{z}/{x}/{y}.png';
 export const MAP_TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 export const MAP_TILE_MAX_ZOOM = 19;
 
 export function parseTileCoordinate(value: string, allowPngSuffix = false): number | null {

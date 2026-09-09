@@ -1,7 +1,7 @@
 import { isValidTileCoordinate, parseTileCoordinate } from '@/lib/map-tiles';
 
 const TILE_CACHE_SECONDS = 60 * 60 * 24 * 7;
-const UPSTREAM_TILE_ROOT = 'https://basemaps.cartocdn.com/light_all';
+const UPSTREAM_TILE_ROOT = 'https://tile.openstreetmap.org';
 
 export async function GET(
   _request: Request,
@@ -20,6 +20,7 @@ export async function GET(
     const upstream = await fetch(`${UPSTREAM_TILE_ROOT}/${z}/${x}/${y}.png`, {
       headers: {
         'User-Agent': 'JuanDerQuest-Web/1.0 (+https://jdq.zernanvash.dev/about)',
+        Referer: 'https://jdq.zernanvash.dev/map',
         Accept: 'image/png,image/*;q=0.8',
       },
       next: { revalidate: TILE_CACHE_SECONDS },
