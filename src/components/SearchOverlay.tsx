@@ -1,56 +1,30 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
+  Search,
   MapPin,
-  Sparkles,
+  Users,
   Trophy,
   X,
-  Compass,
   ArrowRight,
-  RotateCcw,
-  Search,
+  Loader2,
   AlertCircle,
-  RefreshCw,
-  Check,
-  ChevronDown
+  RotateCcw,
+  Sparkles,
+  Compass,
 } from 'lucide-react';
-import { api, normalizeSpot, SpotModel } from '@/lib/api';
-import { fetchWithCache } from '@/lib/cache';
-import { DestinationMedia } from '@/components/DestinationMedia';
-
-const municipalities = [
-  'All Municipalities',
-  'Bolinao',
-  'Alaminos City',
-  'Dagupan City',
-  'Lingayen',
-  'Dasol',
-  'Manaoag',
-  'San Fabian',
-  'Bani',
-  'Sual',
-  'Anda',
-];
-
-const categoryFilters = [
-  { id: 'all', label: 'All Destinations' },
-  { id: 'nature_outdoors', label: '🏖️ Nature & Beaches' },
-  { id: 'eat_drink', label: '🍜 Food & Culinary' },
-  { id: 'culture_heritage', label: '🏛️ Heritage & Shrines' },
-  { id: 'activities_wellness', label: '🧗 Outdoor & Eco' },
-  { id: 'shopping_local', label: '🛍️ Local MSME Crafts' },
-];
-
-const popularSearches = [
-  'Hundred Islands',
-  'Patar White Beach',
-  'Cape Bolinao Lighthouse',
-  'Dasol Salt Beds',
-  'Manaoag Minor Basilica',
-  'Bangus Grill',
-];
+import {
+  isProcessableQuery,
+  normalizeSearchQuery,
+  fetchSearchPreview,
+  SearchGroup,
+  PlaceResultItem,
+  PersonResultItem,
+  QuestResultItem,
+} from '@/lib/search';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -59,390 +33,503 @@ interface SearchOverlayProps {
   setQuery: (q: string) => void;
 }
 
+type FlatItem =
+  | { groupType: 'places'; item: PlaceResultItem; href: string }
+  | { groupType: 'people'; item: PersonResultItem; href: string }
+  | { groupType: 'quests'; item: QuestResultItem; href: string };
+
 export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   isOpen,
   onClose,
   query,
   setQuery,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedMunicipality, setSelectedMunicipality] = useState('All Municipalities');
-  const [selectedCrowdFilter, setSelectedCrowdFilter] = useState<'all' | 'quiet' | 'quests'>('all');
-  const [spots, setSpots] = useState<SpotModel[]>([]);
+  const router = useRouter();
+  const [groups, setGroups] = useState<SearchGroup[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const [isComposing, setIsComposing] = useState(false);
 
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load spots for search index
-  const loadSpotsData = useCallback(async (force = false) => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const { data: rawSpots } = await fetchWithCache(
-        'spots_search_feed',
-        async () => {
-          const res = await api.get('/spots');
-          if (!res.data?.success) throw new Error('Could not load destinations from server');
-          return (res.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
-        },
-        { ttlMs: 120_000, forceRefresh: force }
-      );
-      setSpots(rawSpots);
-    } catch {
-      setLoadError('Failed to load destinations. Please check connection and try again.');
-    } finally {
+  // Flatten items for unified keyboard navigation
+  const flatItems: FlatItem[] = useMemo(() => {
+    const list: FlatItem[] = [];
+    for (const group of groups) {
+      for (const item of group.items) {
+        if (group.type === 'places') {
+          const place = item as PlaceResultItem;
+          list.push({ groupType: 'places', item: place, href: `/explore/${place.slug}` });
+        } else if (group.type === 'people') {
+          const person = item as PersonResultItem;
+          list.push({ groupType: 'people', item: person, href: `/users/${person.id}` });
+        } else if (group.type === 'quests') {
+          const quest = item as QuestResultItem;
+          list.push({ groupType: 'quests', item: quest, href: `/quests/${quest.id}` });
+        }
+      }
+    }
+    return list;
+  }, [groups]);
+
+  // Execute search request
+  const executeSearch = useCallback(
+    async (rawTerm: string) => {
+      // Abort previous in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const normalized = normalizeSearchQuery(rawTerm);
+      if (!isProcessableQuery(normalized)) {
+        setGroups([]);
+        setLoading(false);
+        setError(null);
+        setSelectedIndex(-1);
+        return;
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetchSearchPreview(normalized, 'all', controller.signal);
+        // Only update if not aborted and matches current normalized query
+        if (!controller.signal.aborted) {
+          setGroups(response.data.groups || []);
+          setSelectedIndex(-1);
+        }
+      } catch (err: unknown) {
+        if ((err as Error).name === 'AbortError') return;
+        const msg = err instanceof Error ? err.message : 'Could not complete search.';
+        setError(msg);
+        setGroups([]);
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    []
+  );
+
+  // Handle input changes with 250ms debounce
+  useEffect(() => {
+    if (isComposing) return; // Do not search during IME composition
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    const normalized = normalizeSearchQuery(query);
+    if (!isProcessableQuery(normalized)) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      setGroups([]);
       setLoading(false);
+      setError(null);
+      setSelectedIndex(-1);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      previousFocusRef.current = document.activeElement as HTMLElement | null;
-      loadSpotsData();
-    } else {
-      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
-        previousFocusRef.current.focus();
-      }
-    }
-  }, [isOpen, loadSpotsData]);
-
-  // Handle ESC key to close
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Lock body scroll while open without disabling touch action
-  useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    debounceTimerRef.current = setTimeout(() => {
+      executeSearch(normalized);
+    }, 250);
 
     return () => {
-      document.body.style.overflow = originalOverflow;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
     };
+  }, [query, isComposing, executeSearch]);
+
+  // Focus input on open
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedIndex(-1);
+      setTimeout(() => inputRef.current?.focus(), 60);
+      const normalized = normalizeSearchQuery(query);
+      if (isProcessableQuery(normalized)) {
+        executeSearch(normalized);
+      }
+    } else {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      setGroups([]);
+      setLoading(false);
+      setError(null);
+    }
   }, [isOpen]);
 
-  // Filtered spots calculation (Supports filter-only search without typing!)
-  const filteredSpots = useMemo(() => {
-    const qLower = query.toLowerCase().trim();
+  // Global escape and backdrop click
+  useEffect(() => {
+    if (!isOpen) return;
 
-    return spots.filter((spot) => {
-      const matchQuery =
-        !qLower ||
-        spot.name.toLowerCase().includes(qLower) ||
-        spot.description.toLowerCase().includes(qLower) ||
-        spot.municipality.toLowerCase().includes(qLower) ||
-        spot.tags.some((t) => t.toLowerCase().includes(qLower));
-
-      const matchCategory =
-        selectedCategory === 'all' || spot.category === selectedCategory;
-
-      const matchMunicipality =
-        selectedMunicipality === 'All Municipalities' ||
-        spot.municipality.toLowerCase().includes(selectedMunicipality.toLowerCase());
-
-      let matchSpecial = true;
-      if (selectedCrowdFilter === 'quiet') {
-        matchSpecial = spot.crowdStatus === 'quiet';
-      } else if (selectedCrowdFilter === 'quests') {
-        matchSpecial = Boolean(spot.questId);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
       }
 
-      return matchQuery && matchCategory && matchMunicipality && matchSpecial;
-    });
-  }, [spots, query, selectedCategory, selectedMunicipality, selectedCrowdFilter]);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const max = flatItems.length; // max index is flatItems.length ("See all" option)
+          if (max === 0) return -1;
+          return prev < max ? prev + 1 : 0;
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const max = flatItems.length;
+          if (max === 0) return -1;
+          return prev > 0 ? prev - 1 : max;
+        });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const normalized = normalizeSearchQuery(query);
+        if (!isProcessableQuery(normalized)) return;
 
-  const hasActiveFilters =
-    selectedCategory !== 'all' ||
-    selectedMunicipality !== 'All Municipalities' ||
-    selectedCrowdFilter !== 'all' ||
-    query.trim().length > 0;
+        if (selectedIndex >= 0 && selectedIndex < flatItems.length) {
+          const target = flatItems[selectedIndex];
+          onClose();
+          router.push(target.href);
+        } else {
+          // Explicit Enter with no selected row or on "See all" goes to /search?q=...&type=all
+          onClose();
+          router.push(`/search?q=${encodeURIComponent(normalized)}&type=all`);
+        }
+      }
+    };
 
-  const resetAllFilters = () => {
-    setSelectedCategory('all');
-    setSelectedMunicipality('All Municipalities');
-    setSelectedCrowdFilter('all');
-    setQuery('');
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, selectedIndex, flatItems, query, onClose, router]);
 
   if (!isOpen) return null;
 
+  const normalized = normalizeSearchQuery(query);
+  const hasProcessableQuery = isProcessableQuery(normalized);
+  const totalMatches = flatItems.length;
+
   return (
     <div
-      className="fixed inset-0 top-16 z-40 bg-stone-900/55 backdrop-blur-md flex flex-col justify-start items-center p-3 sm:p-5 sm:pt-6 overflow-y-auto transition-opacity duration-300 ease-out"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search places, people and quests"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-14 sm:pt-20 px-3 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
+          onClose();
+        }
       }}
     >
       <div
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Search and filter Pangasinan destinations"
-        className="w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-3xl border border-[#E3DFD5] shadow-2xl overflow-hidden ring-1 ring-black/5 animate-in fade-in-0 zoom-in-98 duration-200 ease-out"
+        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-2xl transition-all"
       >
-        {/* Controls & Filter Bar Header */}
-        <div className="p-4 sm:p-6 bg-gradient-to-b from-[#FAF9F5] via-white to-white border-b border-[#E3DFD5] space-y-4">
-          {/* Top Filter Status & Action Bar */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-serif font-black text-[#582F0E] text-xs uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                Filter Destinations
-              </span>
-              <span className="text-[10px] bg-emerald-50 text-[#2D6A4F] border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
-                {loading ? 'Searching...' : `${filteredSpots.length} ${filteredSpots.length === 1 ? 'destination' : 'destinations'} found`}
-              </span>
-            </div>
+        {/* Search Input Bar */}
+        <div className="relative flex items-center border-b border-[#E3DFD5] px-4 py-3.5 sm:px-6">
+          <Search className="h-5 w-5 text-[#2D6A4F] shrink-0 mr-3" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => {
+              setIsComposing(false);
+              const val = normalizeSearchQuery(query);
+              if (isProcessableQuery(val)) executeSearch(val);
+            }}
+            placeholder="Search places, people or quests (e.g. Hundred Islands, @juan, Trek)..."
+            aria-label="Search places, people or quests"
+            maxLength={100}
+            className="flex-1 bg-transparent text-sm sm:text-base font-semibold text-[#2C221E] placeholder:text-[#837560]/70 outline-none"
+          />
 
-            {hasActiveFilters && (
+          <div className="flex items-center gap-2">
+            {loading && <Loader2 className="h-4 w-4 animate-spin text-[#2D6A4F]" />}
+            {query && (
               <button
                 type="button"
-                onClick={resetAllFilters}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#BC4749] hover:text-red-700 transition cursor-pointer hover:underline"
+                onClick={() => {
+                  setQuery('');
+                  setGroups([]);
+                  setSelectedIndex(-1);
+                  inputRef.current?.focus();
+                }}
+                className="rounded-full p-1 text-[#837560] hover:bg-[#FAF9F5] hover:text-[#582F0E] transition cursor-pointer"
+                title="Clear query"
+                aria-label="Clear query"
               >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset all</span>
+                <X className="h-4 w-4" />
               </button>
             )}
+            <kbd className="hidden sm:inline-block rounded-md border border-[#E3DFD5] bg-[#FAF9F5] px-2 py-0.5 text-[10px] font-bold text-[#837560]">
+              ESC
+            </kbd>
           </div>
+        </div>
 
-          {/* Interactive Category Filter Pills */}
-          <div
-            role="group"
-            aria-label="Category filters"
-            className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs"
-          >
-            {categoryFilters.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  aria-pressed={isSelected}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer shrink-0 select-none min-h-[36px] ${
-                    isSelected
-                      ? 'bg-[#2D6A4F] text-white shadow-xs scale-102 ring-2 ring-[#2D6A4F]/20'
-                      : 'bg-[#FAF9F5] text-[#582F0E] border border-[#E3DFD5] hover:bg-white hover:border-[#2D6A4F]/50 active:scale-95'
+        {/* Content Area */}
+        <div className="max-h-[70vh] overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
+          {/* 1. Quiet Prompt State (Empty input or < 2 processable characters) */}
+          {!hasProcessableQuery && (
+            <div className="py-8 text-center space-y-3">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D8F3DC]/60 text-[#2D6A4F] shadow-2xs">
+                <Search className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-serif text-base font-bold text-[#2C221E]">
+                  Search places, people or quests
+                </h3>
+                <p className="text-xs text-[#837560] max-w-sm mx-auto">
+                  Type at least 2 characters to explore Pangasinan destinations, verified community scouts, and active bounties.
+                </p>
+              </div>
+              <div className="pt-2 flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#7D5800]">
+                <Sparkles className="h-3.5 w-3.5 text-[#FFB703]" />
+                <span>Tip: Prefix with <strong>@handle</strong> to find fellow travelers</span>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Error State */}
+          {hasProcessableQuery && error && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs text-[#BC4749] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => executeSearch(query)}
+                className="flex items-center gap-1 font-bold underline cursor-pointer hover:text-red-800"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Retry</span>
+              </button>
+            </div>
+          )}
+
+          {/* 3. No Results State */}
+          {hasProcessableQuery && !loading && !error && groups.length === 0 && (
+            <div className="py-8 text-center space-y-2">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-[#837560]">
+                <Compass className="h-6 w-6" />
+              </div>
+              <p className="font-serif text-sm font-bold text-[#2C221E]">
+                No matches found for &ldquo;{normalized}&rdquo;
+              </p>
+              <p className="text-xs text-[#837560] max-w-xs mx-auto">
+                Try searching a different municipality, landmark, activity keyword, or scout handle.
+              </p>
+            </div>
+          )}
+
+          {/* 4. Results Grouping (Maximum 8 items total, capped at 4 per group) */}
+          {hasProcessableQuery && groups.length > 0 && (
+            <div className="space-y-5">
+              {groups.map((group) => {
+                const groupTitle =
+                  group.type === 'places'
+                    ? 'Places'
+                    : group.type === 'people'
+                    ? 'People'
+                    : 'Quests';
+                const GroupIcon =
+                  group.type === 'places' ? MapPin : group.type === 'people' ? Users : Trophy;
+
+                return (
+                  <div key={group.type} className="space-y-2">
+                    <div className="flex items-center justify-between px-1 text-xs font-bold text-[#837560] uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5">
+                        <GroupIcon className="h-3.5 w-3.5 text-[#2D6A4F]" />
+                        <span>{groupTitle}</span>
+                      </div>
+                      {group.has_more && (
+                        <Link
+                          href={`/search?q=${encodeURIComponent(normalized)}&type=${group.type}`}
+                          onClick={onClose}
+                          className="text-[11px] text-[#2D6A4F] hover:underline normal-case font-bold"
+                        >
+                          See all {group.total_matches ?? ''}
+                        </Link>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      {group.items.map((rawItem) => {
+                        // Find index in flatItems for keyboard active state
+                        const itemIdx = flatItems.findIndex(
+                          (f) => f.groupType === group.type && f.item.id === rawItem.id
+                        );
+                        const isSelected = itemIdx === selectedIndex;
+
+                        if (group.type === 'places') {
+                          const place = rawItem as PlaceResultItem;
+                          return (
+                            <Link
+                              key={place.id}
+                              href={`/explore/${place.slug}`}
+                              onClick={onClose}
+                              className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all duration-150 ${
+                                isSelected
+                                  ? 'bg-[#FAF9F5] border-[#2D6A4F] shadow-xs'
+                                  : 'border-transparent hover:border-[#E3DFD5] hover:bg-[#FAF9F5]/70'
+                              }`}
+                            >
+                              <div className="h-11 w-11 shrink-0 rounded-xl overflow-hidden bg-[#FAF9F5] border border-[#E3DFD5] flex items-center justify-center">
+                                {place.image_url ? (
+                                  <img
+                                    src={place.image_url}
+                                    alt={place.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <MapPin className="h-5 w-5 text-[#2D6A4F]" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-xs sm:text-sm font-bold text-[#2C221E] truncate">
+                                  {place.name}
+                                </h4>
+                                <p className="text-[11px] text-[#837560] truncate flex items-center gap-1">
+                                  <span>{place.municipality}</span>
+                                  <span>·</span>
+                                  <span className="capitalize">{place.category.replace('_', ' ')}</span>
+                                </p>
+                              </div>
+                              <ArrowRight className="h-4 w-4 text-[#837560]/70 shrink-0" />
+                            </Link>
+                          );
+                        }
+
+                        if (group.type === 'people') {
+                          const person = rawItem as PersonResultItem;
+                          return (
+                            <Link
+                              key={person.id}
+                              href={`/users/${person.id}`}
+                              onClick={onClose}
+                              className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all duration-150 ${
+                                isSelected
+                                  ? 'bg-[#FAF9F5] border-[#2D6A4F] shadow-xs'
+                                  : 'border-transparent hover:border-[#E3DFD5] hover:bg-[#FAF9F5]/70'
+                              }`}
+                            >
+                              <div className="h-11 w-11 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-[#582F0E] font-black flex items-center justify-center text-sm shadow-2xs border border-white">
+                                {person.avatar_url ? (
+                                  <img
+                                    src={person.avatar_url}
+                                    alt={person.display_name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <span>{person.display_name.charAt(0).toUpperCase()}</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <h4 className="text-xs sm:text-sm font-bold text-[#2C221E] truncate">
+                                    {person.display_name}
+                                  </h4>
+                                  {person.handle && (
+                                    <span className="text-[11px] font-medium text-[#2D6A4F]">
+                                      @{person.handle}
+                                    </span>
+                                  )}
+                                </div>
+                                {person.status_text ? (
+                                  <p className="text-[11px] text-[#837560] truncate">
+                                    {person.status_text}
+                                  </p>
+                                ) : person.bio ? (
+                                  <p className="text-[11px] text-[#837560] truncate">{person.bio}</p>
+                                ) : null}
+                              </div>
+                              <ArrowRight className="h-4 w-4 text-[#837560]/70 shrink-0" />
+                            </Link>
+                          );
+                        }
+
+                        if (group.type === 'quests') {
+                          const quest = rawItem as QuestResultItem;
+                          return (
+                            <Link
+                              key={quest.id}
+                              href={`/quests/${quest.id}`}
+                              onClick={onClose}
+                              className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all duration-150 ${
+                                isSelected
+                                  ? 'bg-[#FAF9F5] border-[#2D6A4F] shadow-xs'
+                                  : 'border-transparent hover:border-[#E3DFD5] hover:bg-[#FAF9F5]/70'
+                              }`}
+                            >
+                              <div className="h-11 w-11 shrink-0 rounded-xl bg-amber-50 border border-amber-200 text-[#B45309] flex items-center justify-center">
+                                <Trophy className="h-5 w-5 text-[#FFB703]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-xs sm:text-sm font-bold text-[#2C221E] truncate">
+                                  {quest.title}
+                                </h4>
+                                <p className="text-[11px] text-[#837560] truncate">
+                                  {quest.location_name}
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[10px] font-black text-[#2D6A4F] shrink-0">
+                                +{quest.reward_points} pts
+                              </span>
+                            </Link>
+                          );
+                        }
+
+                        return null;
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Full Results Action Link */}
+              <div className="pt-2 border-t border-[#E3DFD5]">
+                <Link
+                  href={`/search?q=${encodeURIComponent(normalized)}&type=all`}
+                  onClick={onClose}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all ${
+                    selectedIndex === flatItems.length
+                      ? 'bg-[#2D6A4F] text-white shadow-xs'
+                      : 'bg-[#FAF9F5] text-[#582F0E] hover:bg-[#2D6A4F] hover:text-white'
                   }`}
                 >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Secondary Controls: Municipality Selector & Crowd Toggles */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#E8E5DE]/80">
-            {/* Municipality Dropdown */}
-            <div className="relative flex items-center min-w-[210px]">
-              <label htmlFor="search-municipality-select" className="sr-only">
-                Filter by Municipality
-              </label>
-              <MapPin className="w-3.5 h-3.5 text-[#2D6A4F] absolute left-3 pointer-events-none" />
-              <select
-                id="search-municipality-select"
-                value={selectedMunicipality}
-                onChange={(e) => setSelectedMunicipality(e.target.value)}
-                className="w-full appearance-none bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/60 rounded-xl pl-8.5 pr-8 py-1.5 text-xs text-[#582F0E] font-bold focus:outline-none focus:border-[#2D6A4F] focus:ring-2 focus:ring-[#2D6A4F]/10 transition cursor-pointer shadow-2xs min-h-[36px]"
-              >
-                {municipalities.map((muni) => (
-                  <option key={muni} value={muni}>
-                    {muni}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-stone-400 absolute right-3 pointer-events-none" />
-            </div>
-
-            {/* Quick Feature Toggles */}
-            <div className="flex items-center gap-2 text-xs flex-wrap">
-              <button
-                type="button"
-                onClick={() => setSelectedCrowdFilter((prev) => (prev === 'quiet' ? 'all' : 'quiet'))}
-                aria-pressed={selectedCrowdFilter === 'quiet'}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 select-none min-h-[36px] ${
-                  selectedCrowdFilter === 'quiet'
-                    ? 'bg-emerald-100/90 text-[#2D6A4F] border border-emerald-300 shadow-2xs'
-                    : 'bg-[#FAF9F5] text-[#837560] border border-[#E3DFD5] hover:bg-white hover:border-[#2D6A4F]/40'
-                }`}
-              >
-                <span>🌿 Quiet &amp; Peaceful</span>
-                {selectedCrowdFilter === 'quiet' && <Check className="w-3 h-3 text-[#2D6A4F]" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedCrowdFilter((prev) => (prev === 'quests' ? 'all' : 'quests'))}
-                aria-pressed={selectedCrowdFilter === 'quests'}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 select-none min-h-[36px] ${
-                  selectedCrowdFilter === 'quests'
-                    ? 'bg-amber-100/90 text-[#935610] border border-amber-300 shadow-2xs'
-                    : 'bg-[#FAF9F5] text-[#837560] border border-[#E3DFD5] hover:bg-white hover:border-amber-400/40'
-                }`}
-              >
-                <span>🏆 Quests Available</span>
-                {selectedCrowdFilter === 'quests' && <Check className="w-3 h-3 text-[#935610]" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Popular Tag Shortcut Chips */}
-          {!query && (
-            <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#837560]">
-              <span className="font-semibold text-stone-400 mr-0.5">Popular:</span>
-              {popularSearches.map((term) => (
-                <button
-                  key={term}
-                  type="button"
-                  onClick={() => setQuery(term)}
-                  className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-emerald-50 text-[#6B5E4C] hover:text-[#2D6A4F] border border-transparent hover:border-emerald-200/70 transition cursor-pointer font-medium active:scale-95"
-                >
-                  {term}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Live Matching Results Grid */}
-        <div className="max-h-[58vh] overflow-y-auto p-4 sm:p-6 bg-[#FCFBF8]/60">
-          {loading ? (
-            <div className="py-16 text-center text-xs text-[#837560] space-y-3">
-              <div className="w-7 h-7 border-2 border-[#2D6A4F] border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="font-semibold text-[#582F0E]">Discovering Pangasinan destinations...</p>
-            </div>
-          ) : loadError ? (
-            <div className="py-16 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto text-[#BC4749]">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-              <h4 className="font-serif font-bold text-base text-[#582F0E]">Could not load destinations</h4>
-              <p className="text-xs text-[#837560] max-w-sm mx-auto leading-relaxed">{loadError}</p>
-              <button
-                type="button"
-                onClick={() => loadSpotsData(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2D6A4F] text-white text-xs font-bold hover:bg-[#1B4332] transition shadow-xs cursor-pointer active:scale-95"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry connection</span>
-              </button>
-            </div>
-          ) : filteredSpots.length === 0 ? (
-            <div className="py-16 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-stone-100 border border-[#E3DFD5] flex items-center justify-center mx-auto text-[#D5C4AC]">
-                <Compass className="w-6 h-6" />
-              </div>
-              <h4 className="font-serif font-bold text-base text-[#582F0E]">No matching destinations</h4>
-              <p className="text-xs text-[#837560] max-w-sm mx-auto leading-relaxed">
-                We couldn&apos;t find any spots matching your current filters. Try selecting another municipality, category, or clearing the search query.
-              </p>
-              <button
-                type="button"
-                onClick={resetAllFilters}
-                className="mt-2 px-4 py-2 rounded-xl bg-[#2D6A4F] text-white text-xs font-bold hover:bg-[#1B4332] transition shadow-xs cursor-pointer active:scale-95"
-              >
-                Clear all filters
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {filteredSpots.map((spot) => (
-                <Link
-                  key={spot.id}
-                  href={`/spots/${spot.slug}`}
-                  onClick={onClose}
-                  className="group flex gap-3.5 p-3 rounded-2xl bg-white hover:bg-gradient-to-br hover:from-emerald-50/50 hover:via-white hover:to-white border border-[#E3DFD5] hover:border-[#2D6A4F]/50 shadow-2xs hover:shadow-md transition-all duration-200 ease-out cursor-pointer relative overflow-hidden"
-                >
-                  {/* Photo Container */}
-                  <div className="w-24 h-24 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-[#E3DFD5]/80 relative shadow-2xs">
-                    <DestinationMedia
-                      src={spot.imageUrl}
-                      alt={spot.name}
-                      destinationName={spot.name}
-                      municipality={spot.municipality}
-                      className="w-full h-full object-cover"
-                    />
-                    {spot.crowdStatus === 'quiet' && (
-                      <span className="absolute bottom-1 left-1 bg-[#1B4332]/90 backdrop-blur-2xs text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs z-10">
-                        🌿 Quiet
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Search className="h-3.5 w-3.5" />
+                    <span>See all results for &ldquo;{normalized}&rdquo;</span>
                   </div>
-
-                  {/* Destination Information */}
-                  <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-black text-[#2D6A4F] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          {spot.municipality}
-                        </span>
-                        {spot.questId && (
-                          <span className="text-[10px] font-black text-[#935610] bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/80 flex items-center gap-1">
-                            <Trophy className="w-2.5 h-2.5" />
-                            Quest available
-                          </span>
-                        )}
-                      </div>
-
-                      <h4 className="font-serif font-bold text-sm text-[#2C221E] group-hover:text-[#2D6A4F] transition-colors leading-snug truncate">
-                        {spot.name}
-                      </h4>
-
-                      <p className="text-[11px] text-[#6B5E4C] line-clamp-2 leading-relaxed">
-                        {spot.description}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-[#837560] pt-1">
-                      <span className="truncate max-w-[170px]">
-                        {spot.address || spot.municipality}
-                      </span>
-                      <span className="font-bold text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                        <span>View</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </div>
+                  <kbd
+                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                      selectedIndex === flatItems.length
+                        ? 'bg-white/20 text-white'
+                        : 'bg-stone-200 text-stone-700'
+                    }`}
+                  >
+                    Enter ↵
+                  </kbd>
                 </Link>
-              ))}
+              </div>
             </div>
           )}
-        </div>
-
-        {/* Clean Footer Bar */}
-        <div className="px-5 py-3.5 bg-stone-50/90 border-t border-[#E3DFD5] flex items-center justify-between text-[11px] text-[#837560]">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 font-medium">
-              <kbd className="px-1.5 py-0.5 rounded bg-white border border-[#E3DFD5] font-mono text-[10px] shadow-2xs font-bold text-stone-600">
-                ESC
-              </kbd>
-              <span>to close</span>
-            </span>
-            <span className="text-stone-300">·</span>
-            <span className="hidden sm:inline">
-              Filter by category, town, or type to search
-            </span>
-          </div>
-
-          <Link
-            href="/search"
-            onClick={onClose}
-            className="font-bold text-[#2D6A4F] hover:text-[#1B4332] hover:underline flex items-center gap-1 transition"
-          >
-            <span>Full Directory Page</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
         </div>
       </div>
     </div>

@@ -31,23 +31,14 @@ import { useSavedLibrary } from '@/lib/saved-library';
 import { publicTravelerProfiles, communityChoicePreview } from '@/lib/community';
 import { DestinationMedia } from '@/components/DestinationMedia';
 
-const categories = [
-  { id: 'all', label: 'All Destinations' },
-  { id: 'eat_drink', label: '🍜 Food & Culinary' },
-  { id: 'nature_outdoors', label: '🏖️ Nature & Beaches' },
-  { id: 'culture_heritage', label: '🏛️ Heritage & Shrines' },
-  { id: 'activities_wellness', label: '🧗 Outdoor & Eco' },
-  { id: 'shopping_local', label: '🛍️ Local MSME Crafts' },
-];
-
 export default function ExplorePage() {
   const { user } = useAuth();
   const [spots, setSpots] = useState<SpotModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [category, setCategory] = useState('all');
-  const [sortFlair, setSortFlair] = useState<'for_you' | 'hot' | 'new' | 'quests' | 'quiet'>('for_you');
-  const [search, setSearch] = useState('');
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [likes, setLikes] = useState<Record<string, { isLiked: boolean }>>({});
   const [openTips, setOpenTips] = useState<Record<string, boolean>>({});
   const [userTips, setUserTips] = useState<Record<string, string[]>>({});
@@ -60,31 +51,45 @@ export default function ExplorePage() {
       setLoading(true);
       setError('');
       try {
-        const cacheKey = normalizeQueryKey('spots_feed', {
-          category: category !== 'all' ? category : undefined,
-          q: search.trim() || undefined,
-        });
+        const cacheKey = 'ranked_spots_feed';
 
-        const { data: rawSpots } = await fetchWithCache(
+        const { data: feedResult } = await fetchWithCache(
           cacheKey,
           async () => {
-            const params: Record<string, string | number> = {};
-            if (category !== 'all') params.categories = category;
-            if (search.trim()) params.q = search.trim();
-            const res = await api.get('/spots', { params });
-            return (res.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
+            try {
+              const res = await api.get('/feed');
+              if (res.data?.success && res.data?.data?.items) {
+                const normalizedItems = (res.data.data.items as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
+                return {
+                  items: normalizedItems,
+                  cursor: (res.data.data.cursor as string | null) || null,
+                  hasMore: Boolean(res.data.data.has_more),
+                };
+              }
+            } catch {
+              // Fallback to /spots if /feed unavailable
+            }
+            const fallbackRes = await api.get('/spots');
+            const fallbackItems = (fallbackRes.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
+            return {
+              items: fallbackItems,
+              cursor: null,
+              hasMore: false,
+            };
           },
           { ttlMs: 120_000, forceRefresh }
         );
 
-        setSpots(rawSpots);
+        setSpots(feedResult.items);
+        setCursor(feedResult.cursor);
+        setHasMore(feedResult.hasMore);
       } catch {
         setError('Could not load destination community feed. Please check your connection.');
       } finally {
         setLoading(false);
       }
     },
-    [category, search]
+    []
   );
 
   useEffect(() => {
@@ -123,14 +128,30 @@ export default function ExplorePage() {
 
   const savedSpotHighlights = spots.filter((s) => savedLibrary.spots.includes(s.id)).slice(0, 3);
 
-  // Filter & Sort Logic
-  const processedSpots = spots.filter((s) => {
-    if (sortFlair === 'quests') return Boolean(s.questId);
-    if (sortFlair === 'quiet') return s.crowdStatus === 'quiet' || s.crowdStatus === 'moderate';
-    return true;
-  });
+  const handleLoadMore = async () => {
+    if (visibleCount < spots.length) {
+      setVisibleCount((prev) => prev + 10);
+      return;
+    }
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await api.get('/feed', { params: { cursor } });
+      if (res.data?.success && res.data?.data?.items) {
+        const newItems = (res.data.data.items as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
+        setSpots((prev) => [...prev, ...newItems]);
+        setCursor(res.data.data.cursor || null);
+        setHasMore(Boolean(res.data.data.has_more));
+        setVisibleCount((prev) => prev + newItems.length);
+      }
+    } catch {
+      // Keep existing
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
-  const visibleSpots = processedSpots.slice(0, visibleCount);
+  const visibleSpots = spots.slice(0, visibleCount);
 
   // Spotlight recommendations (distinct from top hero to avoid repetition)
   const topHeroSpot = spots[0] || null;
@@ -167,80 +188,20 @@ export default function ExplorePage() {
               </Link>
             </div>
 
-            {/* Category Filter Pills (Responsive Wrap, No Hidden Horizontal Scrollbars) */}
-            <div
-              role="group"
-              aria-label="Category filters"
-              className="flex flex-wrap items-center gap-1.5 p-1 text-xs"
-            >
-              {categories.map((cat) => {
-                const isSelected = category === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => {
-                      setCategory(cat.id);
-                      setVisibleCount(10);
-                    }}
-                    aria-pressed={isSelected}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150 cursor-pointer select-none min-h-[36px] ${
-                      isSelected
-                        ? 'bg-[#2D6A4F] text-white shadow-xs'
-                        : 'bg-white text-[#582F0E] border border-[#E3DFD5] hover:border-[#2D6A4F]/60'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Feed Status & Sort Toggles */}
+            {/* Feed Status Header */}
             <div className="flex items-center justify-between text-xs px-1">
-              <span className="font-bold text-[#837560]">
-                {loading ? 'Refreshing feed...' : `${processedSpots.length} Pangasinan Destinations`}
-              </span>
-
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setSortFlair('for_you')}
-                  aria-pressed={sortFlair === 'for_you'}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                    sortFlair === 'for_you'
-                      ? 'bg-[#2D6A4F] text-white'
-                      : 'bg-white text-[#837560] border border-[#E3DFD5] hover:text-[#582F0E]'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSortFlair('quests')}
-                  aria-pressed={sortFlair === 'quests'}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                    sortFlair === 'quests'
-                      ? 'bg-amber-100 text-[#935610] border border-amber-300'
-                      : 'bg-white text-[#837560] border border-[#E3DFD5] hover:text-[#582F0E]'
-                  }`}
-                >
-                  <Trophy className="w-3 h-3 text-[#935610]" />
-                  <span>Quests</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSortFlair('quiet')}
-                  aria-pressed={sortFlair === 'quiet'}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                    sortFlair === 'quiet'
-                      ? 'bg-emerald-100 text-[#2D6A4F] border border-emerald-300'
-                      : 'bg-white text-[#837560] border border-[#E3DFD5] hover:text-[#582F0E]'
-                  }`}
-                >
-                  🌿 Quiet
-                </button>
+              <div className="space-y-0.5">
+                <span className="font-serif font-bold text-[#582F0E]">
+                  {loading && spots.length === 0 ? 'Refreshing feed...' : 'Community Feed'}
+                </span>
+                <p className="text-[10px] text-[#837560]">
+                  Ranked with Pangasinan municipal diversity
+                </p>
               </div>
+
+              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#2D6A4F] border border-[#E3DFD5] shadow-2xs">
+                {spots.length} Destinations
+              </span>
             </div>
 
             {/* Post Feed List */}
@@ -261,20 +222,17 @@ export default function ExplorePage() {
                   Retry Loading
                 </button>
               </div>
-            ) : processedSpots.length === 0 ? (
+            ) : spots.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 border border-[#E3DFD5] text-center space-y-3 shadow-xs">
                 <Compass className="w-10 h-10 text-[#D5C4AC] mx-auto" />
-                <h3 className="font-bold text-sm text-[#582F0E]">No destinations found</h3>
-                <p className="text-xs text-[#837560]">Try selecting a different category or clearing filters.</p>
+                <h3 className="font-bold text-sm text-[#582F0E]">No destinations found in feed</h3>
+                <p className="text-xs text-[#837560]">The community feed could not find active destinations.</p>
                 <button
                   type="button"
-                  onClick={() => {
-                    setCategory('all');
-                    setSortFlair('for_you');
-                  }}
+                  onClick={() => loadSpots(true)}
                   className="px-4 py-2 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-bold text-[#582F0E] hover:bg-white transition cursor-pointer"
                 >
-                  Clear all filters
+                  Refresh feed
                 </button>
               </div>
             ) : (
@@ -283,7 +241,7 @@ export default function ExplorePage() {
                   const likeState = likes[spot.id] || { isLiked: false };
                   const isTipsOpen = Boolean(openTips[spot.id]);
                   const customTips = userTips[spot.id] || [];
-                  const isFeaturedHero = index === 0 && category === 'all' && !search;
+                  const isFeaturedHero = index === 0;
 
                   return (
                     <article
@@ -315,13 +273,21 @@ export default function ExplorePage() {
                             Shared by <strong className="text-[#582F0E]">{spot.sourceName}</strong>
                           </span>
 
-                          {/* Provenance Badge */}
-                          {spot.trustLevel === 'lgu_verified' && (
-                            <span className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[9px] border border-blue-200">
-                              <ShieldCheck className="w-2.5 h-2.5" />
-                              <span>LGU Verified</span>
-                            </span>
-                          )}
+                          {/* Provenance Badge & Server Recommendation Reason */}
+                          <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                            {spot.recommendationReasons && spot.recommendationReasons.length > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-[#7D5800] font-bold text-[9px] border border-amber-200">
+                                <Sparkles className="w-2.5 h-2.5 text-[#FFB703]" />
+                                <span>{spot.recommendationReasons[0]}</span>
+                              </span>
+                            )}
+                            {spot.trustLevel === 'lgu_verified' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[9px] border border-blue-200">
+                                <ShieldCheck className="w-2.5 h-2.5" />
+                                <span>LGU Verified</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Title */}
@@ -528,14 +494,17 @@ export default function ExplorePage() {
                 })}
 
                 {/* Bounded Load More Button */}
-                {processedSpots.length > visibleCount && (
+                {(spots.length > visibleCount || hasMore) && (
                   <div className="pt-2 text-center">
                     <button
                       type="button"
-                      onClick={() => setVisibleCount((prev) => prev + 10)}
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
                       className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-white hover:bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] text-xs font-extrabold text-[#582F0E] transition shadow-2xs cursor-pointer min-h-[44px]"
                     >
-                      Load More Destinations ({visibleCount} of {processedSpots.length})
+                      {loadingMore
+                        ? 'Loading more destinations...'
+                        : `Load More Destinations (${Math.min(visibleCount, spots.length)} of ${spots.length})`}
                     </button>
                   </div>
                 )}

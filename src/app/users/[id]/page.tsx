@@ -4,50 +4,57 @@ import {
   Award,
   CalendarDays,
   Compass,
-  Flag,
   MapPin,
   ShieldCheck,
   Sparkles,
   Users,
   CheckCircle2,
   ArrowRight,
-  Bookmark,
-  Share2,
-  type LucideIcon
+  type LucideIcon,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { findPublicTraveler, publicTravelerProfiles } from '@/lib/community';
+import { fetchPublicUserProfile } from '@/lib/search';
 
-export function generateStaticParams() {
-  return publicTravelerProfiles.map(({ id }) => ({ id }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function PublicTravelerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const profile = findPublicTraveler(id);
-  if (!profile) notFound();
+  const profile = await fetchPublicUserProfile(id);
+
+  if (!profile || !profile.is_public) {
+    notFound();
+  }
+
+  const scoutLevel = Math.max(1, Math.floor((profile.scout_reputation || 0) / 100) + 1);
+  const initials = profile.display_name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join('');
 
   const stats: Array<{ label: string; value: number | string; subtext: string; icon: LucideIcon; color: string }> = [
-    { label: 'Scout Level', value: `Lv. ${profile.scoutLevel}`, subtext: profile.title, icon: Award, color: 'text-[#B45309] bg-amber-100/70' },
-    { label: 'Verified Places', value: profile.verifiedDestinations, subtext: 'On-site check-ins', icon: MapPin, color: 'text-[#2D6A4F] bg-emerald-100/70' },
-    { label: 'Municipalities', value: `${profile.municipalitiesExplored} / 44`, subtext: 'Pangasinan towns', icon: Compass, color: 'text-blue-700 bg-blue-100/70' },
-    { label: 'Contributions', value: profile.communityActivities, subtext: 'Community tips & logs', icon: Users, color: 'text-purple-700 bg-purple-100/70' },
+    { label: 'Scout Level', value: `Lv. ${scoutLevel}`, subtext: `${profile.scout_reputation || 0} Scout Rep`, icon: Award, color: 'text-[#B45309] bg-amber-100/70' },
+    { label: 'Reputation', value: `${profile.scout_reputation || 0} RP`, subtext: 'Non-inflationary Rep', icon: Sparkles, color: 'text-[#2D6A4F] bg-emerald-100/70' },
+    { label: 'Region', value: 'Pangasinan', subtext: '44 Municipalities', icon: Compass, color: 'text-blue-700 bg-blue-100/70' },
+    { label: 'Contributions', value: 'Verified', subtext: 'Active Explorer', icon: Users, color: 'text-purple-700 bg-purple-100/70' },
   ];
+
+  const joinedYear = profile.created_at ? new Date(profile.created_at).getFullYear() : 2026;
 
   return (
     <Navigation>
       <div className="mx-auto max-w-5xl space-y-6">
-        
         {/* Prototype Transparency Pill */}
         <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50 via-white to-amber-50/60 p-4 text-xs text-[#7D5800] shadow-2xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="h-4 w-4 text-[#B45309] shrink-0" />
             <span>
-              <strong>Privacy-Safe Public Passport:</strong> This preview showcases verified expedition achievements without exposing private wallet balances or precise GPS logs.
+              <strong>Privacy-Safe Public Passport:</strong> This profile displays verified expedition badges without exposing private wallet balances or precise GPS logs.
             </span>
           </div>
           <span className="shrink-0 rounded-full bg-amber-200/60 px-2.5 py-0.5 text-[10px] font-black uppercase text-[#582F0E]">
-            Prototype Spec
+            Verified Scout
           </span>
         </div>
 
@@ -58,17 +65,20 @@ export default async function PublicTravelerPage({ params }: { params: Promise<{
             <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
             <div className="absolute bottom-3 right-4 flex items-center gap-2 text-white/85 text-[10px] font-bold uppercase tracking-wider bg-black/25 px-3 py-1 rounded-full backdrop-blur-xs">
               <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
-              <span>Pangasinan Explorer Passport · 2026</span>
+              <span>Pangasinan Explorer Passport · {joinedYear}</span>
             </div>
           </div>
 
           <div className="px-6 pb-8 sm:px-8">
             <div className="-mt-14 sm:-mt-16 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              
               {/* Avatar + Primary Identity Info */}
               <div className="flex min-w-0 flex-col gap-3.5 sm:flex-row sm:items-end">
-                <div className="relative flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-2xl sm:text-3xl font-black text-[#582F0E] shadow-md ring-2 ring-[#2D6A4F]/20">
-                  {profile.initials}
+                <div className="relative flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-2xl sm:text-3xl font-black text-[#582F0E] shadow-md ring-2 ring-[#2D6A4F]/20 overflow-hidden">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{initials || 'TR'}</span>
+                  )}
                   <span
                     className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#2D6A4F] text-white shadow-xs"
                     title="Verified Community Scout"
@@ -80,23 +90,25 @@ export default async function PublicTravelerPage({ params }: { params: Promise<{
                 <div className="min-w-0 pb-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="font-serif text-2xl sm:text-3xl font-black text-[#2C221E] tracking-tight">
-                      {profile.displayName}
+                      {profile.display_name}
                     </h1>
                     <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-[#2D6A4F] border border-emerald-200">
-                      Level {profile.scoutLevel}
+                      Level {scoutLevel}
                     </span>
                   </div>
 
-                  <p className="text-xs font-bold text-[#837560]">{profile.handle}</p>
+                  {profile.handle && (
+                    <p className="text-xs font-bold text-[#2D6A4F]">@{profile.handle}</p>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-2 pt-0.5">
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#7D5800] border border-amber-200">
                       <Award className="h-3 w-3 text-[#B45309]" />
-                      {profile.title}
+                      Verified Explorer
                     </span>
                     <span className="inline-flex items-center gap-1 text-xs text-[#514532] font-semibold">
                       <MapPin className="h-3.5 w-3.5 text-[#2D6A4F]" />
-                      {profile.homeMunicipality}
+                      Pangasinan, Philippines
                     </span>
                   </div>
                 </div>
@@ -113,15 +125,24 @@ export default async function PublicTravelerPage({ params }: { params: Promise<{
 
             {/* Bio & Travel Status */}
             <div className="mt-6 pt-5 border-t border-[#F2EFE9] space-y-3">
-              <p className="max-w-2xl text-xs sm:text-sm leading-relaxed text-[#514532]">
-                {profile.bio}
-              </p>
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F5] border border-[#E3DFD5] px-3 py-1 text-[11px] font-bold text-[#2C221E]">
-                  <Compass className="h-3.5 w-3.5 text-[#2D6A4F]" />
-                  <span>{profile.status}</span>
-                </span>
-              </div>
+              {profile.bio ? (
+                <p className="max-w-2xl text-xs sm:text-sm leading-relaxed text-[#514532]">
+                  {profile.bio}
+                </p>
+              ) : (
+                <p className="max-w-2xl text-xs text-[#837560] italic">
+                  No public biography provided yet.
+                </p>
+              )}
+
+              {profile.status_text && (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F5] border border-[#E3DFD5] px-3 py-1 text-[11px] font-bold text-[#2C221E]">
+                    <Compass className="h-3.5 w-3.5 text-[#2D6A4F]" />
+                    <span>{profile.status_text}</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -150,96 +171,15 @@ export default async function PublicTravelerPage({ params }: { params: Promise<{
           ))}
         </section>
 
-        {/* Showcase & Timeline Section */}
-        <div className="grid gap-6 lg:grid-cols-5 items-start">
-          
-          {/* Soulbound Achievement Showcase */}
-          <section className="space-y-4 rounded-3xl border border-[#E3DFD5] bg-white p-5 sm:p-6 shadow-xs lg:col-span-3">
-            <div className="flex items-center justify-between border-b border-[#E8E5DE] pb-3">
-              <div>
-                <h2 className="font-serif text-base sm:text-lg font-black text-[#582F0E]">
-                  Passport Showcase
-                </h2>
-                <p className="text-[11px] text-[#837560]">Curated Soulbound achievement badges</p>
-              </div>
-              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-extrabold text-[#7D5800]">
-                {profile.badges.length} Badges
-              </span>
-            </div>
-
-            <div className="grid gap-3.5 sm:grid-cols-2">
-              {profile.badges.map((badge) => (
-                <div
-                  key={badge.name}
-                  className="group relative overflow-hidden rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/40 p-4 shadow-2xs hover:shadow-xs transition-all duration-200"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 text-[#7D5800] border border-amber-300/80 shadow-2xs">
-                      <Sparkles className="h-5 w-5 text-[#B45309]" />
-                    </div>
-                    <span className="rounded-full bg-white/90 border border-amber-200 px-2 py-0.5 text-[9px] font-black uppercase text-[#B45309]">
-                      Soulbound
-                    </span>
-                  </div>
-                  <h3 className="mt-3 text-xs font-black text-[#582F0E] group-hover:text-[#2D6A4F] transition">
-                    {badge.name}
-                  </h3>
-                  <p className="mt-1 text-[11px] leading-relaxed text-[#6B5E4C]">
-                    {badge.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Public Activity Trail */}
-          <section className="space-y-4 rounded-3xl border border-[#E3DFD5] bg-white p-5 sm:p-6 shadow-xs lg:col-span-2">
-            <div className="flex items-center justify-between border-b border-[#E8E5DE] pb-3">
-              <div>
-                <h2 className="font-serif text-base sm:text-lg font-black text-[#582F0E]">
-                  Public Activity
-                </h2>
-                <p className="text-[11px] text-[#837560]">Recent verified actions &amp; logs</p>
-              </div>
-              <CalendarDays className="h-4 w-4 text-[#2D6A4F]" />
-            </div>
-
-            <div className="space-y-4 pt-1">
-              {profile.recentActivity.map((activity, idx) => (
-                <div key={`${activity.label}-${idx}`} className="relative pl-5 border-l-2 border-emerald-300/70 space-y-1 group">
-                  <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-[#2D6A4F] ring-4 ring-emerald-100" />
-                  <span className="inline-block rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase text-[#2D6A4F] border border-emerald-200/60">
-                    {activity.label}
-                  </span>
-                  <p className="text-xs font-bold text-[#2C221E] leading-snug">
-                    {activity.detail}
-                  </p>
-                  <p className="text-[10px] text-[#837560] font-semibold">
-                    {activity.period}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* Security & Privacy Guarantee Callout */}
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5] p-5 text-xs text-[#514532] shadow-2xs">
-          <div className="flex items-center gap-3">
-            <Flag className="h-5 w-5 text-[#2D6A4F] shrink-0" />
-            <p className="leading-relaxed">
-              <strong>Strict Privacy Standard:</strong> JuanDerQuest public profiles never expose wallet private balances, email addresses, exact live GPS coordinates, or private ballot votes.
-            </p>
-          </div>
+        {/* Action Link back to Explore */}
+        <div className="pt-2 text-center">
           <Link
             href="/explore"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white px-4 py-2 font-bold transition shadow-xs active:scale-95"
+            className="inline-flex items-center gap-2 text-xs font-bold text-[#2D6A4F] hover:underline"
           >
-            <span>Back to Feed</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <span>← Return to Community Feed</span>
           </Link>
         </div>
-
       </div>
     </Navigation>
   );
