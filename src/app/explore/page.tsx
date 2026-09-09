@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Compass,
@@ -27,7 +27,8 @@ import { useAuth } from '@/lib/auth';
 import { useRankedFeed } from '@/lib/use-ranked-feed';
 import { SpotCardSkeleton } from '@/components/Skeleton';
 import { useSavedLibrary } from '@/lib/saved-library';
-import { publicTravelerProfiles, communityChoicePreview } from '@/lib/community';
+import { communityChoicePreview } from '@/lib/community';
+import { fetchPublicTravelers, type PublicTravelerSummary } from '@/lib/social';
 import { DestinationMedia } from '@/components/DestinationMedia';
 
 export default function ExplorePage() {
@@ -38,6 +39,21 @@ export default function ExplorePage() {
   const [userTips, setUserTips] = useState<Record<string, string[]>>({});
   const [tipInput, setTipInput] = useState<Record<string, string>>({});
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
+  const [scouts, setScouts] = useState<PublicTravelerSummary[]>([]);
+  const [loadingScouts, setLoadingScouts] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchPublicTravelers(3).then((items) => {
+      if (mounted) {
+        setScouts(items);
+        setLoadingScouts(false);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleToggleLike = (spotId: string) => {
     setLikes((prev) => {
@@ -583,46 +599,72 @@ export default function ExplorePage() {
               </div>
             )}
 
-            {/* Community Scouts Discovery (Sample Profiles) */}
+            {/* Community Scouts Discovery (Real Public Profiles) */}
             <div className="bg-white rounded-2xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
                 <div>
                   <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
                     Community Scouts
                   </h3>
-                  <span className="text-[10px] font-bold text-[#837560]">Sample Profiles</span>
+                  <span className="text-[10px] font-bold text-[#837560]">Public Travelers</span>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                {publicTravelerProfiles.slice(0, 3).map((profile) => (
-                  <Link
-                    key={profile.id}
-                    href={`/users/${profile.id}`}
-                    className="flex items-center justify-between gap-2.5 rounded-xl p-2.5 hover:bg-[#FAF9F5] border border-transparent hover:border-[#E3DFD5] transition group min-h-[44px]"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] text-[11px] font-black text-white shadow-2xs group-hover:ring-2 group-hover:ring-[#FFB703]/50 transition">
-                        {profile.initials}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
-                            {profile.displayName}
+              {loadingScouts ? (
+                <div className="py-4 text-center">
+                  <span className="text-xs text-[#837560]">Loading scouts...</span>
+                </div>
+              ) : scouts.length === 0 ? (
+                <div className="py-3 text-center px-2 space-y-1">
+                  <p className="text-xs font-bold text-[#582F0E]">No public scouts yet</p>
+                  <p className="text-[10px] text-[#837560]">
+                    Enable your public profile in settings to appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {scouts.map((profile) => {
+                    const initials = profile.display_name
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((w) => w[0].toUpperCase())
+                      .join('');
+
+                    return (
+                      <Link
+                        key={profile.id}
+                        href={`/users/${encodeURIComponent(profile.id)}`}
+                        className="flex items-center justify-between gap-2.5 rounded-xl p-2.5 hover:bg-[#FAF9F5] border border-transparent hover:border-[#E3DFD5] transition group min-h-[44px]"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] text-[11px] font-black text-white shadow-2xs group-hover:ring-2 group-hover:ring-[#FFB703]/50 transition overflow-hidden">
+                            {profile.avatar_url ? (
+                              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{initials || 'TR'}</span>
+                            )}
                           </span>
-                          <CheckCircle2 className="h-3 w-3 text-[#2D6A4F] shrink-0" />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                                {profile.display_name}
+                              </span>
+                            </div>
+                            <span className="block truncate text-[10px] text-[#837560]">
+                              {profile.handle ? `@${profile.handle} · ` : ''}
+                              {profile.scout_reputation ?? 0} Rep
+                            </span>
+                          </div>
                         </div>
-                        <span className="block truncate text-[10px] text-[#837560]">
-                          {profile.title} · Lv. {profile.scoutLevel}
+                        <span className="text-[10px] font-bold text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform">
+                          →
                         </span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform">
-                      →
-                    </span>
-                  </Link>
-                ))}
-              </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </aside>
 

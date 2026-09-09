@@ -144,20 +144,80 @@ export interface PublicUserProfile {
   status_text: string | null;
   scout_reputation: number;
   is_public: boolean;
+  follower_count?: number;
+  following_count?: number;
   created_at: string;
+}
+
+export type FetchUserProfileResult =
+  | { kind: 'success'; profile: PublicUserProfile }
+  | { kind: 'not_found' }
+  | { kind: 'error'; message: string; statusCode?: number };
+
+export function getServerApiBaseUrl(): string {
+  const configured =
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (configured && configured.startsWith('http')) {
+    return configured.replace(/\/$/, '');
+  }
+  return 'http://127.0.0.1:4000/api/v1';
 }
 
 /**
  * Looks up real public traveler profile by ID or @handle.
+ * Distinguishes true 404 from 500/timeout/network errors.
  */
-export async function fetchPublicUserProfile(idOrHandle: string): Promise<PublicUserProfile | null> {
+export async function fetchPublicUserProfile(
+  idOrHandle: string
+): Promise<FetchUserProfileResult> {
+  const isServer = typeof window === 'undefined';
+  const baseUrl = isServer
+    ? getServerApiBaseUrl()
+    : (process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1');
+  const cleanBase = baseUrl.replace(/\/$/, '');
+  const url = `${cleanBase}/users/${encodeURIComponent(idOrHandle)}/profile`;
+
   try {
-    const res = await api.get(`/users/${encodeURIComponent(idOrHandle)}/profile`);
-    if (res.data?.success && res.data?.data) {
-      return res.data.data as PublicUserProfile;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (res.status === 404) {
+      return { kind: 'not_found' };
     }
-    return null;
-  } catch {
-    return null;
+
+    if (!res.ok) {
+      return {
+        kind: 'error',
+        message: `Unable to load traveler profile (HTTP ${res.status}).`,
+        statusCode: res.status,
+      };
+    }
+
+    const body = await res.json();
+    if (body?.success && body?.data) {
+      return { kind: 'success', profile: body.data as PublicUserProfile };
+    }
+
+    return {
+      kind: 'error',
+      message: 'Unexpected profile payload received from server.',
+    };
+  } catch (err: any) {
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+      return { kind: 'error', message: 'Profile request timed out. Please try again.' };
+    }
+    return {
+      kind: 'error',
+      message: 'Network connection failed while loading traveler profile.',
+    };
   }
 }
