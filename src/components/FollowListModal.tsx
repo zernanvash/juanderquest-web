@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
-  fetchFollowers,
-  fetchFollowing,
+  fetchTravelerList,
+  unfollowUser,
   type PublicTravelerSummary,
   type FollowPageResult,
 } from '@/lib/social';
@@ -17,6 +17,7 @@ interface FollowListModalProps {
   userId: string;
   userName: string;
   type: 'followers' | 'following';
+  ownerView?: boolean;
 }
 
 export function FollowListModal({
@@ -25,6 +26,7 @@ export function FollowListModal({
   userId,
   userName,
   type,
+  ownerView = false,
 }: FollowListModalProps) {
   const [items, setItems] = useState<PublicTravelerSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -35,14 +37,16 @@ export function FollowListModal({
 
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const generation = useRef(0);
 
   const loadInitial = useCallback(async () => {
     if (!userId || !isOpen) return;
     setIsLoading(true);
     setError(null);
+    const request = ++generation.current;
     try {
-      const fetchFn = type === 'followers' ? fetchFollowers : fetchFollowing;
-      const res: FollowPageResult | null = await fetchFn(userId, 20);
+      const res: FollowPageResult = await fetchTravelerList(userId, type, ownerView);
+      if (request !== generation.current) return;
       if (res) {
         setItems(res.items);
         setNextCursor(res.next_cursor);
@@ -50,12 +54,12 @@ export function FollowListModal({
       } else {
         setError('Unable to load travelers.');
       }
-    } catch {
-      setError('Connection failed. Please check your network and retry.');
+    } catch (error) {
+      if (request === generation.current) setError(error instanceof Error ? error.message : 'Unable to load connections.');
     } finally {
-      setIsLoading(false);
+      if (request === generation.current) setIsLoading(false);
     }
-  }, [userId, isOpen, type]);
+  }, [userId, isOpen, type, ownerView]);
 
   useEffect(() => {
     if (isOpen) {
@@ -68,6 +72,7 @@ export function FollowListModal({
       setHasMore(false);
       setError(null);
     }
+    return () => { generation.current += 1; };
   }, [isOpen, loadInitial]);
 
   // Handle ESC key press
@@ -85,16 +90,17 @@ export function FollowListModal({
   const loadMore = async () => {
     if (!nextCursor || isLoadingMore) return;
     setIsLoadingMore(true);
+    const request = generation.current;
     try {
-      const fetchFn = type === 'followers' ? fetchFollowers : fetchFollowing;
-      const res: FollowPageResult | null = await fetchFn(userId, 20, nextCursor);
+      const res: FollowPageResult = await fetchTravelerList(userId, type, ownerView, nextCursor);
+      if (request !== generation.current) return;
       if (res) {
         setItems((prev) => [...prev, ...res.items]);
         setNextCursor(res.next_cursor);
         setHasMore(res.has_more);
       }
-    } catch {
-      // Keep existing items, just stop spinner
+    } catch (error) {
+      if (request === generation.current) setError(error instanceof Error ? error.message : 'Unable to load more connections.');
     } finally {
       setIsLoadingMore(false);
     }
@@ -177,6 +183,16 @@ export function FollowListModal({
             <>
               <ul className="space-y-1.5" role="list">
                 {items.map((traveler) => {
+                  if (traveler.is_unavailable) return (
+                    <li key={traveler.id} className="flex items-center justify-between gap-3 p-3 text-sm">
+                      <span>Unavailable traveler</span>
+                      {ownerView && type === 'following' && <button className="min-h-[44px] px-3" onClick={async () => {
+                        const result = await unfollowUser(traveler.id);
+                        if (result.success) await loadInitial();
+                        else setError(result.error?.message || 'Unable to remove connection.');
+                      }}>Unfollow</button>}
+                    </li>
+                  );
                   const initials = traveler.display_name
                     .split(' ')
                     .filter(Boolean)

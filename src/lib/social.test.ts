@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { api } from './api';
+import { fetchTravelerList } from './social';
 import {
   fetchPublicUserProfile,
   getServerApiBaseUrl,
@@ -94,6 +96,19 @@ describe('Public User Profile & Social Graph Client (web_app)', () => {
   });
 
   describe('Social Client Functions (social.ts)', () => {
+    it('uses authenticated owner routes instead of public routes', async () => {
+      const get = vi.spyOn(api, 'get').mockResolvedValue({ data: { success: true, data: { items: [], next_cursor: null, has_more: false } } });
+      await fetchTravelerList('private-user', 'followers', true);
+      expect(get.mock.calls[0][0]).toBe('/users/me/followers');
+      await fetchTravelerList('private-user', 'following', true);
+      expect(get.mock.calls[1][0]).toBe('/users/me/following');
+      await fetchTravelerList('public-user', 'following', false);
+      expect(get.mock.calls[2][0]).toBe('/users/public-user/following');
+    });
+    it('distinguishes expired login from empty connections', async () => {
+      vi.spyOn(api, 'get').mockRejectedValue({ response: { status: 401 } });
+      await expect(fetchTravelerList('owner', 'followers', true)).rejects.toThrow('sign in again');
+    });
     it('fetchPublicTravelers handles error gracefully', async () => {
       const travelers = await fetchPublicTravelers();
       expect(Array.isArray(travelers)).toBe(true);

@@ -461,6 +461,7 @@ export default function ProfilePage() {
             userId={profileData.id}
             userName={profileData.display_name}
             type={followModalType}
+            ownerView
           />
         )}
       </ErrorBoundary>

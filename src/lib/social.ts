@@ -26,6 +26,23 @@ export interface FollowPageResult {
   has_more: boolean;
 }
 
+/** Owner scope is authorized by the server token, never by a supplied user ID. */
+export async function fetchTravelerList(userId: string, type: 'followers' | 'following', ownerView: boolean, cursor?: string): Promise<FollowPageResult> {
+  const path = ownerView ? `/users/me/${type}` : `/users/${encodeURIComponent(userId)}/${type}`;
+  try {
+    const res = await api.get(path, { params: { limit: 20, ...(cursor ? { cursor } : {}) }, timeout: 10000 });
+    const data = res.data?.data;
+    if (!res.data?.success || !Array.isArray(data?.items)) throw new Error('Invalid traveler list response. Please retry.');
+    return data;
+  } catch (error) {
+    const status = (error as { response?: { status?: number } }).response?.status;
+    if (status === 401) throw new Error('Please sign in again to view your connections.');
+    if (status === 404) throw new Error('This profile is private or no longer available.');
+    if (status === 429) throw new Error('Too many requests. Please wait a moment and retry.');
+    throw new Error('Unable to load connections. Please check your connection and retry.');
+  }
+}
+
 export interface AuthenticatedUserProfile {
   id: string;
   display_name: string;
