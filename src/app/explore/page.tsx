@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Compass,
@@ -23,9 +23,8 @@ import {
   Clock
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { api, normalizeSpot, SpotModel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { fetchWithCache, normalizeQueryKey } from '@/lib/cache';
+import { useRankedFeed } from '@/lib/use-ranked-feed';
 import { SpotCardSkeleton } from '@/components/Skeleton';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { publicTravelerProfiles, communityChoicePreview } from '@/lib/community';
@@ -33,68 +32,12 @@ import { DestinationMedia } from '@/components/DestinationMedia';
 
 export default function ExplorePage() {
   const { user } = useAuth();
-  const [spots, setSpots] = useState<SpotModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const { spots, loading, loadingMore, error, hasMore, expired, sentinelRef, feedRef, loadSpots, handleLoadMore } = useRankedFeed(user?.id || 'guest');
   const [likes, setLikes] = useState<Record<string, { isLiked: boolean }>>({});
   const [openTips, setOpenTips] = useState<Record<string, boolean>>({});
   const [userTips, setUserTips] = useState<Record<string, string[]>>({});
   const [tipInput, setTipInput] = useState<Record<string, string>>({});
-  const [visibleCount, setVisibleCount] = useState(10);
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
-
-  const loadSpots = useCallback(
-    async (forceRefresh = false) => {
-      setLoading(true);
-      setError('');
-      try {
-        const cacheKey = 'ranked_spots_feed';
-
-        const { data: feedResult } = await fetchWithCache(
-          cacheKey,
-          async () => {
-            try {
-              const res = await api.get('/feed');
-              if (res.data?.success && res.data?.data?.items) {
-                const normalizedItems = (res.data.data.items as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
-                return {
-                  items: normalizedItems,
-                  cursor: (res.data.data.cursor as string | null) || null,
-                  hasMore: Boolean(res.data.data.has_more),
-                };
-              }
-            } catch {
-              // Fallback to /spots if /feed unavailable
-            }
-            const fallbackRes = await api.get('/spots');
-            const fallbackItems = (fallbackRes.data.data as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
-            return {
-              items: fallbackItems,
-              cursor: null,
-              hasMore: false,
-            };
-          },
-          { ttlMs: 120_000, forceRefresh }
-        );
-
-        setSpots(feedResult.items);
-        setCursor(feedResult.cursor);
-        setHasMore(feedResult.hasMore);
-      } catch {
-        setError('Could not load destination community feed. Please check your connection.');
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    loadSpots();
-  }, [loadSpots]);
 
   const handleToggleLike = (spotId: string) => {
     setLikes((prev) => {
@@ -128,30 +71,7 @@ export default function ExplorePage() {
 
   const savedSpotHighlights = spots.filter((s) => savedLibrary.spots.includes(s.id)).slice(0, 3);
 
-  const handleLoadMore = async () => {
-    if (visibleCount < spots.length) {
-      setVisibleCount((prev) => prev + 10);
-      return;
-    }
-    if (!cursor || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const res = await api.get('/feed', { params: { cursor } });
-      if (res.data?.success && res.data?.data?.items) {
-        const newItems = (res.data.data.items as Parameters<typeof normalizeSpot>[0][]).map(normalizeSpot);
-        setSpots((prev) => [...prev, ...newItems]);
-        setCursor(res.data.data.cursor || null);
-        setHasMore(Boolean(res.data.data.has_more));
-        setVisibleCount((prev) => prev + newItems.length);
-      }
-    } catch {
-      // Keep existing
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const visibleSpots = spots.slice(0, visibleCount);
+  const visibleSpots = spots;
 
   // Spotlight recommendations (distinct from top hero to avoid repetition)
   const topHeroSpot = spots[0] || null;
@@ -168,6 +88,7 @@ export default function ExplorePage() {
           <div
             role="region"
             aria-label="Destination feed"
+            ref={feedRef}
             tabIndex={0}
             className="order-1 lg:order-2 explore-scroll space-y-4 min-w-0"
           >
@@ -216,7 +137,7 @@ export default function ExplorePage() {
                 <p className="text-xs text-[#BC4749] font-bold">{error}</p>
                 <button
                   type="button"
-                  onClick={() => loadSpots(true)}
+                      onClick={() => loadSpots()}
                   className="px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
                 >
                   Retry Loading
@@ -229,7 +150,7 @@ export default function ExplorePage() {
                 <p className="text-xs text-[#837560]">The community feed could not find active destinations.</p>
                 <button
                   type="button"
-                  onClick={() => loadSpots(true)}
+                      onClick={() => loadSpots()}
                   className="px-4 py-2 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-bold text-[#582F0E] hover:bg-white transition cursor-pointer"
                 >
                   Refresh feed
@@ -273,8 +194,17 @@ export default function ExplorePage() {
                             Shared by <strong className="text-[#582F0E]">{spot.sourceName}</strong>
                           </span>
 
-                          {/* Provenance Badge & Server Recommendation Reason */}
+                          {/* Provenance Badge, Server Recommendation Reason & Quest */}
                           <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                            {spot.questId && (
+                              <Link
+                                href={`/quests/${spot.questId}`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFFBEB] text-[#92400E] font-bold text-[9px] border border-[#FDE68A] hover:bg-[#FEF3C7] transition"
+                              >
+                                <Trophy className="w-2.5 h-2.5 text-[#D97706]" />
+                                <span>Quest available</span>
+                              </Link>
+                            )}
                             {spot.recommendationReasons && spot.recommendationReasons.length > 0 && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-[#7D5800] font-bold text-[9px] border border-amber-200">
                                 <Sparkles className="w-2.5 h-2.5 text-[#FFB703]" />
@@ -320,23 +250,18 @@ export default function ExplorePage() {
                         </p>
                       </div>
 
-                      {/* Resilient Edge-to-Edge Destination Media Container */}
-                      <div className="relative w-full border-y border-[#E3DFD5]">
+                      {/* Missing or failed media collapses into a text-only post. */}
                         <DestinationMedia
+                          key={spot.imageUrl || 'no-media'}
                           src={spot.imageUrl}
                           alt={spot.name}
                           destinationName={spot.name}
                           municipality={spot.municipality}
                           priority={index === 0}
                           aspectRatio="card"
+                          hideUnavailable
+                          className="border-y border-[#E3DFD5]"
                         />
-                        {spot.questId && (
-                          <div className="absolute top-3 right-3 bg-[#FFB703] text-[#582F0E] px-2.5 py-0.5 rounded-full text-[11px] font-black flex items-center gap-1 shadow-md pointer-events-none z-10">
-                            <Trophy className="w-3 h-3" />
-                            <span>Quest available</span>
-                          </div>
-                        )}
-                      </div>
 
                       {/* Interactive Engagement Action Row */}
                       <div className="px-4 py-2.5 sm:px-5 sm:py-3 bg-white flex flex-wrap items-center justify-between gap-2 border-t border-[#E8E5DE]/80">
@@ -493,10 +418,11 @@ export default function ExplorePage() {
                   );
                 })}
 
-                {/* Bounded Load More Button */}
-                {(spots.length > visibleCount || hasMore) && (
-                  <div className="pt-2 text-center">
-                    <button
+                {/* Automatically observed inside the independent feed scroll pane. */}
+                  <div ref={sentinelRef} className="pt-2 text-center" aria-live="polite">
+                    {error && <p className="text-sm text-[#BC4749] mb-2">{error}</p>}
+                    {!hasMore && !error && !loadingMore && <p className="text-sm text-[#837560] mb-2">You're caught up. Checking for new posts…</p>}
+                    {(hasMore || error || loadingMore) && <button
                       type="button"
                       onClick={handleLoadMore}
                       disabled={loadingMore}
@@ -504,10 +430,9 @@ export default function ExplorePage() {
                     >
                       {loadingMore
                         ? 'Loading more destinations...'
-                        : `Load More Destinations (${Math.min(visibleCount, spots.length)} of ${spots.length})`}
-                    </button>
+                        : expired ? 'Refresh feed' : error ? 'Try again' : 'Load more posts'}
+                    </button>}
                   </div>
-                )}
               </div>
             )}
           </div>

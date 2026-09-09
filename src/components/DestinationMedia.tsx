@@ -12,6 +12,7 @@ interface DestinationMediaProps {
   aspectRatio?: 'video' | 'card' | 'banner';
   priority?: boolean;
   className?: string;
+  hideUnavailable?: boolean;
 }
 
 export const DestinationMedia: React.FC<DestinationMediaProps> = ({
@@ -22,6 +23,7 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
   aspectRatio = 'card',
   priority = false,
   className = '',
+  hideUnavailable = false,
 }) => {
   const [loadError, setLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -48,6 +50,9 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
     [retryCount]
   );
 
+  // Compact feed cards have no reserved media area when their source is unavailable.
+  if (hideUnavailable && (!src?.trim() || loadError)) return null;
+
   // If video media is detected
   if (isVideo && src) {
     return (
@@ -58,6 +63,7 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
           playsInline
           muted
           preload="metadata"
+          onError={() => setLoadError(true)}
           className="w-full h-full object-cover"
           aria-label={alt}
         />
