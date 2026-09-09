@@ -28,6 +28,7 @@ import { Navigation } from '@/components/Navigation';
 import { fetchRoute, RouteModel, api, SpotModel, normalizeSpot } from '@/lib/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { createUserLocationPinHtml, createDestinationPinHtml, createStepPinHtml } from '@/lib/map-icons';
+import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
 
 
 function NavigateContent() {
@@ -165,13 +166,14 @@ function NavigateContent() {
       if (!mapInstanceRef.current) {
         const map = L.map(mapContainerRef.current, {
           zoomControl: false,
-          attributionControl: false,
+          attributionControl: true,
         }).setView([destination.lat, destination.lng], 12);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
+        L.tileLayer(MAP_TILE_URL, {
+          maxZoom: MAP_TILE_MAX_ZOOM,
+          attribution: MAP_TILE_ATTRIBUTION,
         }).addTo(map);
 
 

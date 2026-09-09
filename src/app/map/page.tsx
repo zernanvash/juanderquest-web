@@ -10,6 +10,7 @@ import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { createQuestPinHtml, createSpotPinHtml } from '@/lib/map-icons';
 import { useSavedLibrary } from '@/lib/saved-library';
+import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
 
 import {
   MapPin,
@@ -168,10 +169,9 @@ export default function QuestMapPage() {
 
           L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            subdomains: ['a', 'b', 'c'],
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          L.tileLayer(MAP_TILE_URL, {
+            maxZoom: MAP_TILE_MAX_ZOOM,
+            attribution: MAP_TILE_ATTRIBUTION,
           }).addTo(map);
 
           markersLayerRef.current = L.featureGroup().addTo(map);

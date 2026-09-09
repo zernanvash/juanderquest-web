@@ -17,6 +17,7 @@ import {
   Route as RouteIcon,
 } from 'lucide-react';
 import { fetchRoute, RouteModel } from '@/lib/api';
+import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
 
 interface RouteModalProps {
   isOpen: boolean;
@@ -122,11 +123,12 @@ export function RouteModal({ isOpen, onClose, destination }: RouteModalProps) {
       if (!mapInstanceRef.current) {
         const map = L.map(mapContainerRef.current, {
           zoomControl: false,
-          attributionControl: false,
+          attributionControl: true,
         }).setView([destination.lat, destination.lng], 12);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
+        L.tileLayer(MAP_TILE_URL, {
+          maxZoom: MAP_TILE_MAX_ZOOM,
+          attribution: MAP_TILE_ATTRIBUTION,
         }).addTo(map);
 
 
