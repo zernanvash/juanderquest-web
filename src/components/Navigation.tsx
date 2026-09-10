@@ -89,8 +89,15 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
   const currentPoints = user?.points ?? 0;
   const currentLevel = Math.floor(currentPoints / 50) + 1;
 
+  const isExplore = pathname === '/explore' || pathname.startsWith('/explore/');
+  const isAppWorkstation = isExplore || fullBleed;
+
   return (
-    <div className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col selection:bg-[var(--color-brand-accent)]/30 text-[var(--color-text-primary)]">
+    <div
+      className={`min-h-screen bg-[var(--color-bg-canvas)] flex flex-col selection:bg-[var(--color-brand-accent)]/30 text-[var(--color-text-primary)] ${
+        isAppWorkstation ? 'lg:h-dvh lg:max-h-dvh lg:overflow-hidden' : ''
+      }`}
+    >
       <EvaluatorBanner />
       {/* Top Global Header Bar (Sticky Top) */}
       <header className="sticky top-0 z-50 shrink-0 h-16 bg-white/95 backdrop-blur-md border-b border-[var(--color-border-default)] px-3 sm:px-5 lg:px-8 flex items-center justify-between shadow-xs gap-3">
@@ -294,9 +301,9 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
           tabIndex={-1}
           className={
             fullBleed
-              ? 'flex-none min-h-0 w-full relative h-[calc(100dvh-64px)] overflow-hidden flex flex-col focus:outline-none'
-              : pathname === '/explore'
-              ? 'w-full flex-1 min-h-0 px-2 sm:px-3 py-2 lg:flex-none lg:h-[calc(100dvh-64px)] lg:overflow-hidden focus:outline-none'
+              ? 'flex-none min-h-0 w-full relative h-[calc(100dvh-64px)] max-h-[calc(100dvh-64px)] overflow-hidden flex flex-col focus:outline-none'
+              : isExplore
+              ? 'w-full flex-1 min-h-0 px-2 sm:px-3 py-2 lg:flex-none lg:h-[calc(100dvh-64px)] lg:max-h-[calc(100dvh-64px)] lg:overflow-hidden focus:outline-none'
               : 'flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-20 lg:pb-10 focus:outline-none'
           }
         >
@@ -305,7 +312,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
       )}
 
       {/* Global Footer (Rendered on standard non-fullscreen views) */}
-      {!fullBleed && pathname !== '/explore' && <Footer />}
+      {!fullBleed && !isExplore && <Footer />}
 
       {/* Floating Bottom Navigation Bar (5 Primary Destinations) */}
       <nav

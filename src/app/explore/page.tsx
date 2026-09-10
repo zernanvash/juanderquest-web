@@ -54,6 +54,11 @@ export default function ExplorePage() {
     }).catch((error) => {
       if (mounted) { setScoutError(error.message); setLoadingScouts(false); }
     });
+
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+    }
+
     return () => {
       mounted = false;
     };
@@ -99,10 +104,10 @@ export default function ExplorePage() {
 
   return (
     <Navigation>
-      <div className="space-y-4 lg:h-full lg:min-h-0">
+      <div className="space-y-4 lg:space-y-0 lg:h-full lg:max-h-full lg:min-h-0">
         {/* Structured 3-Column Post Stream (Desktop: Left shortcuts, Center feed, Right spotlight/leaderboard)
             Mobile: Center feed leads first with order-1, shortcuts follow with order-2, right rail with order-3 */}
-        <div className="explore-columns grid grid-cols-1 gap-3 items-start lg:h-full lg:min-h-0">
+        <div className="explore-columns grid grid-cols-1 gap-3 items-start lg:items-stretch lg:h-full lg:max-h-full lg:min-h-0">
           
           {/* Main Feed Column - ORDER 1 on Mobile, ORDER 2 on Desktop */}
           <div
