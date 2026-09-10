@@ -338,21 +338,28 @@ export default function QuestMapPage() {
               {/* Filter Tabs */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-[#FAF9F5] p-1 rounded-xl border border-[#E3DFD5]">
                 {[
-                  { id: 'all', label: 'All Markers' },
-                  { id: 'saved', label: `Saved (${savedLibrary.spots.length + savedLibrary.quests.length})` },
-                  { id: 'quests', label: '🏆 Quests' },
-                  { id: 'spots', label: '📍 Spots' },
+                  { id: 'all', label: 'All Markers', badge: null },
+                  { id: 'saved', label: 'Saved', badge: savedLibrary.spots.length + savedLibrary.quests.length },
+                  { id: 'quests', label: 'Quests', badge: quests.length },
+                  { id: 'spots', label: 'Spots', badge: spots.length },
                 ].map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setFilterType(f.id as any)}
-                    className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition cursor-pointer text-center ${
+                    className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition cursor-pointer text-center flex items-center justify-center gap-1 min-h-[32px] ${
                       filterType === f.id
                         ? 'bg-[#2D6A4F] text-white shadow-xs'
                         : 'text-[#582F0E] hover:bg-white'
                     }`}
                   >
-                    {f.label}
+                    <span className="truncate">{f.label}</span>
+                    {f.badge !== null && (
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-black shrink-0 ${
+                        filterType === f.id ? 'bg-white/20 text-white' : 'bg-stone-200/80 text-[#582F0E]'
+                      }`}>
+                        {f.badge}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -446,27 +453,27 @@ export default function QuestMapPage() {
                         ? selectedItem.data.locationName
                         : selectedItem.data.address
                     )}`}
-                    className="py-2.5 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition active:scale-95"
+                    className="min-w-0 min-h-[44px] py-2.5 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition active:scale-95"
                   >
-                    <NavIcon className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>Navigate</span>
+                    <NavIcon className="w-3.5 h-3.5 text-[#FFB703] shrink-0" />
+                    <span className="truncate">Navigate</span>
                   </Link>
 
                   {selectedItem.type === 'quest' ? (
                     <Link
                       href={`/quests/${selectedItem.data.id}`}
-                      className="py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-1 transition active:scale-95"
+                      className="min-w-0 min-h-[44px] py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-1 transition active:scale-95"
                     >
-                      <span>View Quest</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <span className="truncate">View Quest</span>
+                      <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                     </Link>
                   ) : (
                     <Link
                       href={`/spots/${(selectedItem.data as SpotModel).slug}`}
-                      className="py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-1 transition active:scale-95"
+                      className="min-w-0 min-h-[44px] py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-1 transition active:scale-95"
                     >
-                      <span>View Spot</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <span className="truncate">View Spot</span>
+                      <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                     </Link>
                   )}
 

@@ -280,12 +280,11 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               <button
                 type="button"
                 onClick={scrollToContent}
-                className="group flex flex-col items-center gap-1 text-[#582F0E] hover:text-[#2D6A4F] transition cursor-pointer pt-1"
+                className="group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white font-bold text-xs shadow-lg transition active:scale-95 cursor-pointer mt-1"
+                aria-label="Scroll to spot details"
               >
-                <span className="text-[10px] font-black uppercase tracking-wider">
-                  View Spot Details
-                </span>
-                <ChevronDown className="w-4 h-4 animate-bounce text-[#582F0E]" />
+                <span className="tracking-wide">View Spot Details</span>
+                <ChevronDown className="w-4 h-4 text-[#FFB703] animate-bounce" />
               </button>
             </div>
           </section>
@@ -332,27 +331,27 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   <button
                     type="button"
                     onClick={handleToggleLike}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition active:scale-95 cursor-pointer min-h-[36px] ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition active:scale-95 cursor-pointer min-h-[44px] ${
                       isLiked
                         ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold'
                         : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-rose-300'
                     }`}
                     aria-label={isLiked ? 'Liked destination' : 'Like destination'}
                   >
-                    <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-rose-600 text-rose-600' : 'text-gray-400'}`} />
+                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-600 text-rose-600' : 'text-gray-400'}`} />
                     <span className="text-xs font-bold">{isLiked ? 'Liked' : 'Like'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleToggleSave}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition active:scale-95 cursor-pointer min-h-[36px] ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition active:scale-95 cursor-pointer min-h-[44px] ${
                       isSaved
                         ? 'bg-amber-100 border-amber-300 text-[#7D5800] font-bold'
                         : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-amber-300'
                     }`}
                   >
-                    <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
+                    <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
                     <span className="text-xs font-bold">{isSaved ? 'Saved' : 'Save'}</span>
                   </button>
                 </div>

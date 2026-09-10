@@ -5,6 +5,12 @@ import { Eye, EyeOff } from 'lucide-react';
 
 export function EvaluatorBanner() {
   const { previewStatus, isPreviewActive, togglePreview } = useAuth();
+  
+  // Do not render banner when evaluator preview is off
+  if (previewStatus === 'off') {
+    return null;
+  }
+
   const messages = {
     off: 'Evaluator preview is off. Public destinations are shown.',
     checking: 'Checking evaluator access… Public browsing remains available.',

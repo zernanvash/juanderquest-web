@@ -183,23 +183,23 @@ export default function ProfilePage() {
 
             {/* Social Followers / Following Bar */}
             {profileData && (
-              <div className="mt-4 flex items-center gap-3 text-xs pt-3 border-t border-[var(--color-border-subtle)]">
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs pt-3 border-t border-[var(--color-border-subtle)]">
                 <button
                   type="button"
                   onClick={() => setFollowModalType('followers')}
-                  className="inline-flex items-center gap-1 text-[var(--color-text-primary)] hover:text-[var(--color-brand-primary)] font-bold hover:underline transition touch-manipulation min-h-[32px]"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200/70 text-[var(--color-text-primary)] hover:text-[var(--color-brand-primary)] font-bold transition touch-manipulation min-h-[44px] cursor-pointer active:scale-95"
                 >
-                  <Users className="h-3.5 w-3.5 text-[var(--color-brand-primary)]" />
+                  <Users className="h-4 w-4 text-[var(--color-brand-primary)]" />
                   <span className="text-[var(--color-brand-primary)]">{profileData.follower_count}</span>
                   <span className="text-[var(--color-text-muted)]">Followers</span>
                 </button>
-                <span className="text-[var(--color-border-default)]">·</span>
+
                 <button
                   type="button"
                   onClick={() => setFollowModalType('following')}
-                  className="inline-flex items-center gap-1 text-[var(--color-text-primary)] hover:text-[var(--color-brand-primary)] font-bold hover:underline transition touch-manipulation min-h-[32px]"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200/70 text-[var(--color-text-primary)] hover:text-[var(--color-brand-primary)] font-bold transition touch-manipulation min-h-[44px] cursor-pointer active:scale-95"
                 >
-                  <UserCheck className="h-3.5 w-3.5 text-[var(--color-brand-primary)]" />
+                  <UserCheck className="h-4 w-4 text-[var(--color-brand-primary)]" />
                   <span className="text-[var(--color-brand-primary)]">{profileData.following_count}</span>
                   <span className="text-[var(--color-text-muted)]">Following</span>
                 </button>

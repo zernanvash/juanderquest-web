@@ -161,7 +161,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               </button>
             ) : (
               <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-                <div className="relative flex items-center w-72 lg:w-96 xl:w-[28rem] transition-all duration-300 ease-out">
+                <div className="relative flex items-center w-60 lg:w-80 xl:w-96 transition-all duration-300 ease-out">
                   <Search className="w-4 h-4 text-[#2D6A4F] absolute left-3.5 pointer-events-none" />
                   <input
                     ref={searchInputRef}

@@ -332,8 +332,9 @@ function NavigateContent() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsControlsCollapsed(!isControlsCollapsed)}
-                className="p-1.5 rounded-lg bg-stone-50 hover:bg-stone-100 text-stone-600 transition cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-stone-50 hover:bg-stone-100 text-stone-600 transition cursor-pointer flex items-center justify-center active:scale-95"
                 title={isControlsCollapsed ? 'Expand Controls' : 'Collapse Controls'}
+                aria-label={isControlsCollapsed ? 'Expand Controls' : 'Collapse Controls'}
               >
                 {isControlsCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
               </button>
@@ -377,7 +378,7 @@ function NavigateContent() {
                   { id: 'auto', label: 'Driving', icon: Car },
                   { id: 'motorcycle', label: 'Moto', icon: RouteIcon },
                   { id: 'bicycle', label: 'Bike', icon: Bike },
-                  { id: 'pedestrian', label: 'Eco-Trail', icon: Footprints },
+                  { id: 'pedestrian', label: 'Walk', icon: Footprints, title: 'Eco-Trail / Walking' },
                 ].map((m) => {
                   const Icon = m.icon;
                   const active = costing === m.id;
@@ -385,6 +386,7 @@ function NavigateContent() {
                     <button
                       key={m.id}
                       onClick={() => setCosting(m.id as any)}
+                      title={m.title || m.label}
                       className={`py-1.5 px-1 rounded-lg text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition cursor-pointer active:scale-95 ${
                         active
                           ? 'bg-[#2D6A4F] text-white shadow-xs'
