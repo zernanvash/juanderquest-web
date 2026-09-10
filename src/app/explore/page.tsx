@@ -132,7 +132,7 @@ export default function ExplorePage() {
             {/* Feed Status Header */}
             <div className="flex items-center justify-between text-xs px-1">
               <div className="space-y-0.5">
-                <span className="font-serif font-bold text-[var(--color-brand-brown)]">
+                <span className="font-bold text-[var(--color-brand-brown)]">
                   {loading && spots.length === 0 ? 'Refreshing feed...' : 'Community Feed'}
                 </span>
                 <p className="text-[10px] text-[var(--color-text-muted)]">
@@ -243,7 +243,7 @@ export default function ExplorePage() {
                         {/* Title */}
                         <Link href={`/spots/${spot.slug}`} className="block group">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-base sm:text-lg font-bold font-serif text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition leading-snug">
+                            <h2 className="text-base sm:text-lg font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition leading-snug">
                               {spot.name}
                             </h2>
                             {spot.isTest && (
@@ -705,7 +705,7 @@ export default function ExplorePage() {
                     Spotlight Destination
                   </span>
                   <div>
-                    <h2 className="font-serif text-base font-black leading-snug text-[#582F0E]">
+                    <h2 className="text-base font-black leading-snug text-[#582F0E]">
                       {spotlightSpot.name}
                     </h2>
                     <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-[#2D6A4F]">

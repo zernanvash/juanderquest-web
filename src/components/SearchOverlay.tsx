@@ -292,7 +292,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                 <Search className="h-6 w-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-serif text-base font-bold text-[#2C221E]">
+                <h3 className="text-base font-bold text-[#2C221E]">
                   Search places, people or quests
                 </h3>
                 <p className="text-xs text-[#837560] max-w-sm mx-auto">
@@ -330,7 +330,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-[#837560]">
                 <Compass className="h-6 w-6" />
               </div>
-              <p className="font-serif text-sm font-bold text-[#2C221E]">
+              <p className="text-sm font-bold text-[#2C221E]">
                 No matches found for &ldquo;{normalized}&rdquo;
               </p>
               <p className="text-xs text-[#837560] max-w-xs mx-auto">

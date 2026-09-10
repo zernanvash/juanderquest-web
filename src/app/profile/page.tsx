@@ -154,7 +154,7 @@ export default function ProfilePage() {
               {user ? user.displayName.charAt(0).toUpperCase() : 'J'}
             </div>
 
-            <h1 className="text-2xl font-extrabold font-serif text-[var(--color-brand-brown)]">
+            <h1 className="text-2xl font-black text-[var(--color-brand-brown)] tracking-tight">
               {profileData?.display_name || user?.displayName || 'Traveler'}
             </h1>
             <p className="text-xs text-[var(--color-text-secondary)] mt-1">{user?.email}</p>
@@ -211,7 +211,7 @@ export default function ProfilePage() {
           <section className="theme-card p-6 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[var(--color-border-subtle)] gap-2">
               <div>
-                <h2 className="text-lg font-serif font-black text-[var(--color-brand-brown)]">
+                <h2 className="text-lg font-black text-[var(--color-brand-brown)]">
                   Public Profile & Discovery Settings
                 </h2>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
@@ -416,7 +416,7 @@ export default function ProfilePage() {
           {/* Explorer Badges — unlocked only by real approved submissions */}
           <div className="theme-card p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold font-serif text-[var(--color-brand-brown)]">Explorer Achievement Badges</h3>
+              <h3 className="text-base font-black text-[var(--color-brand-brown)]">Explorer Achievement Badges</h3>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]">
                 UNLOCKED VIA APPROVED QUESTS
               </span>

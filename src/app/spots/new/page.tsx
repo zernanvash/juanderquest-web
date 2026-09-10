@@ -298,7 +298,7 @@ export default function NewSpotPage() {
               <Sparkles className="w-4 h-4" />
               <span>Contribute a Spot</span>
             </div>
-            <h1 className="text-2xl md:text-4xl font-black font-serif">Add a Pangasinan Destination</h1>
+            <h1 className="text-2xl md:text-4xl font-black">Add a Pangasinan Destination</h1>
             <p className="text-xs md:text-sm text-emerald-50">
               Share local beaches, food spots, cultural sites, and eco-trails. Upload a real photo to help travelers discover authentic local places.
             </p>

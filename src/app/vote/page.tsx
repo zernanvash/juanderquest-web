@@ -182,7 +182,7 @@ export default function VotePage() {
                     mJDQ Governance
                   </span>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black font-serif text-[var(--color-brand-brown)]">
+                <h1 className="text-2xl md:text-3xl font-black text-[var(--color-brand-brown)] tracking-tight">
                   Community Tourism Proposals
                 </h1>
                 <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-2xl leading-relaxed">
@@ -221,7 +221,7 @@ export default function VotePage() {
               <div className="flex items-center justify-between border-b border-[#E8DCB8] pb-4">
                 <div className="flex items-center gap-2">
                   <Landmark className="w-5 h-5 text-[#2D6A4F]" />
-                  <h2 className="font-serif font-black text-lg text-[#582F0E]">
+                  <h2 className="font-black text-lg text-[#582F0E]">
                     Submit a Destination Proposal to the DAO
                   </h2>
                 </div>
@@ -325,7 +325,7 @@ export default function VotePage() {
           {/* Proposals Grid Layout (Full 12 Columns / Multi-Column Cards) */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black font-serif text-[#582F0E]">
+              <h2 className="text-lg font-black text-[#582F0E]">
                 Active Voting Proposals ({proposals.length})
               </h2>
               <span className="text-xs font-bold text-gray-500">Live Quad-Weighted Voting</span>
@@ -375,7 +375,7 @@ export default function VotePage() {
                         </div>
 
                         <div className="space-y-1">
-                          <h3 className="text-base font-black font-serif text-[#582F0E]">{prop.title}</h3>
+                          <h3 className="text-base font-black text-[#582F0E]">{prop.title}</h3>
                           <p className="text-xs text-[#2D6A4F] font-bold">{prop.locationName}</p>
                         </div>
 

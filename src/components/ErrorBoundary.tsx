@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 mx-auto flex items-center justify-center">
             <AlertTriangle className="w-6 h-6" />
           </div>
-          <h3 className="font-serif font-black text-base text-[#582F0E]">
+          <h3 className="font-black text-base text-[#582F0E]">
             {this.props.fallbackTitle || 'Something went wrong while rendering this section'}
           </h3>
           <p className="text-xs text-[#837560] leading-relaxed">

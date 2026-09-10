@@ -100,7 +100,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
             <div className="w-10 h-10 rounded-xl bg-white border border-[var(--color-border-default)] p-1.5 flex items-center justify-center shadow-xs group-hover:border-[var(--color-brand-primary)]/60 transition-colors duration-200">
               <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
             </div>
-            <span className="hidden sm:inline font-serif font-black text-sm text-[var(--color-brand-brown)] tracking-tight">
+            <span className="hidden sm:inline font-black text-sm text-[var(--color-brand-brown)] tracking-tight">
               JuanDerQuest
             </span>
           </Link>
@@ -371,7 +371,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border-default)] mb-5">
                 <div className="flex items-center gap-2">
                   <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
-                  <span className="font-serif font-black text-base text-[var(--color-brand-brown)]">JuanDerQuest</span>
+                  <span className="font-black text-base text-[var(--color-brand-brown)]">JuanDerQuest</span>
                 </div>
                 <button
                   type="button"

@@ -48,7 +48,7 @@ export default function HistoryPage() {
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-extrabold font-serif text-[var(--color-brand-brown)]">Submissions &amp; Proof History</h1>
+              <h1 className="text-2xl font-extrabold text-[var(--color-brand-brown)]">Submissions &amp; Proof History</h1>
               <p className="text-xs text-[var(--color-text-secondary)]">Track status of submitted AR quest proof verifications.</p>
             </div>
             <button
@@ -106,7 +106,7 @@ export default function HistoryPage() {
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold font-serif text-[var(--color-brand-brown)]">
+                    <h3 className="text-base font-bold text-[var(--color-brand-brown)]">
                       {sub.questTitle}
                     </h3>
 

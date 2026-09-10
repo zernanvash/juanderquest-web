@@ -22,7 +22,7 @@ export default async function PublicTravelerPage({ params }: { params: Promise<{
           <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-amber-100 text-[#B45309]">
             <AlertCircle className="h-7 w-7" />
           </div>
-          <h1 className="font-serif text-2xl font-black text-[#2C221E]">
+          <h1 className="text-2xl font-black text-[#2C221E]">
             Profile Temporarily Unavailable
           </h1>
           <p className="text-xs text-[#514532]">

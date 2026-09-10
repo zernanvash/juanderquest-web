@@ -191,7 +191,7 @@ export function FollowButton({
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-[#B45309]">
                 <ShieldAlert className="h-5 w-5" />
               </div>
-              <h3 id="private-modal-title" className="font-serif text-base font-black text-[#2C221E]">
+              <h3 id="private-modal-title" className="text-base font-black text-[#2C221E]">
                 Public Profile Required
               </h3>
             </div>

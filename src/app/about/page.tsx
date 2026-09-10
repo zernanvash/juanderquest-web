@@ -72,7 +72,7 @@ export default function AboutPage() {
             <span>Academic Capstone Research</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold font-serif tracking-tight text-[var(--color-brand-brown)]">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--color-brand-brown)]">
             JuanDerQuest: Gamified Tourism for Pangasinan
           </h1>
 
@@ -107,7 +107,7 @@ export default function AboutPage() {
         <div className="theme-card p-6 sm:p-8 space-y-4">
           <div className="flex items-center gap-2">
             <HeartHandshake className="w-5 h-5 text-[var(--color-brand-primary)]" />
-            <h2 className="text-base font-bold font-serif text-[var(--color-brand-brown)]">The Tri-Party Tourism Flywheel</h2>
+            <h2 className="text-base font-bold text-[var(--color-brand-brown)]">The Tri-Party Tourism Flywheel</h2>
           </div>
 
           <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
@@ -142,7 +142,7 @@ export default function AboutPage() {
         <div className="theme-card p-6 sm:p-8 space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-3">
             <div>
-              <h2 className="text-base font-bold font-serif text-[var(--color-brand-brown)]">Authors & Research Team</h2>
+              <h2 className="text-base font-bold text-[var(--color-brand-brown)]">Authors & Research Team</h2>
               <span className="text-xs text-[var(--color-text-muted)]">School of Information Technology Education, Universidad de Dagupan</span>
             </div>
             <span className="text-[10px] font-bold text-[var(--color-brand-primary)] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded">

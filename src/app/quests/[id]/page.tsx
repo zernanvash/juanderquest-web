@@ -208,7 +208,7 @@ export default function QuestDetailPage() {
                   </div>
 
                   <div className="absolute bottom-6 left-6 right-6 text-white space-y-1.5">
-                    <h1 className="text-2xl sm:text-3xl font-black font-serif drop-shadow-md">{quest.title}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-black drop-shadow-md">{quest.title}</h1>
                     <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-200 font-bold">
                       <MapPin className="w-4 h-4 text-[#48C71D]" />
                       <span>{quest.locationName}</span>

@@ -65,7 +65,7 @@ export default function SavedLibraryPage() {
                   Private Browser Storage
                 </span>
               </div>
-              <h1 className="font-serif text-2xl sm:text-3xl font-black text-[#2C221E] tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#2C221E] tracking-tight">
                 Saved Places &amp; Quests
               </h1>
               <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
@@ -168,7 +168,7 @@ export default function SavedLibraryPage() {
               <Bookmark className="h-8 w-8 text-[#B45309]" />
             </div>
             <div className="max-w-md mx-auto space-y-1.5">
-              <h2 className="font-serif text-lg font-black text-[#582F0E]">
+              <h2 className="text-lg font-black text-[#582F0E]">
                 No saved {tab === 'spots' ? 'destinations' : 'quests'} yet
               </h2>
               <p className="text-xs text-[#837560] leading-relaxed">
@@ -220,7 +220,7 @@ export default function SavedLibraryPage() {
                           <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                             {spot.category.replace('_', ' ')}
                           </p>
-                          <h2 className="font-serif text-base sm:text-lg font-black leading-snug drop-shadow-xs">
+                          <h2 className="text-base sm:text-lg font-black leading-snug drop-shadow-xs">
                             {spot.name}
                           </h2>
                         </div>
@@ -230,7 +230,7 @@ export default function SavedLibraryPage() {
                         <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-[#2D6A4F]">
                           {spot.municipality}
                         </span>
-                        <h2 className="font-serif text-lg font-black text-[#582F0E] mt-2">
+                        <h2 className="text-lg font-black text-[#582F0E] mt-2">
                           {spot.name}
                         </h2>
                       </div>
@@ -295,7 +295,7 @@ export default function SavedLibraryPage() {
                         <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-[#2D6A4F] border border-emerald-200/80">
                           {quest.category.replace('_', ' ')}
                         </span>
-                        <h2 className="font-serif text-base sm:text-lg font-black text-[#582F0E] mt-2 leading-snug">
+                        <h2 className="text-base sm:text-lg font-black text-[#582F0E] mt-2 leading-snug">
                           {quest.title}
                         </h2>
                       </div>

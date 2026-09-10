@@ -39,7 +39,7 @@ export default function CommunityChoiceLeaderboardPage() {
                   Equal-Weight Balloting
                 </span>
               </div>
-              <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-black text-[#2C221E] tracking-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#2C221E] tracking-tight">
                 Destination Leaderboard
               </h1>
               <p className="text-xs sm:text-sm leading-relaxed text-[#514532]">
@@ -103,7 +103,7 @@ export default function CommunityChoiceLeaderboardPage() {
         {/* Top 3 Podium Cards */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="font-serif text-base font-black text-[#582F0E] flex items-center gap-2">
+            <h2 className="text-base font-black text-[#582F0E] flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#FFB703]" />
               <span>Current Podium Standings</span>
             </h2>
@@ -136,7 +136,7 @@ export default function CommunityChoiceLeaderboardPage() {
                     </div>
 
                     <div>
-                      <h3 className="font-serif text-base font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                      <h3 className="text-base font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition">
                         {entry.name}
                       </h3>
                       <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#2D6A4F]">
@@ -179,7 +179,7 @@ export default function CommunityChoiceLeaderboardPage() {
         <section className="overflow-hidden rounded-2xl border border-[#E3DFD5] bg-white shadow-xs">
           <div className="border-b border-[#E8E5DE] px-5 py-4 flex items-center justify-between">
             <div>
-              <h2 className="font-serif text-base font-black text-[#582F0E]">Full Leaderboard Standings</h2>
+              <h2 className="text-base font-black text-[#582F0E]">Full Leaderboard Standings</h2>
               <p className="text-[11px] text-[#837560]">Ranked by total verified community ballots</p>
             </div>
             <span className="rounded-md bg-stone-100 px-2.5 py-1 text-[10px] font-bold text-[#582F0E]">

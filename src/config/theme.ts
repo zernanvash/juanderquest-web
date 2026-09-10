@@ -156,7 +156,7 @@ export const PANGASINAN_EMERALD_THEME: ThemeConfig = {
     },
   },
   typography: {
-    fontHeading: "'Epilogue', Georgia, serif",
+    fontHeading: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     fontBody: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     fontMono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   },

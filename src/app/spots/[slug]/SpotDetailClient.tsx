@@ -242,7 +242,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black font-serif drop-shadow-2xl tracking-tight text-white">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black drop-shadow-2xl tracking-tight text-white">
                 {spot.name}
               </h1>
 
@@ -397,7 +397,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   <span className="text-xs text-[#837560]">•</span>
                   <span className="text-xs text-[#837560]">Source: {spot.sourceName}</span>
                 </div>
-                <h2 className="font-serif text-xl sm:text-2xl font-black text-[#582F0E]">
+                <h2 className="text-xl sm:text-2xl font-black text-[#582F0E]">
                   About {spot.name}
                 </h2>
                 <p className="text-sm text-[#514532] leading-relaxed whitespace-pre-line">
@@ -459,7 +459,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               <div className="bg-white p-6 rounded-2xl border border-[#E3DFD5] space-y-4 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <h3 className="font-serif text-base font-bold text-[#582F0E]">
+                    <h3 className="text-base font-bold text-[#582F0E]">
                       Quieter Alternative Destinations
                     </h3>
                     <p className="text-xs text-[#837560]">
@@ -488,7 +488,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         />
                       </div>
                       <div className="min-w-0 flex-1 space-y-1">
-                        <h4 className="font-serif text-xs font-bold text-[#582F0E] group-hover:text-[#2D6A4F] transition truncate">
+                        <h4 className="text-xs font-bold text-[#582F0E] group-hover:text-[#2D6A4F] transition truncate">
                           {alt.name}
                         </h4>
                         <p className="text-[11px] text-[#7D5800]">{alt.municipality}</p>
@@ -503,7 +503,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             {/* ROW 4: TRAVELER TIPS */}
             <div id="community-forum-row" className="bg-white p-6 rounded-2xl border border-[#E3DFD5] space-y-4 shadow-xs">
               <div className="flex items-center justify-between">
-                <h3 className="font-serif text-base font-bold text-[#582F0E] flex items-center gap-2">
+                <h3 className="text-base font-bold text-[#582F0E] flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-[#2D6A4F]" />
                   <span>Traveler Tips &amp; On-Site Advice</span>
                 </h3>

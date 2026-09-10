@@ -131,7 +131,7 @@ export function FollowListModal({
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-[#2D6A4F]">
               {type === 'followers' ? <Users className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
             </div>
-            <h2 id="follow-modal-title" className="font-serif text-base font-black text-[#2C221E] truncate max-w-[220px] sm:max-w-[280px]">
+            <h2 id="follow-modal-title" className="text-base font-black text-[#2C221E] truncate max-w-[220px] sm:max-w-[280px]">
               {title}
             </h2>
           </div>

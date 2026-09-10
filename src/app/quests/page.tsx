@@ -170,7 +170,7 @@ function QuestsContent() {
                   <Sparkles className="w-3.5 h-3.5 text-[var(--color-brand-accent)]" />
                   <span>Gamified Tourism &amp; Bounties Engine</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-brand-brown)] font-serif">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--color-brand-brown)]">
                   Pangasinan Quest Trails &amp; Campaigns
                 </h1>
                 <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">

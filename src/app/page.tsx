@@ -27,11 +27,11 @@ export default function RootPage() {
                 <span>Pangasinan Tourism &amp; Heritage Platform</span>
               </div>
 
-              <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-black text-[var(--color-brand-brown)] tracking-tight leading-[1.15]">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[var(--color-brand-brown)] tracking-tight leading-[1.15]">
                 Find your next Pangasinan adventure—and build a travel passport worth sharing.
               </h1>
 
-              <p className="text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-2xl">
+              <p className="text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-2xl font-normal">
                 Explore secluded beaches, historic heritage shrines, and family-run food stops across 44 Pangasinan municipalities. Browse instantly on the web or unlock AR quests on Android.
               </p>
 
@@ -89,7 +89,7 @@ export default function RootPage() {
                     <span className="inline-block px-2 py-0.5 rounded bg-[var(--color-brand-accent)] text-[var(--color-brand-brown)] text-[10px] font-black uppercase tracking-wider mb-1">
                       Featured Circuit
                     </span>
-                    <h2 className="font-serif text-lg font-bold drop-shadow-sm">
+                    <h2 className="text-lg font-extrabold drop-shadow-sm">
                       Western Pangasinan Coastal Trail
                     </h2>
                     <p className="text-[11px] text-white/90">
@@ -141,7 +141,7 @@ export default function RootPage() {
               <span className="text-xs font-black uppercase tracking-wider text-[var(--color-brand-primary)]">
                 How JuanDerQuest Works
               </span>
-              <h2 className="font-serif text-2xl sm:text-4xl font-black text-[var(--color-brand-brown)]">
+              <h2 className="text-2xl sm:text-4xl font-black text-[var(--color-brand-brown)] tracking-tight">
                 From first browse to verified traveler passport.
               </h2>
               <p className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-relaxed">
@@ -157,7 +157,7 @@ export default function RootPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-black text-[var(--color-brand-primary)] uppercase tracking-wider">Step 1</span>
-                  <h3 className="font-serif font-black text-lg text-[var(--color-brand-brown)]">Discover</h3>
+                  <h3 className="font-black text-lg text-[var(--color-brand-brown)]">Discover</h3>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                   Browse authentic spots shared by locals—from serene tidal pools to heritage basilicas and seafood shacks.
@@ -171,7 +171,7 @@ export default function RootPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-black text-[var(--color-brand-accent-dark)] uppercase tracking-wider">Step 2</span>
-                  <h3 className="font-serif font-black text-lg text-[var(--color-brand-brown)]">Save on Device</h3>
+                  <h3 className="font-black text-lg text-[var(--color-brand-brown)]">Save on Device</h3>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                   Bookmark favorite destinations to your private travel logbook without needing to register or link a wallet.
@@ -185,7 +185,7 @@ export default function RootPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-black text-blue-700 uppercase tracking-wider">Step 3</span>
-                  <h3 className="font-serif font-black text-lg text-[var(--color-brand-brown)]">Visit &amp; Navigate</h3>
+                  <h3 className="font-black text-lg text-[var(--color-brand-brown)]">Visit &amp; Navigate</h3>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                   Access turn-by-turn routing and real-time crowd status to explore comfortably and avoid peak congestion.
@@ -199,7 +199,7 @@ export default function RootPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-black text-[var(--color-brand-brown)] uppercase tracking-wider">Step 4</span>
-                  <h3 className="font-serif font-black text-lg text-[var(--color-brand-brown)]">Earn &amp; Redeem</h3>
+                  <h3 className="font-black text-lg text-[var(--color-brand-brown)]">Earn &amp; Redeem</h3>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                   Complete on-site GPS check-ins to build your public explorer passport and earn demo points for local perks.

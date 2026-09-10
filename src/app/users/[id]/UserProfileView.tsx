@@ -106,7 +106,7 @@ export function UserProfileView({ profile }: UserProfileViewProps) {
 
               <div className="min-w-0 pb-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-serif text-2xl sm:text-3xl font-black text-[#2C221E] tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#2C221E] tracking-tight">
                     {profile.display_name}
                   </h1>
                   <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-[#2D6A4F] border border-emerald-200">

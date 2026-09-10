@@ -318,7 +318,7 @@ export default function QuestMapPage() {
                     <MapPin className="w-4 h-4 text-[#FFB703]" />
                   </div>
                   <div>
-                    <h1 className="text-xs sm:text-sm font-black text-[#582F0E] leading-tight font-serif">
+                    <h1 className="text-xs sm:text-sm font-black text-[#582F0E] leading-tight">
                       Pangasinan Tourism Map
                     </h1>
                     <span className="text-[10px] text-[#837560] font-semibold">
@@ -413,7 +413,7 @@ export default function QuestMapPage() {
 
                 {/* Body Content */}
                 <div className="space-y-1">
-                  <h2 className="text-sm sm:text-base font-bold text-[#2C221E] leading-snug line-clamp-1 font-serif">
+                  <h2 className="text-sm sm:text-base font-bold text-[#2C221E] leading-snug line-clamp-1">
                     {'title' in selectedItem.data ? selectedItem.data.title : selectedItem.data.name}
                   </h2>
                   <p className="text-xs text-[#514532] line-clamp-2 leading-relaxed">

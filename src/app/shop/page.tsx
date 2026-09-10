@@ -108,7 +108,7 @@ export default function ShopPage() {
                     Local Merchant Loot
                   </span>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black font-serif text-[var(--color-brand-brown)]">
+                <h1 className="text-2xl md:text-3xl font-black text-[var(--color-brand-brown)] tracking-tight">
                   Merchant Voucher Shop
                 </h1>
                 <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-xl leading-relaxed">
@@ -179,7 +179,7 @@ export default function ShopPage() {
           {/* Vouchers Grid Layout (Full 12 Columns / Multi-Column Cards) */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black font-serif text-[#582F0E]">
+              <h2 className="text-lg font-black text-[#582F0E]">
                 Available Local Vouchers ({vouchers.length})
               </h2>
               <span className="text-xs font-bold text-gray-500">Instant Redemption</span>
@@ -229,7 +229,7 @@ export default function ShopPage() {
                         </div>
 
                         <div className="space-y-1">
-                          <h3 className="text-base font-black font-serif text-[#582F0E]">{v.title}</h3>
+                          <h3 className="text-base font-black text-[#582F0E]">{v.title}</h3>
                           <p className="text-xs text-gray-500 font-bold">{v.merchantName}</p>
                         </div>
 

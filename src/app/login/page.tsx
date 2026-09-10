@@ -78,7 +78,7 @@ export default function LoginPage() {
           <div className="mx-auto w-14 h-14 rounded-2xl bg-[var(--color-brand-primary)] text-white grid place-items-center shadow-xs">
             <Wallet className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-black font-serif text-[var(--color-brand-brown)]">Sign in with your wallet</h1>
+          <h1 className="text-2xl font-black text-[var(--color-brand-brown)]">Sign in with your wallet</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">Your wallet proves account ownership. Signing in does not send a transaction or cost gas.</p>
         </div>
 

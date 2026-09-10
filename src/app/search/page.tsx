@@ -220,7 +220,7 @@ function SearchResultsContent() {
             <Search className="h-7 w-7" />
           </div>
           <div className="space-y-1">
-            <h2 className="font-serif text-lg sm:text-xl font-bold text-[#2C221E]">
+            <h2 className="text-lg sm:text-xl font-bold text-[#2C221E]">
               Discover Pangasinan
             </h2>
             <p className="text-xs sm:text-sm text-[#837560] max-w-md mx-auto">
@@ -247,7 +247,7 @@ function SearchResultsContent() {
         <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-center space-y-3 shadow-xs">
           <AlertCircle className="h-8 w-8 text-[#BC4749] mx-auto" />
           <div className="space-y-1">
-            <h3 className="font-serif text-base font-bold text-[#BC4749]">Search Failed</h3>
+            <h3 className="text-base font-bold text-[#BC4749]">Search Failed</h3>
             <p className="text-xs text-[#837560]">{error}</p>
           </div>
           <button
@@ -267,7 +267,7 @@ function SearchResultsContent() {
           {groups.length === 0 ? (
             <div className="rounded-3xl border border-[#E3DFD5] bg-white p-10 text-center space-y-2 shadow-xs">
               <Compass className="h-8 w-8 text-[#837560] mx-auto" />
-              <h3 className="font-serif text-base font-bold text-[#2C221E]">
+              <h3 className="text-base font-bold text-[#2C221E]">
                 No matches found for &ldquo;{normalized}&rdquo;
               </h3>
               <p className="text-xs text-[#837560] max-w-sm mx-auto">
@@ -295,7 +295,7 @@ function SearchResultsContent() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FAF9F5] text-[#2D6A4F] border border-[#E3DFD5]">
                         <GroupIcon className="h-4 w-4" />
                       </div>
-                      <h3 className="font-serif text-base font-bold text-[#2C221E]">{groupTitle}</h3>
+                      <h3 className="text-base font-bold text-[#2C221E]">{groupTitle}</h3>
                       <span className="rounded-full bg-[#FAF9F5] px-2 py-0.5 text-[10px] font-extrabold text-[#837560] border border-[#E3DFD5]">
                         {group.items.length} preview{group.items.length !== 1 ? 's' : ''}
                       </span>
@@ -432,7 +432,7 @@ function SearchResultsContent() {
           {tabItems.length === 0 ? (
             <div className="rounded-3xl border border-[#E3DFD5] bg-white p-10 text-center space-y-2 shadow-xs">
               <Compass className="h-8 w-8 text-[#837560] mx-auto" />
-              <h3 className="font-serif text-base font-bold text-[#2C221E]">
+              <h3 className="text-base font-bold text-[#2C221E]">
                 No {activeTab} matched &ldquo;{normalized}&rdquo;
               </h3>
               <p className="text-xs text-[#837560] max-w-sm mx-auto">
