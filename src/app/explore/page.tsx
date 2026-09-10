@@ -1,4 +1,5 @@
 'use client';
+import { travelerProfileHref } from '@/lib/preview';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -41,6 +42,7 @@ export default function ExplorePage() {
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
   const [scouts, setScouts] = useState<PublicTravelerSummary[]>([]);
   const [loadingScouts, setLoadingScouts] = useState(true);
+  const [scoutError, setScoutError] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -49,6 +51,8 @@ export default function ExplorePage() {
         setScouts(items);
         setLoadingScouts(false);
       }
+    }).catch((error) => {
+      if (mounted) { setScoutError(error.message); setLoadingScouts(false); }
     });
     return () => {
       mounted = false;
@@ -621,6 +625,8 @@ export default function ExplorePage() {
                 <div className="py-4 text-center">
                   <span className="text-xs text-[#837560]">Loading scouts...</span>
                 </div>
+              ) : scoutError ? (
+                <p role="alert" className="py-3 text-xs text-red-800">{scoutError}</p>
               ) : scouts.length === 0 ? (
                 <div className="py-3 text-center px-2 space-y-1">
                   <p className="text-xs font-bold text-[#582F0E]">No public scouts yet</p>
@@ -641,7 +647,7 @@ export default function ExplorePage() {
                     return (
                       <Link
                         key={profile.id}
-                        href={`/users/${encodeURIComponent(profile.id)}`}
+                        href={travelerProfileHref(profile.id)}
                         className="flex items-center justify-between gap-2.5 rounded-xl p-2.5 hover:bg-[#FAF9F5] border border-transparent hover:border-[#E3DFD5] transition group min-h-[44px]"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">

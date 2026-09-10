@@ -20,6 +20,7 @@ const memoryCache = new Map<string, CacheEntry<unknown>>();
 const inFlightRequests = new Map<string, Promise<unknown>>();
 const listeners = new Map<string, Set<CacheListener<unknown>>>();
 const MAX_CACHE_ENTRIES = 200;
+let cacheGeneration = 0;
 
 export interface CacheOptions {
   /** Time in ms that cached data is considered fresh before background revalidating (default: 60,000ms = 1 min) */
@@ -50,6 +51,7 @@ export async function fetchWithCache<T>(
   options: CacheOptions = {}
 ): Promise<{ data: T; fromCache: boolean; isStale: boolean }> {
   const { ttlMs = 60_000, forceRefresh = false } = options;
+  const generation = cacheGeneration;
   const now = Date.now();
   const cached = memoryCache.get(cacheKey) as CacheEntry<T> | undefined;
 
@@ -62,14 +64,16 @@ export async function fetchWithCache<T>(
     const revalidationPromise = (async () => {
       try {
         const freshData = await fetcher();
+        if (generation !== cacheGeneration) throw new Error('Cache scope changed');
         setCacheValue(cacheKey, freshData);
         notifySubscribers(cacheKey, freshData);
         return freshData;
       } catch (err) {
+        if (generation !== cacheGeneration) return undefined as T;
         // Retain cached data on background failure
         return cached?.data as T;
       } finally {
-        inFlightRequests.delete(cacheKey);
+        if (generation === cacheGeneration) inFlightRequests.delete(cacheKey);
       }
     })();
 
@@ -97,11 +101,12 @@ export async function fetchWithCache<T>(
   const freshPromise = (async () => {
     try {
       const result = await fetcher();
+      if (generation !== cacheGeneration) throw new Error('Cache scope changed');
       setCacheValue(cacheKey, result);
       notifySubscribers(cacheKey, result);
       return result;
     } finally {
-      inFlightRequests.delete(cacheKey);
+      if (generation === cacheGeneration) inFlightRequests.delete(cacheKey);
     }
   })();
 
@@ -128,6 +133,8 @@ export function setCacheValue<T>(cacheKey: string, data: T): void {
  */
 export function invalidateCache(keyOrPrefix?: string): void {
   if (!keyOrPrefix) {
+    cacheGeneration++;
+    inFlightRequests.clear();
     memoryCache.clear();
     return;
   }

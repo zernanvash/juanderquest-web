@@ -1,4 +1,5 @@
 'use client';
+import { travelerProfileHref } from '@/lib/preview';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
@@ -206,7 +207,7 @@ export function FollowListModal({
                       className="flex items-center justify-between gap-3 p-2.5 rounded-2xl border border-transparent hover:border-[#E3DFD5] hover:bg-[#FAF9F5] transition"
                     >
                       <Link
-                        href={`/users/${encodeURIComponent(traveler.id)}`}
+                        href={travelerProfileHref(traveler.id)}
                         onClick={onClose}
                         className="flex items-center gap-3 min-w-0 flex-1 group"
                       >

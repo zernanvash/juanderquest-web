@@ -1,4 +1,5 @@
 'use client';
+import { travelerProfileHref } from '@/lib/preview';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -66,7 +67,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
           list.push({ groupType: 'places', item: place, href: `/explore/${place.slug}` });
         } else if (group.type === 'people') {
           const person = item as PersonResultItem;
-          list.push({ groupType: 'people', item: person, href: `/users/${person.id}` });
+          list.push({ groupType: 'people', item: person, href: travelerProfileHref(person.id) });
         } else if (group.type === 'quests') {
           const quest = item as QuestResultItem;
           list.push({ groupType: 'quests', item: quest, href: `/quests/${quest.id}` });
@@ -421,7 +422,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                           return (
                             <Link
                               key={person.id}
-                              href={`/users/${person.id}`}
+                              href={travelerProfileHref(person.id)}
                               onClick={onClose}
                               className={`flex items-center gap-3 p-2.5 rounded-2xl border transition-all duration-150 ${
                                 isSelected

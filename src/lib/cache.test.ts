@@ -20,6 +20,18 @@ describe('Stale-While-Revalidate Cache & Deduplication', () => {
     expect(key1).toBe('spots?category=nature&q=beach');
   });
 
+  it('discards an in-flight preview result after scope invalidation', async () => {
+    let resolve!: (value: string[]) => void;
+    const pending = fetchWithCache('scoped', () => new Promise<string[]>((done) => { resolve = done; }));
+    const rejected = expect(pending).rejects.toThrow();
+    invalidateCache();
+    resolve(['test-traveler']);
+    await rejected;
+    expect(getCachedValue('scoped')).toBeUndefined();
+    const publicResult = await fetchWithCache('scoped', async () => ['public-traveler']);
+    expect(publicResult.data).toEqual(['public-traveler']);
+  });
+
   it('ignores empty, null, or undefined parameters in query keys', () => {
     const key = normalizeQueryKey('spots', { category: 'all', q: '', page: undefined });
     expect(key).toBe('spots?category=all');

@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { PreviewGate, PreviewStatus, setPreviewAuthorization, storedToken } from './preview';
+import { invalidateCache } from './cache';
 import { useRouter } from 'next/navigation';
 import { api, ADMIN_URL, normalizeUser, normalizeWallet, UserModel, WalletModel } from './api';
 
@@ -11,8 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   isPreviewActive: boolean;
   togglePreview: () => void;
-  previewPasskey: string | null;
-  setPreviewPasskey: (passkey: string | null) => void;
+  previewStatus: PreviewStatus;
   loginWithSeed: (seedId: string) => Promise<boolean>;
   loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<boolean>;
   loginWithWallet: (address: string, signature: string, rememberMe: boolean) => Promise<boolean>;
@@ -36,11 +37,7 @@ export const shouldStayInTravelerApp = (): boolean => {
     sessionStorage.setItem('jdq_app_view', 'true');
     return true;
   }
-  return (
-    sessionStorage.getItem('jdq_app_view') === 'true' ||
-    localStorage.getItem('jdq_qa_preview') === 'true' ||
-    sessionStorage.getItem('jdq_qa_preview') === 'true'
-  );
+  return sessionStorage.getItem('jdq_app_view') === 'true';
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,56 +46,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [wallet, setWallet] = useState<WalletModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [isPreviewActive, setIsPreviewActive] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.get('preview') === 'true') {
-        localStorage.setItem('jdq_qa_preview', 'true');
-        return true;
-      }
-      return (
-        localStorage.getItem('jdq_qa_preview') === 'true' ||
-        sessionStorage.getItem('jdq_qa_preview') === 'true'
-      );
-    }
-    return false;
+  const [previewStatus, setPreviewStatus] = useState<PreviewStatus>('off');
+  const [previewEpoch, setPreviewEpoch] = useState(0);
+  const identityRef = useRef(token);
+  identityRef.current = token;
+  const gateRef = useRef<PreviewGate | null>(null);
+  if (!gateRef.current) gateRef.current = new PreviewGate((status) => {
+    setPreviewAuthorization(status === 'active' ? identityRef.current : null);
+    invalidateCache();
+    setPreviewStatus(status);
+    setPreviewEpoch((epoch) => epoch + 1);
+    window.dispatchEvent(new Event('jdq:preview-mode-changed'));
   });
-
-  const [previewPasskey, setPreviewPasskeyState] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jdq_qa_passkey') || sessionStorage.getItem('jdq_qa_passkey');
-    }
-    return null;
+  const isPreviewActive = previewStatus === 'active';
+  const enablePreview = () => gateRef.current!.enable(identityRef.current, async () => {
+    const res = await api.get('/qa/capabilities', { timeout: 8000 });
+    return res.data?.success === true && res.data?.data?.can_preview_test_data === true;
   });
-
-  const setPreviewPasskey = (passkey: string | null) => {
-    setPreviewPasskeyState(passkey);
-    if (typeof window !== 'undefined') {
-      if (passkey) {
-        localStorage.setItem('jdq_qa_passkey', passkey);
-      } else {
-        localStorage.removeItem('jdq_qa_passkey');
-        sessionStorage.removeItem('jdq_qa_passkey');
-      }
-    }
-  };
-
   const togglePreview = () => {
-    setIsPreviewActive((prev) => {
-      const next = !prev;
-      if (typeof window !== 'undefined') {
-        if (next) {
-          localStorage.setItem('jdq_qa_preview', 'true');
-          sessionStorage.setItem('jdq_app_view', 'true');
-        } else {
-          localStorage.removeItem('jdq_qa_preview');
-          sessionStorage.removeItem('jdq_qa_preview');
-        }
-        window.dispatchEvent(new CustomEvent('jdq:preview-mode-changed', { detail: { active: next } }));
-      }
-      return next;
-    });
+    if (gateRef.current!.status === 'active' || gateRef.current!.status === 'checking') {
+      try { sessionStorage.removeItem('jdq_preview_requested'); } catch {}
+      gateRef.current!.disable();
+    } else {
+      try { sessionStorage.setItem('jdq_preview_requested', 'true'); sessionStorage.setItem('jdq_app_view', 'true'); } catch {}
+      void enablePreview();
+    }
   };
+
+  useEffect(() => {
+    try {
+      // Old preview/passkey values are not proof of authorization.
+      for (const storage of [localStorage, sessionStorage]) {
+        storage.removeItem('jdq_qa_preview');
+        storage.removeItem('jdq_qa_passkey');
+      }
+      if (new URLSearchParams(window.location.search).get('preview') === 'true') {
+        sessionStorage.setItem('jdq_preview_requested', 'true');
+        sessionStorage.setItem('jdq_app_view', 'true');
+      }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    gateRef.current!.disable();
+    try {
+      if (sessionStorage.getItem('jdq_preview_requested') === 'true') void enablePreview();
+    } catch {}
+    return () => { gateRef.current!.disable(); };
+  }, [token]);
+  useEffect(() => {
+    const rejected = (event: Event) => {
+      const status = (event as CustomEvent<number>).detail;
+      gateRef.current!.disable(status === 401 ? 'sign_in_required' : status === 403 ? 'forbidden' : 'unavailable');
+    };
+    const changedStorage = (event: StorageEvent) => {
+      if (event.key === 'jdq_token' || event.key === null) {
+        gateRef.current!.disable();
+        setUser(null);
+        setWallet(null);
+        setToken(storedToken());
+        // Restore the new tab's identity through the normal validated session path.
+        window.location.reload();
+      }
+    };
+    window.addEventListener('jdq:preview-rejected', rejected);
+    window.addEventListener('storage', changedStorage);
+    return () => { window.removeEventListener('jdq:preview-rejected', rejected); window.removeEventListener('storage', changedStorage); };
+  }, []);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
@@ -270,6 +283,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    gateRef.current!.disable();
+    sessionStorage.removeItem('jdq_preview_requested');
     setToken(null);
     setUser(null);
     setWallet(null);
@@ -288,8 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isPreviewActive,
         togglePreview,
-        previewPasskey,
-        setPreviewPasskey,
+        previewStatus,
         loginWithSeed,
         loginWithSimulatedWallet,
         loginWithWallet,
@@ -299,7 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshWallet,
       }}
     >
-      {children}
+      <React.Fragment key={previewEpoch}>{children}</React.Fragment>
     </AuthContext.Provider>
   );
 };

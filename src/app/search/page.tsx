@@ -1,4 +1,5 @@
 'use client';
+import { travelerProfileHref } from '@/lib/preview';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
@@ -349,7 +350,7 @@ function SearchResultsContent() {
                         return (
                           <Link
                             key={person.id}
-                            href={`/users/${person.id}`}
+                            href={travelerProfileHref(person.id)}
                             className="flex items-center gap-3 p-3 rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5]/40 hover:bg-white hover:border-[#2D6A4F]/60 transition-all shadow-2xs group"
                           >
                             <div className="h-14 w-14 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-[#582F0E] font-black flex items-center justify-center text-base border-2 border-white shadow-2xs">
@@ -479,7 +480,7 @@ function SearchResultsContent() {
                   return (
                     <Link
                       key={person.id}
-                      href={`/users/${person.id}`}
+                      href={travelerProfileHref(person.id)}
                       className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#E3DFD5] bg-white hover:border-[#2D6A4F]/60 transition-all shadow-xs group"
                     >
                       <div className="h-16 w-16 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-[#582F0E] font-black flex items-center justify-center text-lg border-2 border-white shadow-2xs">

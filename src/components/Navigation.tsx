@@ -434,7 +434,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                     <span>Evaluator Mode</span>
                   </div>
                   <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-800">
-                    {isPreviewActive ? 'Active (72 Fixtures)' : 'Off'}
+                    {isPreviewActive ? 'Active' : 'Off'}
                   </span>
                 </button>
               </div>

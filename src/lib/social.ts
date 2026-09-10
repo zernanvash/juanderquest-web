@@ -68,9 +68,12 @@ export async function fetchPublicTravelers(limit = 3): Promise<PublicTravelerSum
     if (res.data?.success && res.data?.data?.items) {
       return res.data.data.items as PublicTravelerSummary[];
     }
-    return [];
-  } catch {
-    return [];
+    throw new Error('Invalid traveler response. Please retry.');
+  } catch (error) {
+    const status = (error as { response?: { status?: number } }).response?.status;
+    throw new Error(status === 401 || status === 403
+      ? 'Evaluator access expired or is not authorized. Check access and retry.'
+      : 'Unable to load travelers. Please retry.');
   }
 }
 

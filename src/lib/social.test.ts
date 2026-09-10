@@ -109,9 +109,9 @@ describe('Public User Profile & Social Graph Client (web_app)', () => {
       vi.spyOn(api, 'get').mockRejectedValue({ response: { status: 401 } });
       await expect(fetchTravelerList('owner', 'followers', true)).rejects.toThrow('sign in again');
     });
-    it('fetchPublicTravelers handles error gracefully', async () => {
-      const travelers = await fetchPublicTravelers();
-      expect(Array.isArray(travelers)).toBe(true);
+    it('fetchPublicTravelers does not disguise an outage as an empty directory', async () => {
+      vi.spyOn(api, 'get').mockRejectedValue({ response: { status: 503 } });
+      await expect(fetchPublicTravelers()).rejects.toThrow('Unable to load travelers');
     });
 
     it('fetchUserRelationship handles missing user gracefully', async () => {

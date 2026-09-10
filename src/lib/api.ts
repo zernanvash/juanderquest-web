@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { previewRequestHeaders, previewGeneration, previewEnabled } from './preview';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1';
 export const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://admin.jdq.zernanvash.dev';
@@ -12,23 +13,31 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
+    if (previewEnabled() && (config.method || 'get').toLowerCase() !== 'get' && !config.url?.startsWith('/auth/')) {
+      throw new Error('Evaluator preview is read-only. Exit preview before making changes.');
+    }
     const token = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    const isPreview =
-      localStorage.getItem('jdq_qa_preview') === 'true' ||
-      sessionStorage.getItem('jdq_qa_preview') === 'true';
-    if (isPreview) {
-      config.headers['x-include-test'] = 'true';
-      const passkey =
-        localStorage.getItem('jdq_qa_passkey') || sessionStorage.getItem('jdq_qa_passkey');
-      if (passkey) {
-        config.headers['x-qa-preview-token'] = passkey;
-      }
+    if (!config.url?.includes('/qa/capabilities') && (config.method || 'get').toLowerCase() === 'get') {
+      Object.assign(config.headers, previewRequestHeaders());
     }
+    (config as typeof config & { jdqScope?: number }).jdqScope = previewGeneration();
   }
   return config;
+});
+
+api.interceptors.response.use((response) => {
+  const scope = (response.config as typeof response.config & { jdqScope?: number }).jdqScope;
+  if (scope !== undefined && scope !== previewGeneration()) throw new Error('Preview scope changed; response discarded.');
+  return response;
+}, (error) => {
+  if (typeof window !== 'undefined' && error.config?.jdqScope === previewGeneration() && error.config?.headers?.['x-include-test'] === 'true' &&
+      [401, 403, 503].includes(error.response?.status)) {
+    window.dispatchEvent(new CustomEvent('jdq:preview-rejected', { detail: error.response.status }));
+  }
+  return Promise.reject(error);
 });
 
 export const uuid = (): string =>

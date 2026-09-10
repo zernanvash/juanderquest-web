@@ -1,4 +1,5 @@
 import { api } from './api';
+import { previewRequestHeaders, previewGeneration } from './preview';
 
 export interface PlaceResultItem {
   id: string;
@@ -177,6 +178,8 @@ export async function fetchPublicUserProfile(
     ? getServerApiBaseUrl()
     : (process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1');
   const cleanBase = baseUrl.replace(/\/$/, '');
+  const scope = previewGeneration();
+  const previewHeaders = previewRequestHeaders();
   const url = `${cleanBase}/users/${encodeURIComponent(idOrHandle)}/profile`;
 
   try {
@@ -185,16 +188,21 @@ export async function fetchPublicUserProfile(
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...previewHeaders,
       },
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
     });
 
+    if (scope !== previewGeneration()) return { kind: 'error', message: 'Preview access changed. Retry the profile.', statusCode: 409 };
     if (res.status === 404) {
       return { kind: 'not_found' };
     }
 
     if (!res.ok) {
+      if (!isServer && previewHeaders['x-include-test'] && [401, 403, 503].includes(res.status)) {
+        window.dispatchEvent(new CustomEvent('jdq:preview-rejected', { detail: res.status }));
+      }
       return {
         kind: 'error',
         message: `Unable to load traveler profile (HTTP ${res.status}).`,
@@ -203,6 +211,7 @@ export async function fetchPublicUserProfile(
     }
 
     const body = await res.json();
+    if (scope !== previewGeneration()) return { kind: 'error', message: 'Preview access changed. Retry the profile.', statusCode: 409 };
     if (body?.success && body?.data) {
       return { kind: 'success', profile: body.data as PublicUserProfile };
     }
