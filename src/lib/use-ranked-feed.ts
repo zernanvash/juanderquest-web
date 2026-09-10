@@ -55,6 +55,19 @@ export function useRankedFeed(identity: string) {
     return () => { generation.current++; pending.current?.abort(); pending.current = null; };
   }, [identity, fetchPage]);
 
+  useEffect(() => {
+    const handlePreviewChange = () => {
+      setSpots([]);
+      void fetchPage(true);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('jdq:preview-mode-changed', handlePreviewChange);
+      return () => {
+        window.removeEventListener('jdq:preview-mode-changed', handlePreviewChange);
+      };
+    }
+  }, [fetchPage]);
+
   // Desktop scrolls the middle column; mobile scrolls the document.
   useEffect(() => {
     const sentinel = sentinelRef.current;

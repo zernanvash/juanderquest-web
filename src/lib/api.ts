@@ -16,6 +16,17 @@ api.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const isPreview =
+      localStorage.getItem('jdq_qa_preview') === 'true' ||
+      sessionStorage.getItem('jdq_qa_preview') === 'true';
+    if (isPreview) {
+      config.headers['x-include-test'] = 'true';
+      const passkey =
+        localStorage.getItem('jdq_qa_passkey') || sessionStorage.getItem('jdq_qa_passkey');
+      if (passkey) {
+        config.headers['x-qa-preview-token'] = passkey;
+      }
+    }
   }
   return config;
 });
@@ -43,7 +54,7 @@ export interface UserModel {
   displayName: string;
   email: string;
   avatarUrl: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'qa';
   points: number; // demo_points
 }
 
@@ -61,7 +72,8 @@ export interface QuestModel {
   geoMultiplier?: number;
   rewardPoints: number;
   markerCode?: string; // present on detail only; list does not expose markers
-  markerImageUrl: string;
+  markerImageUrl?: string;
+  isTest?: boolean;
 }
 
 export interface PayoutRecipient {
@@ -171,6 +183,7 @@ export interface SpotModel {
   crowdStatus: 'quiet' | 'moderate' | 'estimated_busy' | 'unknown';
   crowdConfidence: string;
   crowdUpdatedAt?: string;
+  isTest?: boolean;
 }
 
 export interface UploadedAssetModel {
@@ -247,6 +260,7 @@ export function normalizeSpot(raw: any): SpotModel {
     crowdStatus: raw.crowd_status || 'unknown',
     crowdConfidence: raw.crowd_confidence || 'none',
     crowdUpdatedAt: raw.crowd_updated_at || undefined,
+    isTest: Boolean(raw.is_test),
   };
 }
 
@@ -289,6 +303,7 @@ type BackendQuest = {
   reward_points: number;
   marker_code?: string;
   marker_image_url?: string;
+  is_test?: boolean;
 };
 
 export function normalizeQuest(raw: BackendQuest): QuestModel {
@@ -307,6 +322,7 @@ export function normalizeQuest(raw: BackendQuest): QuestModel {
     rewardPoints: Number(raw.reward_points),
     markerCode: raw.marker_code,
     markerImageUrl: raw.marker_image_url || '',
+    isTest: Boolean(raw.is_test),
   };
 }
 

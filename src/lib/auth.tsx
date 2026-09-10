@@ -9,6 +9,10 @@ interface AuthContextType {
   token: string | null;
   wallet: WalletModel | null;
   isLoading: boolean;
+  isPreviewActive: boolean;
+  togglePreview: () => void;
+  previewPasskey: string | null;
+  setPreviewPasskey: (passkey: string | null) => void;
   loginWithSeed: (seedId: string) => Promise<boolean>;
   loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<boolean>;
   loginWithWallet: (address: string, signature: string, rememberMe: boolean) => Promise<boolean>;
@@ -25,11 +29,76 @@ export const isStoredUser = (raw: unknown): raw is { display_name?: unknown; dem
 
 export const adminHandoffUrl = (token: string) => `${ADMIN_URL}/#session=${encodeURIComponent(token)}`;
 
+export const shouldStayInTravelerApp = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.get('app_view') === 'true' || searchParams.get('preview') === 'true') {
+    sessionStorage.setItem('jdq_app_view', 'true');
+    return true;
+  }
+  return (
+    sessionStorage.getItem('jdq_app_view') === 'true' ||
+    localStorage.getItem('jdq_qa_preview') === 'true' ||
+    sessionStorage.getItem('jdq_qa_preview') === 'true'
+  );
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserModel | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [isPreviewActive, setIsPreviewActive] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('preview') === 'true') {
+        localStorage.setItem('jdq_qa_preview', 'true');
+        return true;
+      }
+      return (
+        localStorage.getItem('jdq_qa_preview') === 'true' ||
+        sessionStorage.getItem('jdq_qa_preview') === 'true'
+      );
+    }
+    return false;
+  });
+
+  const [previewPasskey, setPreviewPasskeyState] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('jdq_qa_passkey') || sessionStorage.getItem('jdq_qa_passkey');
+    }
+    return null;
+  });
+
+  const setPreviewPasskey = (passkey: string | null) => {
+    setPreviewPasskeyState(passkey);
+    if (typeof window !== 'undefined') {
+      if (passkey) {
+        localStorage.setItem('jdq_qa_passkey', passkey);
+      } else {
+        localStorage.removeItem('jdq_qa_passkey');
+        sessionStorage.removeItem('jdq_qa_passkey');
+      }
+    }
+  };
+
+  const togglePreview = () => {
+    setIsPreviewActive((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        if (next) {
+          localStorage.setItem('jdq_qa_preview', 'true');
+          sessionStorage.setItem('jdq_app_view', 'true');
+        } else {
+          localStorage.removeItem('jdq_qa_preview');
+          sessionStorage.removeItem('jdq_qa_preview');
+        }
+        window.dispatchEvent(new CustomEvent('jdq:preview-mode-changed', { detail: { active: next } }));
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const savedToken = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
@@ -40,8 +109,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Validate stored user shape; discard broken sessions (Phase C repair).
         if (isStoredUser(raw) && raw.display_name && typeof raw.demo_points === 'number') {
           const restored = normalizeUser(raw as Parameters<typeof normalizeUser>[0]);
-          // Preserve the admin handoff across reloads: admins belong on the dashboard.
-          if (restored.role === 'admin') {
+          // Preserve the admin handoff across reloads unless user opted into traveler app view / preview.
+          if (restored.role === 'admin' && !shouldStayInTravelerApp()) {
             window.location.assign(adminHandoffUrl(savedToken));
             return;
           }
@@ -72,34 +141,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storage = localStorage.getItem('jdq_token') ? localStorage : sessionStorage;
         storage.setItem('jdq_user', JSON.stringify(res.data.data));
       }
-    } catch (e: any) {
-      // Expired or invalid session: clear it so guards redirect to login.
-      if ([401, 403, 404].includes(e?.response?.status)) {
-        logout();
-      } else {
-        console.error('Failed to refresh profile', e);
-      }
+    } catch (e) {
+      console.error('Failed to refresh profile', e);
     }
   };
 
   const refreshWallet = async () => {
+    if (!token) return;
     try {
-      const res = await api.get('/wallet');
+      const res = await api.get('/auth/wallet/status');
       if (res.data?.success) {
         setWallet(normalizeWallet(res.data.data));
       }
-    } catch (e: any) {
-      // No fabricated fallback balance: leave the wallet as null so UI shows a dash.
-      setWallet(null);
-      if (![401, 403, 404].includes(e?.response?.status)) {
-        console.error('Failed to refresh wallet', e);
-      }
+    } catch (e) {
+      console.error('Failed to refresh wallet', e);
     }
   };
 
   useEffect(() => {
     if (token) {
-      refreshProfile();
       refreshWallet();
     }
   }, [token]);
@@ -111,8 +171,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.data?.success) {
         const authToken = res.data.data.token;
         const normalized = normalizeUser(res.data.data.user);
-        // Admin users hand off to the dashboard with a fragment session (restored protocol).
-        if (normalized.role === 'admin') {
+        // Admin users hand off to dashboard unless explicitly in traveler app view / preview mode.
+        if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
           window.location.assign(adminHandoffUrl(authToken));
           return false;
         }
@@ -130,13 +190,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const loginWithSimulatedWallet = async (username: string, password: string, rememberMe: boolean): Promise<boolean> => {
+  const loginWithSimulatedWallet = async (username: string, password: string, rememberMe: boolean) => {
     setIsLoading(true);
     try {
       const res = await api.post('/auth/simulated-wallet-login', { username, password });
       if (res.data?.success) {
         const authToken = res.data.data.token;
         const normalized = normalizeUser(res.data.data.user);
+        if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
+          window.location.assign(adminHandoffUrl(authToken));
+          return false;
+        }
         const storage = rememberMe ? localStorage : sessionStorage;
         localStorage.removeItem('jdq_token');
         localStorage.removeItem('jdq_user');
@@ -157,6 +221,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const storeWalletSession = (data: { token: string; user: Parameters<typeof normalizeUser>[0] }, rememberMe: boolean) => {
+    const user = normalizeUser(data.user);
+    if (user.role === 'admin' && !shouldStayInTravelerApp()) {
+      window.location.assign(adminHandoffUrl(data.token));
+      return;
+    }
     const storage = rememberMe ? localStorage : sessionStorage;
     localStorage.removeItem('jdq_token');
     localStorage.removeItem('jdq_user');
@@ -165,7 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storage.setItem('jdq_token', data.token);
     storage.setItem('jdq_user', JSON.stringify(data.user));
     setToken(data.token);
-    setUser(normalizeUser(data.user));
+    setUser(user);
   };
 
   const loginWithWallet = async (address: string, signature: string, rememberMe: boolean) => {
@@ -217,6 +286,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         wallet,
         isLoading,
+        isPreviewActive,
+        togglePreview,
+        previewPasskey,
+        setPreviewPasskey,
         loginWithSeed,
         loginWithSimulatedWallet,
         loginWithWallet,

@@ -238,9 +238,16 @@ export default function ExplorePage() {
 
                         {/* Title */}
                         <Link href={`/spots/${spot.slug}`} className="block group">
-                          <h2 className="text-base sm:text-lg font-bold font-serif text-[#582F0E] group-hover:text-[#2D6A4F] transition leading-snug">
-                            {spot.name}
-                          </h2>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-base sm:text-lg font-bold font-serif text-[#582F0E] group-hover:text-[#2D6A4F] transition leading-snug">
+                              {spot.name}
+                            </h2>
+                            {spot.isTest && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                QA Test Fixture
+                              </span>
+                            )}
+                          </div>
                         </Link>
 
                         {/* Crowd Status Banner */}

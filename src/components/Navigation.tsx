@@ -19,16 +19,18 @@ import {
   Search,
   Bookmark,
   Award,
+  Eye,
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { SearchOverlay } from '@/components/SearchOverlay';
+import { EvaluatorBanner } from '@/components/EvaluatorBanner';
 
 export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: boolean }> = ({
   children,
   fullBleed = false,
 }) => {
   const pathname = usePathname();
-  const { user, wallet, logout } = useAuth();
+  const { user, wallet, logout, isPreviewActive, togglePreview } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,6 +91,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
 
   return (
     <div className="min-h-screen bg-[#F4F3EE] flex flex-col selection:bg-[#FFB703]/30 text-[#2B2319]">
+      <EvaluatorBanner />
       {/* Top Global Header Bar (Sticky Top) */}
       <header className="sticky top-0 z-50 shrink-0 h-16 bg-white/95 backdrop-blur-md border-b border-[#E3DFD5] px-3 sm:px-5 lg:px-8 flex items-center justify-between shadow-xs gap-3">
         {/* Brand Logo (Clean & Minimalist) */}
@@ -413,6 +416,28 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                   );
                 })}
               </nav>
+              <div className="pt-3 pb-2 border-t border-[#E3DFD5]/60 mt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    togglePreview();
+                    setDrawerOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                    isPreviewActive
+                      ? 'bg-amber-500/20 text-amber-900 border border-amber-500/30'
+                      : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-amber-600" />
+                    <span>Evaluator Mode</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-800">
+                    {isPreviewActive ? 'Active (72 Fixtures)' : 'Off'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {user && (
