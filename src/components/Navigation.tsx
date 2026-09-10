@@ -90,17 +90,17 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
   const currentLevel = Math.floor(currentPoints / 50) + 1;
 
   return (
-    <div className="min-h-screen bg-[#F4F3EE] flex flex-col selection:bg-[#FFB703]/30 text-[#2B2319]">
+    <div className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col selection:bg-[var(--color-brand-accent)]/30 text-[var(--color-text-primary)]">
       <EvaluatorBanner />
       {/* Top Global Header Bar (Sticky Top) */}
-      <header className="sticky top-0 z-50 shrink-0 h-16 bg-white/95 backdrop-blur-md border-b border-[#E3DFD5] px-3 sm:px-5 lg:px-8 flex items-center justify-between shadow-xs gap-3">
+      <header className="sticky top-0 z-50 shrink-0 h-16 bg-white/95 backdrop-blur-md border-b border-[var(--color-border-default)] px-3 sm:px-5 lg:px-8 flex items-center justify-between shadow-xs gap-3">
         {/* Brand Logo (Clean & Minimalist) */}
         <div className="flex items-center gap-3 shrink-0">
           <Link href="/explore" className="flex items-center group shrink-0" title="JuanDerQuest — Pangasinan Exploration">
-            <div className="w-10 h-10 rounded-xl bg-white border border-[#E3DFD5] p-1.5 flex items-center justify-center shadow-xs group-hover:border-[#2D6A4F]/60 transition-colors duration-200">
+            <div className="w-10 h-10 rounded-xl bg-white border border-[var(--color-border-default)] p-1.5 flex items-center justify-center shadow-xs group-hover:border-[var(--color-brand-primary)]/60 transition-colors duration-200">
               <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
             </div>
-            <span className="hidden sm:inline font-serif font-black text-sm text-[#582F0E] tracking-tight">
+            <span className="hidden sm:inline font-serif font-black text-sm text-[var(--color-brand-brown)] tracking-tight">
               JuanDerQuest
             </span>
           </Link>
@@ -124,17 +124,17 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                 aria-current={isActive ? 'page' : undefined}
                 className={`relative flex items-center justify-center w-12 lg:w-16 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
                   isActive
-                    ? 'bg-[#2D6A4F] text-white shadow-xs scale-105'
-                    : 'text-[#6B5E4C] hover:text-[#2D6A4F] hover:bg-gray-100/60 active:scale-95'
+                    ? 'bg-[var(--color-brand-primary)] text-white shadow-xs scale-105'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] hover:bg-[var(--color-bg-subtle)] active:scale-95'
                 }`}
               >
                 <Icon
                   className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
-                    isActive ? 'text-[#FFB703]' : ''
+                    isActive ? 'text-[var(--color-brand-accent)]' : ''
                   }`}
                 />
                 {item.badge && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#FFB703] border-2 border-white shadow-xs" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--color-brand-accent)] border-2 border-white shadow-xs" />
                 )}
               </Link>
             );
@@ -215,20 +215,20 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               setIsSearchOpen(true);
               setTimeout(() => searchInputRef.current?.focus(), 60);
             }}
-            className="md:hidden p-2 rounded-xl text-[#582F0E] hover:bg-[#FAF9F5] border border-[#E3DFD5] flex items-center justify-center cursor-pointer transition active:scale-95"
+            className="md:hidden p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center justify-center cursor-pointer transition active:scale-95"
             aria-label="Open search dialog (Ctrl+K)"
           >
-            <Search className="w-5 h-5 text-[#2D6A4F]" />
+            <Search className="w-5 h-5 text-[var(--color-brand-primary)]" />
           </button>
 
           {user ? (
             <div className="flex items-center gap-2">
               <Link
                 href="/profile"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F]/40 transition shadow-xs"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/50 transition shadow-xs"
                 title="View explorer profile"
               >
-                <div className="relative w-7 h-7 rounded-full bg-[#2D6A4F] text-white flex items-center justify-center text-xs font-black overflow-hidden">
+                <div className="relative w-7 h-7 rounded-full bg-[var(--color-brand-primary)] text-white flex items-center justify-center text-xs font-black overflow-hidden">
                   {user.avatarUrl ? (
                     <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
                   ) : (
@@ -236,10 +236,10 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                   )}
                 </div>
                 <div className="flex flex-col text-left pr-1">
-                  <span className="text-xs font-extrabold text-[#582F0E] leading-tight">
+                  <span className="text-xs font-extrabold text-[var(--color-brand-brown)] leading-tight">
                     {user.displayName}
                   </span>
-                  <span className="text-[10px] text-[#2D6A4F] font-bold">
+                  <span className="text-[10px] text-[var(--color-brand-primary)] font-bold">
                     Lvl {currentLevel} • {wallet ? `${wallet.balanceMjdq.toLocaleString()} mJDQ` : 'Demo Explorer'}
                   </span>
                 </div>
@@ -257,7 +257,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold hover:bg-[#1B4332] shadow-xs transition active:scale-95"
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-[var(--color-brand-primary)] text-white text-xs font-extrabold hover:bg-[var(--color-brand-primary-hover)] shadow-xs transition active:scale-95"
             >
               <User className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Connect Wallet / Login</span>
@@ -268,7 +268,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
           {/* Drawer Trigger */}
           <button
             onClick={() => setDrawerOpen(true)}
-            className="lg:hidden p-2 rounded-xl text-[#582F0E] hover:bg-[#FAF9F5] border border-[#E3DFD5] cursor-pointer"
+            className="lg:hidden p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] cursor-pointer"
             aria-label="Open navigation menu"
           >
             <Menu className="w-5 h-5" />
@@ -310,7 +310,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
       {/* Floating Bottom Navigation Bar (5 Primary Destinations) */}
       <nav
         aria-label="Mobile Bottom Navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E3DFD5] px-2 pt-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] flex items-center justify-around"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[var(--color-border-default)] px-2 pt-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(43,35,25,0.06)] flex items-center justify-around"
       >
         {[
           { label: 'Explore', href: '/explore', icon: Compass },
@@ -328,12 +328,12 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition min-w-[56px] min-h-[44px] ${
                 isActive
-                  ? 'text-[#2D6A4F] font-black'
-                  : 'text-[#837560] hover:text-[#582F0E] font-medium'
+                  ? 'text-[var(--color-brand-primary)] font-black'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-medium'
               }`}
             >
-              <div className={`p-1 rounded-xl transition ${isActive ? 'bg-[#2D6A4F]/10' : ''}`}>
-                <Icon className={`w-5 h-5 ${isActive ? 'text-[#2D6A4F]' : 'text-[#837560]'}`} />
+              <div className={`p-1 rounded-xl transition ${isActive ? 'bg-[var(--color-brand-primary)]/10' : ''}`}>
+                <Icon className={`w-5 h-5 ${isActive ? 'text-[var(--color-brand-primary)]' : 'text-[var(--color-text-muted)]'}`} />
               </div>
               <span className="text-[11px] mt-0.5 tracking-tight">{item.label}</span>
             </Link>
@@ -345,10 +345,10 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
           type="button"
           onClick={() => setDrawerOpen(true)}
           aria-label="Open more menu"
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition min-w-[56px] min-h-[44px] text-[#837560] hover:text-[#582F0E] font-medium cursor-pointer"
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition min-w-[56px] min-h-[44px] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-medium cursor-pointer"
         >
           <div className="p-1 rounded-xl">
-            <Menu className="w-5 h-5 text-[#837560]" />
+            <Menu className="w-5 h-5 text-[var(--color-text-muted)]" />
           </div>
           <span className="text-[11px] mt-0.5 tracking-tight">More</span>
         </button>
@@ -368,15 +368,15 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
             onClick={(e) => e.stopPropagation()}
           >
             <div>
-              <div className="flex items-center justify-between pb-4 border-b border-[#E3DFD5] mb-5">
+              <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border-default)] mb-5">
                 <div className="flex items-center gap-2">
                   <img src="/logo.png" alt="JuanDerQuest" width="28" height="28" className="w-7 h-7 object-contain" />
-                  <span className="font-serif font-black text-base text-[#582F0E]">JuanDerQuest</span>
+                  <span className="font-serif font-black text-base text-[var(--color-brand-brown)]">JuanDerQuest</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-[#FAF9F5] text-[#582F0E] cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-[var(--color-bg-subtle)] text-[var(--color-brand-brown)] cursor-pointer"
                   aria-label="Close navigation menu"
                 >
                   <X className="w-5 h-5" />
@@ -395,8 +395,8 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                       aria-current={isActive ? 'page' : undefined}
                       className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition min-h-[44px] ${
                         isActive
-                          ? 'bg-[#2D6A4F] text-white'
-                          : 'text-[#582F0E] hover:bg-[#FAF9F5]'
+                          ? 'bg-[var(--color-brand-primary)] text-white'
+                          : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -406,7 +406,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                       {item.flair && (
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded-full ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-[#FAF9F5] text-[#7D5800]'
+                            isActive ? 'bg-white/20 text-white' : 'bg-[var(--color-bg-subtle)] text-[var(--color-brand-accent-dark)]'
                           }`}
                         >
                           {item.flair}
@@ -416,7 +416,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                   );
                 })}
               </nav>
-              <div className="pt-3 pb-2 border-t border-[#E3DFD5]/60 mt-3">
+              <div className="pt-3 pb-2 border-t border-[var(--color-border-subtle)] mt-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -441,7 +441,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
             </div>
 
             {user && (
-              <div className="pt-4 border-t border-[#E3DFD5]">
+              <div className="pt-4 border-t border-[var(--color-border-default)]">
                 <button
                   type="button"
                   onClick={logout}

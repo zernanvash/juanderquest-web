@@ -113,16 +113,16 @@ export default function ExplorePage() {
             className="order-1 lg:order-2 explore-scroll space-y-4 min-w-0"
           >
             {/* Quick Share / Post Bar */}
-            <div className="bg-white rounded-2xl p-4 border border-[#E3DFD5] shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#2D6A4F] text-white font-bold flex items-center justify-center text-sm shrink-0">
+            <div className="bg-white rounded-2xl p-4 border border-[var(--color-border-default)] shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[var(--color-brand-primary)] text-white font-bold flex items-center justify-center text-sm shrink-0">
                 {user ? user.displayName.charAt(0).toUpperCase() : 'U'}
               </div>
               <Link
                 href="/spots/new"
-                className="flex-1 bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E3DFD5] rounded-xl px-4 py-2.5 text-xs text-[#837560] font-medium transition cursor-pointer flex items-center justify-between"
+                className="flex-1 bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border-default)] rounded-xl px-4 py-2.5 text-xs text-[var(--color-text-muted)] font-medium transition cursor-pointer flex items-center justify-between"
               >
                 <span>Share a photo, hidden beach, heritage shrine, or tip...</span>
-                <div className="flex items-center gap-1.5 text-[#2D6A4F] font-bold">
+                <div className="flex items-center gap-1.5 text-[var(--color-brand-primary)] font-bold">
                   <PlusCircle className="w-4 h-4" />
                   <span className="hidden sm:inline text-xs">Add Spot</span>
                 </div>
@@ -132,15 +132,15 @@ export default function ExplorePage() {
             {/* Feed Status Header */}
             <div className="flex items-center justify-between text-xs px-1">
               <div className="space-y-0.5">
-                <span className="font-serif font-bold text-[#582F0E]">
+                <span className="font-serif font-bold text-[var(--color-brand-brown)]">
                   {loading && spots.length === 0 ? 'Refreshing feed...' : 'Community Feed'}
                 </span>
-                <p className="text-[10px] text-[#837560]">
+                <p className="text-[10px] text-[var(--color-text-muted)]">
                   Ranked with Pangasinan municipal diversity
                 </p>
               </div>
 
-              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#2D6A4F] border border-[#E3DFD5] shadow-2xs">
+              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--color-brand-primary)] border border-[var(--color-border-default)] shadow-2xs">
                 {spots.length} Destinations
               </span>
             </div>
@@ -157,21 +157,21 @@ export default function ExplorePage() {
                 <p className="text-xs text-[#BC4749] font-bold">{error}</p>
                 <button
                   type="button"
-                      onClick={() => loadSpots()}
-                  className="px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+                  onClick={() => loadSpots()}
+                  className="px-4 py-2 rounded-xl bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
                 >
                   Retry Loading
                 </button>
               </div>
             ) : spots.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 border border-[#E3DFD5] text-center space-y-3 shadow-xs">
-                <Compass className="w-10 h-10 text-[#D5C4AC] mx-auto" />
-                <h3 className="font-bold text-sm text-[#582F0E]">No destinations found in feed</h3>
-                <p className="text-xs text-[#837560]">The community feed could not find active destinations.</p>
+              <div className="bg-white rounded-3xl p-12 border border-[var(--color-border-default)] text-center space-y-3 shadow-xs">
+                <Compass className="w-10 h-10 text-[var(--color-border-default)] mx-auto" />
+                <h3 className="font-bold text-sm text-[var(--color-brand-brown)]">No destinations found in feed</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">The community feed could not find active destinations.</p>
                 <button
                   type="button"
-                      onClick={() => loadSpots()}
-                  className="px-4 py-2 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-bold text-[#582F0E] hover:bg-white transition cursor-pointer"
+                  onClick={() => loadSpots()}
+                  className="px-4 py-2 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] text-xs font-bold text-[var(--color-brand-brown)] hover:bg-white transition cursor-pointer"
                 >
                   Refresh feed
                 </button>
@@ -187,31 +187,31 @@ export default function ExplorePage() {
                   return (
                     <article
                       key={spot.id}
-                      className="bg-white rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden"
+                      className="bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden"
                     >
                       {/* Compact Post Header & Caption Area */}
                       <div className="px-4 pt-3.5 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3 space-y-2">
                         {isFeaturedHero && (
                           <div className="flex flex-wrap items-center gap-2 border-b border-emerald-100 pb-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#2D6A4F]">
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--color-brand-primary)]">
                               <Sparkles className="h-3 w-3" />
                               Featured Destination
                             </span>
-                            <span className="text-[10px] font-medium text-[#837560]">
+                            <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
                               Curated Pangasinan highlight
                             </span>
                           </div>
                         )}
 
                         {/* Meta Header */}
-                        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#837560] leading-none">
-                          <span className="font-bold text-[#2D6A4F] flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] leading-none">
+                          <span className="font-bold text-[var(--color-brand-primary)] flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
                             {spot.municipality}
                           </span>
                           <span>•</span>
                           <span>
-                            Shared by <strong className="text-[#582F0E]">{spot.sourceName}</strong>
+                            Shared by <strong className="text-[var(--color-brand-brown)]">{spot.sourceName}</strong>
                           </span>
 
                           {/* Provenance Badge, Server Recommendation Reason & Quest */}
@@ -226,8 +226,8 @@ export default function ExplorePage() {
                               </Link>
                             )}
                             {spot.recommendationReasons && spot.recommendationReasons.length > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-[#7D5800] font-bold text-[9px] border border-amber-200">
-                                <Sparkles className="w-2.5 h-2.5 text-[#FFB703]" />
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-[var(--color-brand-accent-dark)] font-bold text-[9px] border border-amber-200">
+                                <Sparkles className="w-2.5 h-2.5 text-[var(--color-brand-accent)]" />
                                 <span>{spot.recommendationReasons[0]}</span>
                               </span>
                             )}
@@ -243,7 +243,7 @@ export default function ExplorePage() {
                         {/* Title */}
                         <Link href={`/spots/${spot.slug}`} className="block group">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-base sm:text-lg font-bold font-serif text-[#582F0E] group-hover:text-[#2D6A4F] transition leading-snug">
+                            <h2 className="text-base sm:text-lg font-bold font-serif text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition leading-snug">
                               {spot.name}
                             </h2>
                             {spot.isTest && (

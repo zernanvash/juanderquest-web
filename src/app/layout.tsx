@@ -16,8 +16,17 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className="h-full antialiased"><body className="min-h-full flex flex-col bg-[#FAF9F5] text-[#582F0E]">
-    <a href="#main-content" className="skip-link">Skip to main content</a>
-    <AuthProvider><MobileGuard>{children}</MobileGuard><StickyMobileCta /><CookieConsent /><WebAnalytics /></AuthProvider>
-  </body></html>;
+  return (
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full flex flex-col bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-accent)]/30">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <AuthProvider>
+          <MobileGuard>{children}</MobileGuard>
+          <StickyMobileCta />
+          <CookieConsent />
+          <WebAnalytics />
+        </AuthProvider>
+      </body>
+    </html>
+  );
 }

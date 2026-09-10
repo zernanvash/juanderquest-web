@@ -72,33 +72,66 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAF9F5] grid place-items-center p-4">
-      <section className="w-full max-w-md bg-white rounded-3xl border border-[#D5C4AC]/50 shadow-xl p-7 space-y-6">
+    <main className="min-h-screen bg-[var(--color-bg-canvas)] grid place-items-center p-4">
+      <section className="w-full max-w-md bg-white rounded-3xl border border-[var(--color-border-default)] shadow-xl p-7 space-y-6">
         <div className="text-center space-y-2">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-[#2D6A4F] text-white grid place-items-center"><Wallet /></div>
-          <h1 className="text-2xl font-black font-serif text-[#582F0E]">Sign in with your wallet</h1>
-          <p className="text-sm text-[#514532]">Your wallet proves account ownership. Signing in does not send a transaction or cost gas.</p>
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-[var(--color-brand-primary)] text-white grid place-items-center shadow-xs">
+            <Wallet className="w-7 h-7" />
+          </div>
+          <h1 className="text-2xl font-black font-serif text-[var(--color-brand-brown)]">Sign in with your wallet</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">Your wallet proves account ownership. Signing in does not send a transaction or cost gas.</p>
         </div>
 
         {mode === 'signature' && (
-          <button onClick={connectWallet} disabled={isLoading} className="w-full rounded-xl bg-[#2D6A4F] text-white font-extrabold py-3 px-5 disabled:opacity-60 flex justify-center items-center gap-2">
-            <ShieldCheck className="w-4 h-4" />{isLoading ? 'Verifying…' : 'Connect and sign'}
+          <button
+            onClick={connectWallet}
+            disabled={isLoading}
+            className="w-full rounded-xl bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white font-extrabold py-3.5 px-5 disabled:opacity-60 flex justify-center items-center gap-2 shadow-xs transition active:scale-98 cursor-pointer min-h-[44px]"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>{isLoading ? 'Verifying…' : 'Connect and sign'}</span>
           </button>
         )}
 
         {mode === 'local' && (
-          <form onSubmit={useLocalBypass} className="space-y-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">
-            <div className="flex gap-2 text-[#7D5800]"><FlaskConical className="w-5 h-5 shrink-0" /><p className="text-xs font-bold">Local development bypass — wallet ownership is not verified.</p></div>
-            <label className="block text-xs font-bold text-[#582F0E]">Development wallet identifier
-              <input value={address} onChange={(event) => setAddress(event.target.value)} required maxLength={100} spellCheck={false} autoCapitalize="none" autoCorrect="off" className="mt-1.5 w-full rounded-xl border border-[#D5C4AC] px-3 py-2 font-mono text-xs" />
+          <form onSubmit={useLocalBypass} className="space-y-4 rounded-2xl border border-amber-300 bg-amber-50/70 p-4">
+            <div className="flex gap-2 text-[var(--color-brand-accent-dark)]">
+              <FlaskConical className="w-5 h-5 shrink-0" />
+              <p className="text-xs font-bold">Local development bypass — wallet ownership is not verified.</p>
+            </div>
+            <label className="block text-xs font-bold text-[var(--color-brand-brown)]">
+              Development wallet identifier
+              <input
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                required
+                maxLength={100}
+                spellCheck={false}
+                autoCapitalize="none"
+                autoCorrect="off"
+                className="mt-1.5 w-full rounded-xl border border-[var(--color-border-default)] bg-white px-3 py-2 font-mono text-xs focus:border-[var(--color-brand-primary)] focus:outline-none min-h-[40px]"
+              />
             </label>
-            <button disabled={isLoading} className="w-full rounded-xl bg-[#7D5800] text-white font-extrabold py-3 disabled:opacity-60">{isLoading ? 'Starting…' : 'Continue locally'}</button>
+            <button
+              disabled={isLoading}
+              className="w-full rounded-xl bg-[var(--color-brand-accent-dark)] hover:opacity-90 text-white font-extrabold py-3 disabled:opacity-60 transition cursor-pointer min-h-[44px]"
+            >
+              {isLoading ? 'Starting…' : 'Continue locally'}
+            </button>
           </form>
         )}
 
-        <label className="flex items-center gap-2 text-xs font-bold text-[#514532]"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} />Remember this session</label>
+        <label className="flex items-center gap-2 text-xs font-bold text-[var(--color-text-secondary)] cursor-pointer">
+          <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="rounded" />
+          <span>Remember this session</span>
+        </label>
         {error && <p role="alert" className="text-xs font-bold text-[#BC4749]">{error}</p>}
-        <button onClick={() => router.push('/')} className="w-full text-xs font-bold text-[#3F6653]">Back to home</button>
+        <button
+          onClick={() => router.push('/')}
+          className="w-full text-xs font-bold text-[var(--color-brand-primary)] hover:underline cursor-pointer py-1"
+        >
+          Back to home
+        </button>
       </section>
     </main>
   );

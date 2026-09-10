@@ -170,22 +170,22 @@ export default function VotePage() {
       <ErrorBoundary fallbackTitle="Unable to display Governance Proposals">
         <div className="space-y-6 max-w-7xl mx-auto">
           {/* Header Banner */}
-          <div className="p-6 md:p-8 rounded-3xl bg-white border border-[#E3DFD5] shadow-xs relative overflow-hidden">
+          <div className="p-6 md:p-8 rounded-3xl bg-white border border-[var(--color-border-default)] shadow-xs relative overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#FFB703]" />
-                  <span className="text-xs font-black tracking-wider text-[#7D5800] uppercase">
+                  <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
+                  <span className="text-xs font-black tracking-wider text-[var(--color-brand-accent-dark)] uppercase">
                     Pangasinan Tourism DAO Arena
                   </span>
-                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#2D6A4F]/10 text-[#2D6A4F]">
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]">
                     mJDQ Governance
                   </span>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E]">
+                <h1 className="text-2xl md:text-3xl font-black font-serif text-[var(--color-brand-brown)]">
                   Community Tourism Proposals
                 </h1>
-                <p className="text-xs md:text-sm text-[#514532] max-w-2xl leading-relaxed">
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-2xl leading-relaxed">
                   {config
                     ? `Cast community votes (${voteFeeSplit?.fee} mJDQ per vote). ${(config.burnBps / 100).toFixed(0)}% is permanently burned and ${(100 - config.burnBps / 100).toFixed(0)}% enters the LGU tourism improvement escrow.`
                     : 'Cast community votes to approve new eco-trails and heritage sites in Pangasinan.'}
@@ -193,11 +193,11 @@ export default function VotePage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] flex items-center gap-3">
-                  <Wallet className="w-6 h-6 text-[#2D6A4F]" />
+                <div className="p-4 rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center gap-3">
+                  <Wallet className="w-6 h-6 text-[var(--color-brand-primary)]" />
                   <div>
-                    <div className="text-[10px] font-bold text-[#837560] uppercase">mJDQ Token Balance</div>
-                    <div className="text-sm font-extrabold text-[#2D6A4F]">
+                    <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">mJDQ Token Balance</div>
+                    <div className="text-sm font-extrabold text-[var(--color-brand-primary)]">
                       {wallet ? `${wallet.balanceMjdq} mJDQ` : '100 mJDQ'}
                     </div>
                   </div>
@@ -205,7 +205,7 @@ export default function VotePage() {
 
                 <button
                   onClick={() => setSuggestFormOpen(!suggestFormOpen)}
-                  className="inline-flex items-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-black px-6 py-4 rounded-2xl shadow-md transition transform active:scale-95 text-xs cursor-pointer"
+                  className="inline-flex items-center gap-2 bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white font-black px-6 py-4 rounded-2xl shadow-md transition transform active:scale-95 text-xs cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>{suggestFormOpen ? 'Close Form' : 'Suggest Destination'}</span>

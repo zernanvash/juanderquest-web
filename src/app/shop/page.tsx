@@ -96,34 +96,34 @@ export default function ShopPage() {
       <ErrorBoundary fallbackTitle="Unable to display Merchant Shop">
         <div className="space-y-6 max-w-7xl mx-auto">
           {/* Header Banner */}
-          <div className="p-6 md:p-8 rounded-3xl bg-white border border-[#E3DFD5] shadow-xs relative overflow-hidden">
+          <div className="p-6 md:p-8 rounded-3xl bg-white border border-[var(--color-border-default)] shadow-xs relative overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#FFB703]" />
-                  <span className="text-xs font-black tracking-wider text-[#7D5800] uppercase">
+                  <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
+                  <span className="text-xs font-black tracking-wider text-[var(--color-brand-accent-dark)] uppercase">
                     Pangasinan MSME Rewards Hub
                   </span>
-                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#2D6A4F]/10 text-[#2D6A4F]">
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]">
                     Local Merchant Loot
                   </span>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black font-serif text-[#582F0E]">
+                <h1 className="text-2xl md:text-3xl font-black font-serif text-[var(--color-brand-brown)]">
                   Merchant Voucher Shop
                 </h1>
-                <p className="text-xs md:text-sm text-[#514532] max-w-xl leading-relaxed">
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-xl leading-relaxed">
                   Redeem your earned JuanDerQuest Points for discount vouchers at verified local partner restaurants, souvenir craft shops, and homestays across Pangasinan.
                 </p>
               </div>
 
               {/* Balance Widget */}
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] shrink-0">
-                <div className="w-12 h-12 rounded-2xl bg-[#FFB703]/20 text-[#7D5800] flex items-center justify-center">
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--color-brand-accent)]/20 text-[var(--color-brand-accent-dark)] flex items-center justify-center">
                   <Coins className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold text-gray-500 uppercase">Available Points</div>
-                  <div className="text-lg font-black text-[#582F0E]">
+                  <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Available Points</div>
+                  <div className="text-lg font-black text-[var(--color-brand-brown)]">
                     {user?.points ?? 0} PTS
                   </div>
                 </div>

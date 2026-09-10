@@ -293,41 +293,41 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
           {/* 2. DESTINATION DETAILS SURFACE */}
           <div
             id="spot-details-surface"
-            className="relative z-10 w-full bg-[#FAF9F5] border-t border-[#E3DFD5] pt-6 pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-6"
+            className="relative z-10 w-full bg-[var(--color-bg-canvas)] border-t border-[var(--color-border-default)] pt-6 pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-6"
           >
             {/* ROW 1: PRIMARY ACTION BUTTONS & TELEMETRY */}
-            <div className="bg-white p-5 sm:p-7 rounded-2xl border border-[#E3DFD5] space-y-4 shadow-xs">
+            <div className="bg-white p-5 sm:p-7 rounded-2xl border border-[var(--color-border-default)] space-y-4 shadow-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                 <Link
                   href={navigateUrl}
                   onClick={trackDirections}
-                  className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-xl py-3.5 px-5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 shadow-xs transition active:scale-98 cursor-pointer text-center min-h-[44px]"
+                  className="w-full bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white rounded-xl py-3.5 px-5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 shadow-xs transition active:scale-98 cursor-pointer text-center min-h-[44px]"
                 >
-                  <Compass className="w-4 h-4 text-[#FFB703]" />
+                  <Compass className="w-4 h-4 text-[var(--color-brand-accent)]" />
                   <span>Navigate with Valhalla</span>
                 </Link>
 
                 {spot.questId ? (
                   <Link
                     href={`/quests/${spot.questId}`}
-                    className="w-full bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] rounded-xl py-3.5 px-5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition active:scale-98 text-center cursor-pointer min-h-[44px]"
+                    className="w-full bg-[var(--color-brand-accent)] hover:bg-[var(--color-brand-accent-hover)] text-[var(--color-brand-brown)] rounded-xl py-3.5 px-5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition active:scale-98 text-center cursor-pointer min-h-[44px]"
                   >
-                    <Trophy className="w-4 h-4 text-[#582F0E]" />
+                    <Trophy className="w-4 h-4 text-[var(--color-brand-brown)]" />
                     <span>Play Linked Quest</span>
                   </Link>
                 ) : (
                   <Link
                     href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}`}
-                    className="w-full bg-[#FAF9F5] hover:bg-stone-100 text-[#582F0E] border border-[#D5C4AC] rounded-xl py-3.5 px-5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition active:scale-98 text-center cursor-pointer min-h-[44px]"
+                    className="w-full bg-[var(--color-bg-subtle)] hover:bg-stone-100 text-[var(--color-brand-brown)] border border-[var(--color-border-default)] rounded-xl py-3.5 px-5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition active:scale-98 text-center cursor-pointer min-h-[44px]"
                   >
-                    <MapPin className="w-4 h-4 text-[#2D6A4F]" />
+                    <MapPin className="w-4 h-4 text-[var(--color-brand-primary)]" />
                     <span>View on Province Map</span>
                   </Link>
                 )}
               </div>
 
               {/* Interaction Strip */}
-              <div className="pt-3 border-t border-[#E8E5DE] flex flex-wrap items-center justify-between gap-3">
+              <div className="pt-3 border-t border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

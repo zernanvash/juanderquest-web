@@ -1,27 +1,245 @@
 @import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-primary-hover: var(--color-brand-primary-hover);
+  --color-brand-primary-light: var(--color-brand-primary-light);
+  --color-brand-accent: var(--color-brand-accent);
+  --color-brand-accent-hover: var(--color-brand-accent-hover);
+  --color-brand-accent-light: var(--color-brand-accent-light);
+  --color-brand-accent-dark: var(--color-brand-accent-dark);
+  --color-brand-brown: var(--color-brand-brown);
+  --color-brand-brown-dark: var(--color-brand-brown-dark);
+  
+  --color-theme-canvas: var(--color-bg-canvas);
+  --color-theme-surface: var(--color-bg-surface);
+  --color-theme-subtle: var(--color-bg-subtle);
+  --color-theme-hover: var(--color-bg-hover);
+  
+  --color-theme-text-primary: var(--color-text-primary);
+  --color-theme-text-secondary: var(--color-text-secondary);
+  --color-theme-text-muted: var(--color-text-muted);
+  
+  --color-theme-border: var(--color-border-default);
+  --color-theme-border-subtle: var(--color-border-subtle);
+  --color-theme-border-focus: var(--color-border-focus);
+  
+  --color-status-success: var(--color-status-success);
+  --color-status-warning: var(--color-status-warning);
+  --color-status-danger: var(--color-status-danger);
+  --color-status-info: var(--color-status-info);
+}
+
 :root {
-  --background: #FAF9F5;
-  --foreground: #582F0E;
-  --gold: #FFB703;
-  --green: #2D6A4F;
-  --green-dark: #1B4332;
-  --brown: #582F0E;
-  --sand: #FAF9F5;
-  --card-bg: #FFFFFF;
+  /* Central Design Tokens (Synced with web_app/src/config/theme.ts) */
+  --color-brand-primary: #2D6A4F;
+  --color-brand-primary-hover: #1B4332;
+  --color-brand-primary-light: #E8F5E9;
+  --color-brand-primary-muted: #3F6653;
+  --color-brand-accent: #FFB703;
+  --color-brand-accent-hover: #F77F00;
+  --color-brand-accent-light: #FFF8E1;
+  --color-brand-accent-dark: #B45309;
+  --color-brand-brown: #582F0E;
+  --color-brand-brown-dark: #3E1F0A;
+  --color-brand-brown-light: #7B4B27;
+
+  --color-bg-canvas: #FAF9F5;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-subtle: #F5F3ED;
+  --color-bg-hover: #EFECE3;
+  --color-bg-overlay: rgba(43, 35, 25, 0.45);
+
+  --color-text-primary: #2C221E;
+  --color-text-secondary: #514532;
+  --color-text-muted: #837560;
+  --color-text-inverse: #FFFFFF;
+
+  --color-border-default: #E3DFD5;
+  --color-border-subtle: #ECE9E2;
+  --color-border-focus: #2D6A4F;
+
+  --color-status-success: #2D6A4F;
+  --color-status-success-bg: #D8F3DC;
+  --color-status-warning: #D97706;
+  --color-status-warning-bg: #FEF3C7;
+  --color-status-danger: #BC4749;
+  --color-status-danger-bg: #FDE8E8;
+  --color-status-info: #2563EB;
+  --color-status-info-bg: #DBEAFE;
+
+  --color-crowd-quiet: #2D6A4F;
+  --color-crowd-quiet-bg: #D8F3DC;
+  --color-crowd-moderate: #D97706;
+  --color-crowd-moderate-bg: #FEF3C7;
+  --color-crowd-busy: #BC4749;
+  --color-crowd-busy-bg: #FDE8E8;
+  --color-crowd-surging: #991B1B;
+  --color-crowd-surging-bg: #FEE2E2;
+
+  --font-heading: 'Epilogue', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 1px 3px rgba(43, 35, 25, 0.05), 0 1px 2px rgba(43, 35, 25, 0.03);
+  --shadow-card-hover: 0 8px 24px rgba(45, 106, 79, 0.10), 0 2px 8px rgba(43, 35, 25, 0.04);
+  --shadow-dropdown: 0 10px 25px -3px rgba(43, 35, 25, 0.12), 0 4px 6px -2px rgba(43, 35, 25, 0.05);
+  --shadow-modal: 0 20px 40px -5px rgba(43, 35, 25, 0.20), 0 8px 16px -4px rgba(43, 35, 25, 0.10);
+  --shadow-glow: 0 0 20px rgba(255, 183, 3, 0.35);
+
+  /* Legacy aliases for backward compatibility */
+  --background: var(--color-bg-canvas);
+  --foreground: var(--color-brand-brown);
+  --gold: var(--color-brand-accent);
+  --green: var(--color-brand-primary);
+  --green-dark: var(--color-brand-primary-hover);
+  --brown: var(--color-brand-brown);
+  --sand: var(--color-bg-canvas);
+  --card-bg: var(--color-bg-surface);
 }
 
 body {
-  background-color: #FAF9F5;
-  color: #582F0E;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
   margin: 0;
   padding: 0;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Epilogue', Georgia, serif;
+  font-family: var(--font-heading);
+}
+
+/* Custom Semantic Utility Components */
+.theme-card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.theme-card:hover {
+  border-color: rgba(45, 106, 79, 0.30);
+}
+
+.theme-card-interactive {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.theme-card-interactive:hover {
+  border-color: rgba(45, 106, 79, 0.40);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.theme-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-brand-primary);
+  color: #ffffff;
+  font-weight: 800;
+  border-radius: var(--radius-lg);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.8125rem;
+  box-shadow: 0 1px 3px rgba(45, 106, 79, 0.25);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+
+.theme-btn-primary:hover {
+  background-color: var(--color-brand-primary-hover);
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.30);
+}
+
+.theme-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.theme-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+  font-weight: 700;
+  border-radius: var(--radius-lg);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.8125rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.theme-btn-secondary:hover {
+  background-color: var(--color-bg-subtle);
+  border-color: var(--color-brand-primary);
+  color: var(--color-brand-primary);
+}
+
+.theme-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.theme-btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-brand-accent);
+  color: var(--color-brand-brown);
+  font-weight: 800;
+  border-radius: var(--radius-lg);
+  padding: 0.625rem 1.25rem;
+  font-size: 0.8125rem;
+  box-shadow: 0 1px 3px rgba(255, 183, 3, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.theme-btn-accent:hover {
+  background-color: var(--color-brand-accent-hover);
+  color: #ffffff;
+}
+
+.theme-btn-accent:active {
+  transform: scale(0.98);
+}
+
+.theme-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 
 /* Custom Animations */
@@ -96,22 +314,22 @@ button, a, input, select, textarea {
 }
 
 :focus-visible {
-  outline: 2px solid #2D6A4F;
+  outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(213, 196, 172, 0.5);
+  border: 1px solid rgba(227, 223, 213, 0.6);
 }
 
 .gold-gradient {
-  background: linear-gradient(135deg, #FFB703 0%, #F77F00 100%);
+  background: linear-gradient(135deg, var(--color-brand-accent) 0%, var(--color-brand-accent-hover) 100%);
 }
 
 .emerald-gradient {
-  background: linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%);
+  background: linear-gradient(135deg, var(--color-brand-primary) 0%, var(--color-brand-primary-hover) 100%);
 }
 
 /* Leaflet divIcon custom SVG marker pin */
@@ -137,7 +355,6 @@ button, a, input, select, textarea {
   transform: rotate(45deg);
 }
 
-
 html,
 body {
   max-width: 100%;
@@ -148,13 +365,11 @@ body {
   overflow-x: clip;
 }
 
-
 /* Smooth, hardware-accelerated media rendering without raster distortion or wonky zoom */
 img, video {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
-
 
 /* Custom scrollbar - keep vertical clean, eliminate horizontal track */
 ::-webkit-scrollbar {
@@ -192,10 +407,35 @@ img, video {
   }
 }
 
-.skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 100; border-radius: .75rem; background: #fff; padding: .75rem 1rem; font-weight: 800; color: #1B4332; box-shadow: 0 4px 18px rgba(0,0,0,.2); }
-.skip-link:focus { top: 1rem; }
-[id] { scroll-margin-top: 5rem; }
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: -5rem;
+  z-index: 100;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  font-weight: 800;
+  color: var(--color-brand-primary-hover);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+}
+.skip-link:focus {
+  top: 1rem;
+}
+[id] {
+  scroll-margin-top: 5rem;
+}
+
 @media (min-width: 1024px) {
-  .explore-columns { grid-template-columns: minmax(220px, 1fr) minmax(420px, 2.4fr) minmax(240px, 1fr); }
-  .explore-scroll { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 0 3px 16px; }
+  .explore-columns {
+    grid-template-columns: minmax(220px, 1fr) minmax(420px, 2.4fr) minmax(240px, 1fr);
+  }
+  .explore-scroll {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    padding: 0 3px 16px;
+  }
 }

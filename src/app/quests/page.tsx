@@ -163,32 +163,32 @@ function QuestsContent() {
       <ErrorBoundary fallbackTitle="Unable to display Quest Trails & Campaigns">
         <div className="space-y-6 max-w-6xl mx-auto">
           {/* Header Banner & Sub-Feature Tabs */}
-          <div className="bg-white rounded-xl border border-[#E3DFD5] p-6 sm:p-8 space-y-6 shadow-xs">
+          <div className="bg-white rounded-2xl border border-[var(--color-border-default)] p-6 sm:p-8 space-y-6 shadow-xs">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="space-y-1.5 max-w-xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-[#2D6A4F] text-xs font-semibold">
-                  <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
-                  <span>Gamified Tourism & Bounties Engine</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-brand-primary)]/10 border border-[var(--color-brand-primary)]/20 text-[var(--color-brand-primary)] text-xs font-semibold">
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--color-brand-accent)]" />
+                  <span>Gamified Tourism &amp; Bounties Engine</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#2C221E]">
-                  Pangasinan Quest Trails & Campaigns
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-brand-brown)] font-serif">
+                  Pangasinan Quest Trails &amp; Campaigns
                 </h1>
-                <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
                   Complete permanent GPS check-in trails or join scheduled municipal pre-events and eco-raids to unlock escrow-backed rewards.
                 </p>
               </div>
 
               {/* Segmented Tab Switcher */}
-              <div className="inline-flex p-1.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] self-start md:self-center">
+              <div className="inline-flex p-1.5 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] self-start md:self-center">
                 <button
                   onClick={() => switchTab('trails')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer active:scale-98 ${
                     activeTab === 'trails'
-                      ? 'bg-[#2D6A4F] text-white shadow-xs'
-                      : 'text-[#582F0E] hover:bg-white'
+                      ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
+                      : 'text-[var(--color-brand-brown)] hover:bg-white'
                   }`}
                 >
-                  <Zap className="w-4 h-4 text-[#FFB703]" />
+                  <Zap className="w-4 h-4 text-[var(--color-brand-accent)]" />
                   <span>Ongoing Trails</span>
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === 'trails' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>
                     {quests.length}
@@ -199,11 +199,11 @@ function QuestsContent() {
                   onClick={() => switchTab('campaigns')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer active:scale-98 ${
                     activeTab === 'campaigns'
-                      ? 'bg-[#2D6A4F] text-white shadow-xs'
-                      : 'text-[#582F0E] hover:bg-white'
+                      ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
+                      : 'text-[var(--color-brand-brown)] hover:bg-white'
                   }`}
                 >
-                  <Sparkles className="w-4 h-4 text-[#FFB703]" />
+                  <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
                   <span>Event Campaigns</span>
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === 'campaigns' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'}`}>
                     {campaigns.length} Active
@@ -214,20 +214,20 @@ function QuestsContent() {
 
             {/* Escrow Highlight Strip (Visible on Event Campaigns Tab) */}
             {activeTab === 'campaigns' && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[#E8E5DE]">
-                <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
-                  <span className="text-[10px] text-gray-500 uppercase font-medium block">Active Pre-Events</span>
-                  <span className="text-base sm:text-lg font-bold text-[#2C221E]">{campaigns.length} Events Live</span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[var(--color-border-subtle)]">
+                <div className="p-3 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)]">
+                  <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-medium block">Active Pre-Events</span>
+                  <span className="text-base sm:text-lg font-bold text-[var(--color-text-primary)]">{campaigns.length} Events Live</span>
                 </div>
-                <div className="p-3 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
-                  <span className="text-[10px] text-gray-500 uppercase font-medium block">Total Locked Escrow</span>
-                  <span className="text-base sm:text-lg font-bold text-[#2D6A4F]">
+                <div className="p-3 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)]">
+                  <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-medium block">Total Locked Escrow</span>
+                  <span className="text-base sm:text-lg font-bold text-[var(--color-brand-primary)]">
                     {(campaigns.reduce((acc, c) => acc + c.totalBudgetMjdq, 0) / 1000).toLocaleString()} JDQ
                   </span>
                 </div>
-                <div className="col-span-2 sm:col-span-1 p-3 rounded-lg bg-[#FAF9F5] border border-[#E3DFD5]">
-                  <span className="text-[10px] text-gray-500 uppercase font-medium block">Promoter Referral Rate</span>
-                  <span className="text-base sm:text-lg font-bold text-[#B45309]">Up to 50 JDQ / Friend</span>
+                <div className="col-span-2 sm:col-span-1 p-3 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)]">
+                  <span className="text-[10px] text-[var(--color-text-muted)] uppercase font-medium block">Promoter Referral Rate</span>
+                  <span className="text-base sm:text-lg font-bold text-[var(--color-brand-accent-dark)]">Up to 50 JDQ / Friend</span>
                 </div>
               </div>
             )}
@@ -307,11 +307,11 @@ function QuestsContent() {
                 {filteredQuests.map((quest) => (
                   <article
                     key={quest.id}
-                    className="bg-white rounded-xl border border-[#E3DFD5] hover:border-[#2D6A4F]/50 p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group"
+                    className="bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/50 p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-md bg-[#FAF9F5] text-[#2D6A4F] border border-[#E3DFD5]">
+                        <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-md bg-[var(--color-bg-subtle)] text-[var(--color-brand-primary)] border border-[var(--color-border-default)]">
                           {quest.category.replace('_', ' ')}
                         </span>
                         <div className="flex items-center gap-1.5">
@@ -322,12 +322,12 @@ function QuestsContent() {
                             className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all active:scale-95 cursor-pointer ${
                               isSaved('quests', quest.id)
                                 ? 'border-amber-300 bg-amber-100/90 text-[#7D5800] shadow-2xs'
-                                : 'border-[#E3DFD5] bg-white text-[#837560] hover:text-[#2D6A4F] hover:border-[#2D6A4F]/40'
+                                : 'border-[var(--color-border-default)] bg-white text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] hover:border-[var(--color-brand-primary)]/40'
                             }`}
                           >
                             <Bookmark className={`h-3.5 w-3.5 ${isSaved('quests', quest.id) ? 'fill-current text-[#B45309]' : ''}`} />
                           </button>
-                          <div className="flex items-center gap-1.5 bg-[#FFB703] text-[#582F0E] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
+                          <div className="flex items-center gap-1.5 bg-[var(--color-brand-accent)] text-[var(--color-brand-brown)] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
                             <Award className="w-3.5 h-3.5" />
                             <span>+{quest.rewardPoints} PTS</span>
                           </div>
@@ -335,7 +335,7 @@ function QuestsContent() {
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-base font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition line-clamp-2">
+                        <h2 className="text-base font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition line-clamp-2">
                           {quest.title}
                         </h2>
                         {quest.isTest && (
@@ -345,21 +345,21 @@ function QuestsContent() {
                         )}
                       </div>
 
-                      <p className="text-xs text-[#514532] leading-relaxed line-clamp-3">
+                      <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed line-clamp-3">
                         {quest.description}
                       </p>
 
-                      <div className="flex items-center gap-1.5 text-[11px] text-[#837560] pt-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                      <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] pt-1">
+                        <MapPin className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
                         <span className="truncate font-medium">{quest.locationName}</span>
                         <span className="shrink-0">• {quest.radiusMeters}m radius</span>
                       </div>
                     </div>
 
-                    <div className="mt-5 pt-3.5 border-t border-[#E8E5DE] flex items-center justify-between gap-2">
+                    <div className="mt-5 pt-3.5 border-t border-[var(--color-border-subtle)] flex items-center justify-between gap-2">
                       <Link
                         href={`/navigate?name=${encodeURIComponent(quest.locationName)}&lat=${quest.gpsLat}&lng=${quest.gpsLng}&address=${encodeURIComponent(quest.locationName)}`}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-[#2D6A4F] transition"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] transition"
                       >
                         <MapPin className="w-3.5 h-3.5" />
                         <span>Navigate</span>
@@ -367,7 +367,7 @@ function QuestsContent() {
 
                       <Link
                         href={`/quests/${quest.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold shadow-xs group-hover:translate-x-0.5 transition"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white text-xs font-bold shadow-xs group-hover:translate-x-0.5 transition"
                       >
                         <span>Start Quest</span>
                         <ArrowRight className="w-3.5 h-3.5" />
