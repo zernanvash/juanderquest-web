@@ -13,6 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   isPreviewActive: boolean;
   togglePreview: () => void;
+  dismissPreview: () => void;
   previewStatus: PreviewStatus;
   loginWithSeed: (seedId: string) => Promise<boolean>;
   loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<boolean>;
@@ -63,10 +64,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await api.get('/qa/capabilities', { timeout: 8000 });
     return res.data?.success === true && res.data?.data?.can_preview_test_data === true;
   });
+  const dismissPreview = () => {
+    try {
+      sessionStorage.removeItem('jdq_preview_requested');
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('preview')) {
+          url.searchParams.delete('preview');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    } catch {}
+    gateRef.current!.disable('off');
+  };
   const togglePreview = () => {
     if (gateRef.current!.status === 'active' || gateRef.current!.status === 'checking') {
       try { sessionStorage.removeItem('jdq_preview_requested'); } catch {}
-      gateRef.current!.disable();
+      gateRef.current!.disable('off');
+    } else if (
+      gateRef.current!.status === 'forbidden' ||
+      gateRef.current!.status === 'unavailable' ||
+      gateRef.current!.status === 'sign_in_required'
+    ) {
+      dismissPreview();
     } else {
       try { sessionStorage.setItem('jdq_preview_requested', 'true'); sessionStorage.setItem('jdq_app_view', 'true'); } catch {}
       void enablePreview();
@@ -303,6 +323,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isPreviewActive,
         togglePreview,
+        dismissPreview,
         previewStatus,
         loginWithSeed,
         loginWithSimulatedWallet,
