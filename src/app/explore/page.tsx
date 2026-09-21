@@ -28,7 +28,9 @@ import { useAuth } from '@/lib/auth';
 import { useRankedFeed } from '@/lib/use-ranked-feed';
 import { SpotCardSkeleton } from '@/components/Skeleton';
 import { useSavedLibrary } from '@/lib/saved-library';
-import { communityChoicePreview } from '@/lib/community';
+import { JuanChoiceRail } from '@/components/JuanChoiceRail';
+import { JuanChoiceSpotlightCard } from '@/components/JuanChoiceSpotlightCard';
+import { getPublicJuanChoiceSpotlight, planJuanChoicePlacement, type JuanChoiceSpotlight } from '@/lib/juanchoice';
 import { fetchPublicTravelers, type PublicTravelerSummary } from '@/lib/social';
 import { DestinationMedia } from '@/components/DestinationMedia';
 
@@ -43,6 +45,15 @@ export default function ExplorePage() {
   const [scouts, setScouts] = useState<PublicTravelerSummary[]>([]);
   const [loadingScouts, setLoadingScouts] = useState(true);
   const [scoutError, setScoutError] = useState('');
+  const [juanChoiceSpotlight, setJuanChoiceSpotlight] = useState<JuanChoiceSpotlight | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void getPublicJuanChoiceSpotlight(controller.signal).then(value => {
+      if (!controller.signal.aborted) setJuanChoiceSpotlight(value);
+    }).catch(() => { if (!controller.signal.aborted) setJuanChoiceSpotlight(null); });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -96,11 +107,11 @@ export default function ExplorePage() {
 
   const savedSpotHighlights = spots.filter((s) => savedLibrary.spots.includes(s.id)).slice(0, 3);
 
-  const visibleSpots = spots;
+  const { spotlight: featuredChoice, ordinary: visibleSpots, insertionIndex: choiceInsertionIndex } = planJuanChoicePlacement(spots, juanChoiceSpotlight);
 
   // Spotlight recommendations (distinct from top hero to avoid repetition)
-  const topHeroSpot = spots[0] || null;
-  const spotlightSpot = spots.length > 1 ? spots[1] : null;
+  const topHeroSpot = visibleSpots[0] || null;
+  const spotlightSpot = visibleSpots.length > 1 ? visibleSpots[1] : null;
 
   return (
     <Navigation>
@@ -168,7 +179,7 @@ export default function ExplorePage() {
                   Retry Loading
                 </button>
               </div>
-            ) : spots.length === 0 ? (
+            ) : spots.length === 0 && !featuredChoice ? (
               <div className="bg-white rounded-3xl p-12 border border-[var(--color-border-default)] text-center space-y-3 shadow-xs">
                 <Compass className="w-10 h-10 text-[var(--color-border-default)] mx-auto" />
                 <h3 className="font-bold text-sm text-[var(--color-brand-brown)]">No destinations found in feed</h3>
@@ -189,9 +200,9 @@ export default function ExplorePage() {
                   const customTips = userTips[spot.id] || [];
                   const isFeaturedHero = index === 0;
 
-                  return (
+                  return (<React.Fragment key={spot.id}>
+                    {featuredChoice && choiceInsertionIndex === index && <JuanChoiceSpotlightCard spotlight={featuredChoice} />}
                     <article
-                      key={spot.id}
                       className="bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden"
                     >
                       {/* Compact Post Header & Caption Area */}
@@ -450,8 +461,10 @@ export default function ExplorePage() {
                         </div>
                       )}
                     </article>
+                    </React.Fragment>
                   );
                 })}
+                {featuredChoice && choiceInsertionIndex === visibleSpots.length && <JuanChoiceSpotlightCard spotlight={featuredChoice} />}
 
                 {/* Automatically observed inside the independent feed scroll pane. */}
                   <div ref={sentinelRef} className="pt-2 text-center" aria-live="polite">
@@ -517,7 +530,7 @@ export default function ExplorePage() {
                 </Link>
 
                 <Link
-                  href="/community-choice/leaderboard"
+                  href="/choice"
                   className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group min-h-[44px]"
                 >
                   <div className="flex items-center gap-2.5 font-bold text-[#2C221E]">
@@ -527,7 +540,7 @@ export default function ExplorePage() {
                     <span>Community Choice</span>
                   </div>
                   <span className="text-[10px] text-[#7D5800] font-bold group-hover:translate-x-0.5 transition-transform">
-                    Preview →
+                    Free vote →
                   </span>
                 </Link>
 
@@ -734,59 +747,7 @@ export default function ExplorePage() {
               </article>
             )}
 
-            {/* Community Choice Standings Widget (Truthfully Labeled Preview) */}
-            <section className="rounded-2xl border border-[#E3DFD5] bg-white p-4 shadow-xs space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
-                <div>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-[#B45309]">
-                    Community Choice (Preview)
-                  </span>
-                  <h3 className="text-xs font-black text-[#582F0E]">Sample Monthly Standings</h3>
-                </div>
-                <Trophy className="h-4 w-4 text-[#FFB703] fill-[#FFB703]" />
-              </div>
-
-              <div className="space-y-2 pt-0.5">
-                {communityChoicePreview.entries.slice(0, 3).map((entry) => {
-                  const medal = entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉';
-                  return (
-                    <Link
-                      key={entry.slug}
-                      href={`/spots/${entry.slug}`}
-                      className="block rounded-xl bg-[#FAF9F5] border border-[#E3DFD5]/80 p-2.5 transition hover:bg-white hover:border-[#2D6A4F]/40 group"
-                    >
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-sm">{medal}</span>
-                          <span className="truncate text-[#2C221E] group-hover:text-[#2D6A4F] transition">
-                            {entry.name}
-                          </span>
-                        </div>
-                        <span className="shrink-0 text-[10px] font-black text-[#2D6A4F]">
-                          {entry.share}%
-                        </span>
-                      </div>
-                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-200">
-                        <div
-                          className="h-full rounded-full bg-[#2D6A4F]"
-                          style={{ width: `${entry.share}%` }}
-                        />
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-
-              <Link
-                href="/community-choice/leaderboard"
-                className="mt-2 flex w-full items-center justify-center rounded-xl border border-[#E3DFD5] bg-[#FAF9F5] hover:bg-white px-3 py-2 text-[10px] font-bold text-[#2D6A4F] transition min-h-[36px]"
-              >
-                Full Leaderboard Preview →
-              </Link>
-              <p className="text-center text-[9px] text-[#837560] leading-tight">
-                Preview rankings · Off-chain community demonstration
-              </p>
-            </section>
+            <JuanChoiceRail />
           </aside>
         </div>
       </div>

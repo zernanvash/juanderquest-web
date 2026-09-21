@@ -182,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshWallet = async () => {
     if (!token) return;
     try {
-      const res = await api.get('/auth/wallet/status');
+      const res = await api.get('/wallet');
       if (res.data?.success) {
         setWallet(normalizeWallet(res.data.data));
       }

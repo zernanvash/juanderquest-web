@@ -1,6 +1,6 @@
 import { pageMetadata } from '@/lib/page-metadata';
 
-export const metadata = pageMetadata('Community Choice Leaderboard', 'See the destinations recognized by JuanDerQuest community participation each month.', '/community-choice/leaderboard');
+export const metadata = { ...pageMetadata('JuanChoice', 'Explore live JuanChoice community rounds.', '/choice'), robots: { index: false, follow: false } };
 
 export default function CommunityChoiceLeaderboardLayout({ children }: { children: React.ReactNode }) {
   return children;

@@ -22,9 +22,13 @@ export default function LoginPage() {
   const [address, setAddress] = React.useState('dev-wallet-1');
   const [rememberMe, setRememberMe] = React.useState(true);
   const [error, setError] = React.useState('');
+  const redirectTarget = () => {
+    const target = new URLSearchParams(window.location.search).get('redirect');
+    return target?.startsWith('/') && !target.startsWith('//') && !target.includes('\\') && !target.startsWith('/login') ? target : null;
+  };
 
   React.useEffect(() => {
-    if (user) router.replace('/quests');
+    if (user) router.replace(redirectTarget() ?? '/quests');
   }, [user, router]);
 
   React.useEffect(() => {
@@ -34,7 +38,7 @@ export default function LoginPage() {
   }, []);
 
   const finish = (ok: boolean) => {
-    if (ok) router.push('/onboarding/interests');
+    if (ok) router.push(redirectTarget() ?? '/onboarding/interests');
     else setError('Wallet authentication failed. Please try again.');
   };
 

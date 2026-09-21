@@ -13,6 +13,7 @@ import {
   type AuthenticatedUserProfile,
 } from '@/lib/social';
 import { FollowListModal } from '@/components/FollowListModal';
+import { fetchMyEngagement, updateAchievementSharing, type EngagementSummary } from '@/lib/engagement';
 import {
   Wallet,
   Award,
@@ -47,6 +48,9 @@ export default function ProfilePage() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | null>(null);
+  const [engagement, setEngagement] = useState<EngagementSummary | null>(null);
+  const [shareAchievements, setShareAchievements] = useState(false);
+  const [savingSharing, setSavingSharing] = useState(false);
 
   const fetchSubmissions = useCallback(async (forceRefresh = false) => {
     try {
@@ -82,6 +86,7 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchSubmissions();
     loadProfileSettings();
+    fetchMyEngagement().then((summary) => { setEngagement(summary); setShareAchievements(summary.share_achievements); }).catch(() => setEngagement(null));
   }, [fetchSubmissions, loadProfileSettings]);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -130,6 +135,14 @@ export default function ProfilePage() {
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  const handleSharingChange = async (enabled: boolean) => {
+    setShareAchievements(enabled);
+    setSavingSharing(true);
+    try { await updateAchievementSharing(enabled); }
+    catch { setShareAchievements(!enabled); }
+    finally { setSavingSharing(false); }
   };
 
   if (!isReady) return null;
@@ -206,6 +219,27 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          {engagement && (
+            <section className="theme-card p-6 space-y-4" aria-labelledby="engagement-heading">
+              <div>
+                <h2 id="engagement-heading" className="text-lg font-black text-[var(--color-brand-brown)]">Community journey</h2>
+                <p className="text-xs text-[var(--color-text-muted)]">Your participation status is calculated from finalized rounds and verified visits.</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="rounded-xl bg-[var(--color-bg-subtle)] p-3"><strong className="block text-xl">{engagement.streak.current}</strong><span className="text-[11px]">Current streak</span></div>
+                <div className="rounded-xl bg-[var(--color-bg-subtle)] p-3"><strong className="block text-xl">{engagement.streak.longest}</strong><span className="text-[11px]">Longest streak</span></div>
+                <div className="rounded-xl bg-[var(--color-bg-subtle)] p-3"><strong className="block text-xl">{engagement.impact.unique_destinations}</strong><span className="text-[11px]">Destinations</span></div>
+                <div className="rounded-xl bg-[var(--color-bg-subtle)] p-3"><strong className="block text-xl">{engagement.impact.finalized_participations}</strong><span className="text-[11px]">Votes completed</span></div>
+              </div>
+              {engagement.streak.next_milestone && <p className="text-xs font-semibold text-[var(--color-brand-primary)]">{engagement.streak.next_milestone - engagement.streak.current} more official round(s) to your next civic badge.</p>}
+              {engagement.challenges.slice(0, 3).map((challenge) => <div key={challenge.id} className="text-xs flex justify-between gap-3"><span>{challenge.complete ? '✓ ' : ''}{challenge.title}</span><span className="font-bold">{challenge.progress}/{challenge.target}</span></div>)}
+              <label className="flex items-start gap-3 border-t border-[var(--color-border-subtle)] pt-4 text-xs">
+                <input type="checkbox" checked={shareAchievements} disabled={savingSharing} onChange={(event) => handleSharingChange(event.target.checked)} className="mt-0.5" />
+                <span><strong className="block">Share achievement badges publicly</strong><span className="text-[var(--color-text-muted)]">Off by default. Your private impact summary is never exposed by this setting.</span></span>
+              </label>
+            </section>
+          )}
 
           {/* Public Profile & Social Settings Form */}
           <section className="theme-card p-6 sm:p-8 space-y-6">

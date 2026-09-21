@@ -77,6 +77,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
     { label: 'Interactive Map', href: '/map', icon: MapPin },
     { label: 'Saved Places', href: '/saved', icon: Bookmark, flair: 'Logbook' },
     { label: 'Quests & Events', href: '/quests', icon: Zap, flair: 'Bounties' },
+    { label: 'JuanChoice', href: '/choice', icon: Award, flair: 'Free vote' },
     { label: 'Merchant Shop', href: '/shop', icon: ShoppingBag },
     { label: 'Governance DAO', href: '/vote', icon: Vote, badge: 'DAO' },
     { label: 'Leaderboard', href: '/leaderboard', icon: Award },

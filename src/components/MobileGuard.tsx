@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Download, X, Sparkles, Smartphone, ChevronRight } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 const BANNER_DISMISSED_KEY = 'jdq_mobile_banner_dismissed_v1';
 
@@ -39,7 +40,7 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsIOS(ios);
 
     // Fetch dynamic version if available
-    fetch('https://jdq.zernanvash.dev/api/v1/app/version')
+    fetch(`${API_BASE_URL}/app/version`)
       .then((res) => res.json())
       .then((res) => {
         if (res.success && res.data) {
