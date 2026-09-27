@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import {
   Compass,
   MapPin,
+  Route,
   Zap,
   ShoppingBag,
   Vote,
@@ -75,6 +76,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
   const navItems = [
     { label: 'Explore Feed', href: '/explore', icon: Compass, flair: 'Feed' },
     { label: 'Interactive Map', href: '/map', icon: MapPin },
+    { label: 'The Trail', href: '/trail', icon: Route, flair: 'Soon' },
     { label: 'Saved Places', href: '/saved', icon: Bookmark, flair: 'Logbook' },
     { label: 'Quests & Events', href: '/quests', icon: Zap, flair: 'Bounties' },
     { label: 'JuanChoice', href: '/choice', icon: Award, flair: 'Free vote' },
@@ -117,9 +119,9 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
         {/* Spacious, Seamless Icon Navigation Bar with Minimized Expanding Search Pill (Desktop) */}
         <nav
           aria-label="Main Navigation"
-          className="hidden md:flex flex-1 items-center justify-center gap-1 lg:gap-2 px-2 min-w-0 max-w-3xl"
+          className="hidden lg:flex flex-1 items-center justify-center gap-1 xl:gap-2 px-2 min-w-0 max-w-3xl"
         >
-          {navItems.slice(0, 5).map((item) => {
+          {navItems.slice(0, 6).map((item) => {
             const Icon = item.icon;
             const isActive =
               pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
@@ -130,7 +132,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
                 title={item.label}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className={`relative flex items-center justify-center w-12 lg:w-16 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
+                className={`relative flex items-center justify-center w-12 xl:w-16 h-11 rounded-xl transition-all duration-200 cursor-pointer select-none ${
                   isActive
                     ? 'bg-[var(--color-brand-primary)] text-white shadow-xs scale-105'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] hover:bg-[var(--color-bg-subtle)] active:scale-95'
@@ -223,7 +225,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               setIsSearchOpen(true);
               setTimeout(() => searchInputRef.current?.focus(), 60);
             }}
-            className="md:hidden p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center justify-center cursor-pointer transition active:scale-95"
+            className="lg:hidden p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center justify-center cursor-pointer transition active:scale-95"
             aria-label="Open search dialog (Ctrl+K)"
           >
             <Search className="w-5 h-5 text-[var(--color-brand-primary)]" />
@@ -315,14 +317,15 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
       {/* Global Footer (Rendered on standard non-fullscreen views) */}
       {!fullBleed && !isExplore && <Footer />}
 
-      {/* Floating Bottom Navigation Bar (5 Primary Destinations) */}
+      {/* Floating Bottom Navigation Bar (5 primary destinations plus More) */}
       <nav
         aria-label="Mobile Bottom Navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[var(--color-border-default)] px-2 pt-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(43,35,25,0.06)] flex items-center justify-around"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[var(--color-border-default)] px-2 pt-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(43,35,25,0.06)] flex items-center justify-around gap-0.5"
       >
         {[
           { label: 'Explore', href: '/explore', icon: Compass },
           { label: 'Map', href: '/map', icon: MapPin },
+          { label: 'Trail', href: '/trail', icon: Route },
           { label: 'Saved', href: '/saved', icon: Bookmark },
           { label: 'Quests', href: '/quests', icon: Zap },
         ].map((item) => {
@@ -334,7 +337,7 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
               key={item.href}
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition min-w-[56px] min-h-[44px] ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition min-h-[44px] ${
                 isActive
                   ? 'text-[var(--color-brand-primary)] font-black'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-medium'
@@ -348,12 +351,12 @@ export const Navigation: React.FC<{ children?: React.ReactNode; fullBleed?: bool
           );
         })}
 
-        {/* 5th Bottom Item: More (opens full navigation drawer) */}
+        {/* More opens the full navigation drawer. */}
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
           aria-label="Open more menu"
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl transition min-w-[56px] min-h-[44px] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-medium cursor-pointer"
+          className="flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition min-h-[44px] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-medium cursor-pointer"
         >
           <div className="p-1 rounded-xl">
             <Menu className="w-5 h-5 text-[var(--color-text-muted)]" />
