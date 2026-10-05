@@ -35,7 +35,7 @@ import { JuanChoiceSpotlightCard } from '@/components/JuanChoiceSpotlightCard';
 import { getPublicJuanChoiceSpotlight, planJuanChoicePlacement, type JuanChoiceSpotlight } from '@/lib/juanchoice';
 import { fetchPublicTravelers, type PublicTravelerSummary } from '@/lib/social';
 import { DestinationMedia } from '@/components/DestinationMedia';
-import { SpotFieldLogSection } from '@/components/SpotFieldLogSection';
+import { SpotCommentSection } from '@/components/SpotCommentSection';
 import { SpotReportModal } from '@/components/SpotReportModal';
 
 export default function ExplorePage() {
@@ -495,7 +495,7 @@ export default function ExplorePage() {
                             </span>
                           </button>
 
-                          {/* Scout Field Logs Toggle (Unique JuanDerQuest Community Intelligence) */}
+                          {/* Normal Comments Toggle */}
                           <button
                             type="button"
                             onClick={() => handleToggleTips(spot.id)}
@@ -504,16 +504,14 @@ export default function ExplorePage() {
                                 ? 'bg-emerald-50 text-[#2D6A4F] border border-emerald-200 shadow-2xs'
                                 : 'hover:bg-[#FAF9F5] text-[#582F0E] border border-transparent'
                             }`}
-                            aria-label={isTipsOpen ? 'Hide scout field logbook' : 'Open scout field logbook'}
+                            aria-label={isTipsOpen ? 'Hide comments' : 'Open comments'}
                           >
-                            <Compass
-                              className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                                isTipsOpen ? 'rotate-45 text-[#2D6A4F]' : 'text-[#837560]'
+                            <MessageSquare
+                              className={`w-3.5 h-3.5 transition-colors ${
+                                isTipsOpen ? 'text-[#2D6A4F]' : 'text-[#837560]'
                               }`}
                             />
-                            <span>
-                              <span className="hidden sm:inline">Scout </span>Field Logs
-                            </span>
+                            <span>Comments</span>
                           </button>
 
                           {/* Bookmark / Save */}
@@ -562,7 +560,7 @@ export default function ExplorePage() {
                         </div>
                       </div>
 
-                      {/* Scout Field Logbook & Dispatches (Gamified Community Intelligence) */}
+                      {/* Comments Drawer (Normal Comments with Location Pins, Images, and Emojis) */}
                       {isTipsOpen && (
                         <div className="px-3.5 py-4 sm:px-5 sm:py-5 bg-[#FAF9F5] border-t border-[#E3DFD5] space-y-4 animate-fadeIn">
                           {/* Venue Quick Address & Classification */}
@@ -578,8 +576,8 @@ export default function ExplorePage() {
                             )}
                           </div>
 
-                          {/* Dedicated JuanDerQuest Scout Field Log Section */}
-                          <SpotFieldLogSection spotId={spot.id} spotName={spot.name} />
+                          {/* Standard Comment Section with Attachments */}
+                          <SpotCommentSection spotId={spot.id} spotName={spot.name} />
                         </div>
                       )}
                     </article>
