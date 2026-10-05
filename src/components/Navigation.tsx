@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth';
+import { useAuth, adminHandoffUrl } from '@/lib/auth';
 import {
   Compass,
   MapPin,
@@ -86,7 +86,9 @@ export const Navigation: React.FC<{
 }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, wallet, logout } = useAuth();
+  const { user, wallet, token, logout } = useAuth();
+  const adminDashboardUrl =
+    user?.role === 'admin' ? (token ? adminHandoffUrl(token) : 'https://admin.juanderquest.app') : null;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -730,8 +732,15 @@ export const Navigation: React.FC<{
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-extrabold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition truncate">
-                          {user.displayName}
+                        <div className="flex items-center gap-1.5">
+                          <div className="text-xs font-extrabold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition truncate">
+                            {user.displayName}
+                          </div>
+                          {user.role === 'admin' && (
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-700 border border-amber-500/30 shrink-0">
+                              Admin
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px] text-[var(--color-text-muted)] truncate font-mono">
                           {user.seedId || 'demo-traveler'}
@@ -750,6 +759,25 @@ export const Navigation: React.FC<{
 
                   {/* Account Quick Links */}
                   <div className="space-y-0.5 mb-2">
+                    {adminDashboardUrl && (
+                      <a
+                        href={adminDashboardUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        role="menuitem"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-amber-900 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition mb-1"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="w-4 h-4" />
+                          </div>
+                          <span>Admin Control Room</span>
+                        </div>
+                        <span className="text-[10px] text-amber-700 font-extrabold uppercase">
+                          Launch ↗
+                        </span>
+                      </a>
+                    )}
                     <Link
                       href={userProfileHref}
                       onClick={() => setIsProfileOpen(false)}
@@ -1075,8 +1103,15 @@ export const Navigation: React.FC<{
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-extrabold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition truncate">
-                        {user.displayName}
+                      <div className="flex items-center gap-1.5">
+                        <div className="text-xs font-extrabold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition truncate">
+                          {user.displayName}
+                        </div>
+                        {user.role === 'admin' && (
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-700 border border-amber-500/30 shrink-0">
+                            Admin
+                          </span>
+                        )}
                       </div>
                       <div className="text-[10px] text-[var(--color-text-muted)] truncate font-mono">
                         {user.seedId || 'demo-traveler'}
@@ -1109,6 +1144,23 @@ export const Navigation: React.FC<{
                       <span>Settings</span>
                     </Link>
                   </div>
+                  {adminDashboardUrl && (
+                    <div className="mt-2 pt-2 border-t border-[var(--color-border-default)]/40">
+                      <a
+                        href={adminDashboardUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setDrawerOpen(false)}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-amber-900 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 transition shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-amber-700" />
+                          <span>Admin Control Room</span>
+                        </div>
+                        <span className="text-[10px] text-amber-700 font-extrabold uppercase">Launch ↗</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mb-4 p-3 rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)]">
