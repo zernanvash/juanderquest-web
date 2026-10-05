@@ -19,6 +19,7 @@ import { Navigation } from '@/components/Navigation';
 import { api, uploadSpotMedia, isVideoMedia } from '@/lib/api';
 import { invalidateCache } from '@/lib/cache';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { MiniMapPreview } from '@/components/MiniMapPreview';
 
 const categories = [
   {
@@ -82,8 +83,8 @@ export default function NewSpotPage() {
   const [description, setDescription] = useState('');
   const [municipality, setMunicipality] = useState('');
   const [address, setAddress] = useState('');
-  const [gpsLat, setGpsLat] = useState<number>(16.0);
-  const [gpsLng, setGpsLng] = useState<number>(120.0);
+  const [gpsLat, setGpsLat] = useState<number>(16.0205);
+  const [gpsLng, setGpsLng] = useState<number>(120.2338);
   const [priceLevel, setPriceLevel] = useState<number>(1);
   const [dailyHours, setDailyHours] = useState('08:00 AM - 05:00 PM');
   const [selectedTags, setSelectedTags] = useState<string[]>(['hidden_gem', 'local_favorite']);
@@ -298,9 +299,9 @@ export default function NewSpotPage() {
               <Sparkles className="w-4 h-4" />
               <span>Contribute a Spot</span>
             </div>
-            <h1 className="text-2xl md:text-4xl font-black">Add a Pangasinan Destination</h1>
+            <h1 className="text-2xl md:text-4xl font-black">Share a Destination</h1>
             <p className="text-xs md:text-sm text-emerald-50">
-              Share local beaches, food spots, cultural sites, and eco-trails. Upload a real photo to help travelers discover authentic local places.
+              Share local beaches, food spots, cultural sites, and eco-trails. We’re reviewing Pangasinan destinations first for the pilot. Upload a real photo to help travelers discover authentic places.
             </p>
           </div>
 
@@ -453,7 +454,7 @@ export default function NewSpotPage() {
                   }}
                   aria-invalid={Boolean(fieldErrors.municipality)}
                   aria-describedby={fieldErrors.municipality ? 'spot-muni-error' : undefined}
-                  placeholder="e.g. Dagupan City"
+                  placeholder="e.g. Municipality or city"
                   className={`w-full p-3.5 rounded-2xl border text-sm text-[#582F0E] font-semibold outline-none transition min-h-[44px] ${
                     fieldErrors.municipality
                       ? 'border-red-500 bg-red-50/20 focus:border-red-600'
@@ -564,7 +565,7 @@ export default function NewSpotPage() {
                   }}
                   aria-invalid={Boolean(fieldErrors.address)}
                   aria-describedby={fieldErrors.address ? 'spot-address-error' : undefined}
-                  placeholder="e.g. Bonuan Gueset, Dagupan City, Pangasinan"
+                  placeholder="e.g. Street, municipality or city, province"
                   className={`w-full p-3.5 rounded-2xl border text-sm text-[#582F0E] font-semibold outline-none transition min-h-[44px] ${
                     fieldErrors.address
                       ? 'border-red-500 bg-red-50/20 focus:border-red-600'
@@ -579,45 +580,42 @@ export default function NewSpotPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 items-center">
-                <div>
-                  <label htmlFor="spot-lat" className="block text-[10px] font-bold text-gray-500 uppercase">
-                    GPS Latitude
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-[#582F0E] uppercase">
+                    Landmark Location Pin
                   </label>
-                  <input
-                    id="spot-lat"
-                    name="gpsLat"
-                    type="number"
-                    step="0.00001"
-                    value={gpsLat}
-                    onChange={(e) => setGpsLat(Number(e.target.value))}
-                    className="w-full p-3 rounded-xl border border-[#D5C4AC] text-xs text-[#582F0E] font-mono font-bold min-h-[44px]"
-                  />
+                  <button
+                    type="button"
+                    onClick={handleCaptureGps}
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#2D6A4F] hover:text-[#1B4332] min-h-[36px] cursor-pointer"
+                  >
+                    <LocateFixed className="w-4 h-4 text-[#FFB703]" />
+                    <span>Use Current Device Location</span>
+                  </button>
                 </div>
-                <div>
-                  <label htmlFor="spot-lng" className="block text-[10px] font-bold text-gray-500 uppercase">
-                    GPS Longitude
-                  </label>
-                  <input
-                    id="spot-lng"
-                    name="gpsLng"
-                    type="number"
-                    step="0.00001"
-                    value={gpsLng}
-                    onChange={(e) => setGpsLng(Number(e.target.value))}
-                    className="w-full p-3 rounded-xl border border-[#D5C4AC] text-xs text-[#582F0E] font-mono font-bold min-h-[44px]"
-                  />
-                </div>
-              </div>
+                <p className="text-[11px] text-[#837560]">
+                  Click or drag anywhere on the map preview below to set the landmark pin in Pangasinan.
+                </p>
 
-              <button
-                type="button"
-                onClick={handleCaptureGps}
-                className="inline-flex items-center gap-2 text-xs font-extrabold text-[#2D6A4F] hover:text-[#1B4332] min-h-[36px] cursor-pointer"
-              >
-                <LocateFixed className="w-4 h-4 text-[#FFB703]" />
-                <span>Use Current Device Location</span>
-              </button>
+                <MiniMapPreview
+                  lat={gpsLat}
+                  lng={gpsLng}
+                  name={name || 'New Landmark'}
+                  address={address}
+                  municipality={municipality}
+                  interactive={true}
+                  onLocationChange={(newLat, newLng) => {
+                    setGpsLat(Number(newLat.toFixed(5)));
+                    setGpsLng(Number(newLng.toFixed(5)));
+                  }}
+                  badgeLabel="Click map or drag pin to position"
+                  height="h-56"
+                />
+
+                <input type="hidden" name="gpsLat" value={gpsLat} />
+                <input type="hidden" name="gpsLng" value={gpsLng} />
+              </div>
             </div>
 
             {/* Tags & Amenities */}

@@ -1,85 +1,75 @@
 import type { Metadata } from 'next';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { cache } from 'react';
 import { SpotDetailClient } from './SpotDetailClient';
-import { getPublishedDestination, isSyntheticSpot, getPublishedSlugs } from '@/lib/destinations';
+import { appRoutes, isResourceId } from '@/lib/routes';
+import { getServerApiBaseUrl } from '@/lib/search';
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  return getPublishedSlugs().map((slug) => ({ slug }));
+interface PublicSpot {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  municipality: string;
+  image_url?: string | null;
+  is_test?: boolean;
 }
+
+export const dynamic = 'force-dynamic';
+
+const loadPublicSpot = cache(async (identifier: string): Promise<PublicSpot | null> => {
+  if (!isResourceId(identifier)) return null;
+  const response = await fetch(`${getServerApiBaseUrl()}/spots/${encodeURIComponent(identifier)}`, {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(6000),
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`Destination lookup failed (HTTP ${response.status})`);
+  const body = await response.json();
+  const spot = body?.data as PublicSpot | undefined;
+  if (!body?.success || !spot?.id || !spot?.slug || !isResourceId(spot.id)) {
+    throw new Error('Destination lookup returned an invalid response');
+  }
+  return spot;
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const destination = getPublishedDestination(slug);
-
-  // If this is a synthetic or QA test fixture, mark as noindex/nofollow
-  if (isSyntheticSpot(slug)) {
-    return {
-      title: `${slug.replace(/[-_]/g, ' ')} (QA Test Preview)`,
-      description: 'Development and QA test preview on JuanDerQuest. This record is not an indexed destination.',
-      robots: {
-        index: false,
-        follow: false,
-      },
-      alternates: {
-        canonical: `/spots/${slug}`,
-      },
-    };
-  }
-
-  if (destination) {
-    const title = `${destination.name} — ${destination.municipality}, Pangasinan`;
-    const description = destination.description;
-    const url = `/spots/${slug}`;
-
-    return {
+  if (!isResourceId(slug)) notFound();
+  const spot = await loadPublicSpot(slug);
+  if (!spot) return {
+    title: 'Destination preview | JuanDerQuest',
+    description: 'Open this destination in JuanDerQuest.',
+    robots: { index: false, follow: false },
+  };
+  const url = appRoutes.spot(spot.id);
+  const title = `${spot.name} | JuanDerQuest`;
+  const description = spot.description || `Explore ${spot.name} in ${spot.municipality}.`;
+  return {
+    title,
+    description,
+    robots: spot.is_test ? { index: false, follow: false } : undefined,
+    alternates: { canonical: url },
+    openGraph: {
       title,
       description,
-      alternates: {
-        canonical: url,
-      },
-      openGraph: {
-        title: `${destination.name} | JuanDerQuest`,
-        description,
-        url,
-        siteName: 'JuanDerQuest',
-        images: destination.imageUrl
-          ? [
-              {
-                url: destination.imageUrl,
-                alt: `${destination.name} in ${destination.municipality}, Pangasinan`,
-              },
-            ]
-          : undefined,
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: `${destination.name} | JuanDerQuest`,
-        description,
-        images: destination.imageUrl ? [destination.imageUrl] : undefined,
-      },
-    };
-  }
-
-  // Graceful fallback for any newly added community destination
-  const formattedTitle = slug
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-
-  return {
-    title: `${formattedTitle} — Pangasinan Destination`,
-    description: `Discover ${formattedTitle} on JuanDerQuest — community destinations, verified landmarks, and turn-by-turn navigation across Pangasinan.`,
-    alternates: {
-      canonical: `/spots/${slug}`,
+      url,
+      siteName: 'JuanDerQuest',
+      images: spot.image_url ? [{ url: spot.image_url, alt: spot.name }] : undefined,
     },
   };
 }
 
 export default async function SpotDetailPage({ params }: Props) {
   const { slug } = await params;
-  return <SpotDetailClient slug={slug} />;
+  if (!isResourceId(slug)) notFound();
+  const spot = await loadPublicSpot(slug);
+  if (spot && slug !== spot.id) permanentRedirect(appRoutes.spot(spot.id));
+  // The API session cookie is host-scoped to api.juanderquest.app. Browser lookup
+  // must remain possible for wallet-only alpha records invisible to this server.
+  return <SpotDetailClient slug={spot?.id ?? slug} />;
 }

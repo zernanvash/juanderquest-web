@@ -254,7 +254,7 @@ export function RouteModal({ isOpen, onClose, destination }: RouteModalProps) {
               <Sparkles className="w-4 h-4 text-[#2D6A4F]" />
               <div>
                 <span className="text-xs font-black text-[#582F0E] block">Algorithmic Crowd Avoidance</span>
-                <span className="text-[10px] text-gray-500">Route around active congested Pangasinan tourist bottlenecks</span>
+                <span className="text-[10px] text-gray-500">Explore route alternatives near busy destinations</span>
               </div>
             </div>
             <button

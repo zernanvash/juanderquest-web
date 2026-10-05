@@ -19,8 +19,8 @@ export async function GET(
   try {
     const upstream = await fetch(`${UPSTREAM_TILE_ROOT}/${z}/${x}/${y}.png`, {
       headers: {
-        'User-Agent': 'JuanDerQuest-Web/1.0 (+https://jdq.zernanvash.dev/about)',
-        Referer: 'https://jdq.zernanvash.dev/map',
+        'User-Agent': 'JuanDerQuest-Web/1.0 (+https://juanderquest.app/about)',
+        Referer: 'https://juanderquest.app/map',
         Accept: 'image/png,image/*;q=0.8',
       },
       next: { revalidate: TILE_CACHE_SECONDS },

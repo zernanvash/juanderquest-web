@@ -197,7 +197,7 @@ export function FollowButton({
             </div>
 
             <p className="text-xs text-[#514532] leading-relaxed">
-              JuanDerQuest social discovery is public-to-public. To follow travelers and build your Pangasinan scout network, please enable your public profile in settings.
+              JuanDerQuest social discovery is public-to-public. To follow travelers and build your explorer network, please enable your public profile in settings.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F2EFE9]">

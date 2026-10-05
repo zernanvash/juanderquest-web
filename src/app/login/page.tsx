@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Wallet, ShieldCheck, FlaskConical } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { safeReturnPath } from '@/lib/routes';
+import { isTravelerSession } from '@/lib/traveler-session';
 
 type WalletMode = 'local' | 'signature';
 type EthereumProvider = {
@@ -17,23 +19,27 @@ declare global {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isLoading, loginWithWallet, loginWithLocalWallet } = useAuth();
+  const { user, isLoading, loginWithWallet, loginWithLocalWallet, loginAsGuest, loginWithSeed } = useAuth();
+  const [guestEnabled, setGuestEnabled] = React.useState(false);
   const [mode, setMode] = React.useState<WalletMode | null>(null);
   const [address, setAddress] = React.useState('dev-wallet-1');
   const [rememberMe, setRememberMe] = React.useState(true);
   const [error, setError] = React.useState('');
   const redirectTarget = () => {
     const target = new URLSearchParams(window.location.search).get('redirect');
-    return target?.startsWith('/') && !target.startsWith('//') && !target.includes('\\') && !target.startsWith('/login') ? target : null;
+    return safeReturnPath(target);
   };
 
   React.useEffect(() => {
-    if (user) router.replace(redirectTarget() ?? '/quests');
+    if (isTravelerSession(user)) router.replace(redirectTarget() ?? '/quests');
   }, [user, router]);
 
   React.useEffect(() => {
     api.get('/auth/wallet/config')
-      .then((response) => setMode(response.data.data.mode))
+      .then((response) => {
+        setMode(response.data.data.mode);
+        setGuestEnabled(response.data.data.guest_login_enabled === true);
+      })
       .catch(() => setError('Could not load the wallet authentication configuration.'));
   }, []);
 
@@ -76,14 +82,14 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--color-bg-canvas)] grid place-items-center p-4">
-      <section className="w-full max-w-md bg-white rounded-3xl border border-[var(--color-border-default)] shadow-xl p-7 space-y-6">
+    <main className="min-h-screen bg-[var(--color-bg-canvas)] grid place-items-center p-3 sm:p-4">
+      <section className="w-full max-w-md bg-white rounded-3xl border border-[var(--color-border-default)] shadow-xl p-5 sm:p-7 space-y-5 sm:space-y-6">
         <div className="text-center space-y-2">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-[var(--color-brand-primary)] text-white grid place-items-center shadow-xs">
             <Wallet className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-black text-[var(--color-brand-brown)]">Sign in with your wallet</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">Your wallet proves account ownership. Signing in does not send a transaction or cost gas.</p>
+          <h1 className="text-xl sm:text-2xl font-black text-[var(--color-brand-brown)] break-words">Sign in to JuanDerQuest</h1>
+          <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Your wallet proves account ownership. Signing in does not send a transaction or cost gas.</p>
         </div>
 
         {mode === 'signature' && (
@@ -98,7 +104,7 @@ export default function LoginPage() {
         )}
 
         {mode === 'local' && (
-          <form onSubmit={useLocalBypass} className="space-y-4 rounded-2xl border border-amber-300 bg-amber-50/70 p-4">
+          <form onSubmit={useLocalBypass} className="space-y-4 rounded-2xl border border-amber-300 bg-amber-50/70 p-3.5 sm:p-4">
             <div className="flex gap-2 text-[var(--color-brand-accent-dark)]">
               <FlaskConical className="w-5 h-5 shrink-0" />
               <p className="text-xs font-bold">Local development bypass — wallet ownership is not verified.</p>
@@ -124,6 +130,52 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+
+        {guestEnabled && <div className="space-y-2">
+          <button type="button" disabled={isLoading}
+            onClick={async () => {
+              setError('');
+              try {
+                if (await loginAsGuest(rememberMe)) router.replace(redirectTarget() ?? '/explore');
+                else setError('Guest sign-in could not be completed. Please retry.');
+              } catch {
+                setError('Guest sign-in is unavailable or too many attempts were made. Please try again shortly.');
+              }
+            }}
+            className="w-full min-h-[44px] rounded-xl border border-[var(--color-brand-primary)] px-5 py-3 font-bold text-[var(--color-brand-primary)] disabled:opacity-60">
+            {isLoading ? 'Signing in…' : 'Sign in as guest'}
+          </button>
+          <p className="text-xs text-[var(--color-text-secondary)]">Your own guest account, with normal user actions and demo rewards. No crypto wallet needed. Signing out, clearing cookies or session expiry loses access; wallet account linking is not available yet.</p>
+        </div>}
+
+        <div className="space-y-2 rounded-2xl border border-emerald-300 bg-emerald-50/70 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-emerald-800">Scout Persona (30+ Days)</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">Verified Scout</span>
+          </div>
+          <p className="text-xs text-emerald-900">
+            Sign in as Scout Aira (established account &gt;72h old) to demonstrate live JuanChoice voting, tally updates, and Civic XP rewards.
+          </p>
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={async () => {
+              setError('');
+              try {
+                if (await loginWithSeed('qa-sim-20260927-u01')) {
+                  router.replace(redirectTarget() ?? '/choice');
+                } else {
+                  setError('Scout sign-in could not be completed. Please retry.');
+                }
+              } catch {
+                setError('Scout sign-in failed. Please retry.');
+              }
+            }}
+            className="w-full min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-4 disabled:opacity-60 transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+          >
+            <span>{isLoading ? 'Signing in…' : 'Sign in as Scout Aira'}</span>
+          </button>
+        </div>
 
         <label className="flex items-center gap-2 text-xs font-bold text-[var(--color-text-secondary)] cursor-pointer">
           <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="rounded" />

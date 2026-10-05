@@ -8,7 +8,6 @@ import { FollowListModal } from '@/components/FollowListModal';
 import {
   Award,
   Compass,
-  MapPin,
   Sparkles,
   Users,
   UserCheck,
@@ -68,6 +67,7 @@ export function UserProfileView({ profile }: UserProfileViewProps) {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
+      {profile.is_test && <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-bold text-amber-900">Fictional alpha traveler — profile and activity are seeded for testing.</p>}
       {/* Privacy Notice Pill */}
       <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50 via-white to-amber-50/60 p-4 text-xs text-[#7D5800] shadow-2xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -88,7 +88,7 @@ export function UserProfileView({ profile }: UserProfileViewProps) {
           <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
           <div className="absolute bottom-3 right-4 flex items-center gap-2 text-white/85 text-[10px] font-bold uppercase tracking-wider bg-black/25 px-3 py-1 rounded-full backdrop-blur-xs">
             <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
-            <span>Pangasinan Explorer · Member since {joinedYear}</span>
+            <span>Traveler · Member since {joinedYear}</span>
           </div>
         </div>
 
@@ -119,11 +119,6 @@ export function UserProfileView({ profile }: UserProfileViewProps) {
                 )}
 
                 <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <span className="inline-flex items-center gap-1 text-xs text-[#514532] font-semibold">
-                    <MapPin className="h-3.5 w-3.5 text-[#2D6A4F]" />
-                    Pangasinan, Philippines
-                  </span>
-
                   {/* Clickable Follower / Following counters */}
                   <div className="flex items-center gap-2 text-xs">
                     <button
@@ -150,11 +145,11 @@ export function UserProfileView({ profile }: UserProfileViewProps) {
 
             {/* Follow / Edit Action Button */}
             <div className="pt-2 sm:pt-0">
-              <FollowButton
+              {!profile.is_test && <FollowButton
                 targetUserId={profile.id}
                 targetDisplayName={profile.display_name}
                 onCountChange={(delta) => setFollowerCount((prev) => Math.max(0, prev + delta))}
-              />
+              />}
             </div>
           </div>
 

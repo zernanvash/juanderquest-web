@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { api, normalizeSubmission, SubmissionModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { useRequireAuth } from '@/lib/auth';
@@ -45,7 +46,7 @@ export default function HistoryPage() {
   return (
     <Navigation>
       <ErrorBoundary fallbackTitle="Unable to display Submission History">
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-6 w-full max-w-5xl 2xl:max-w-6xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-extrabold text-[var(--color-brand-brown)]">Submissions &amp; Proof History</h1>
@@ -111,10 +112,14 @@ export default function HistoryPage() {
                     </h3>
 
                     <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                        {sub.capturedLat.toFixed(6)}, {sub.capturedLng.toFixed(6)}
-                      </span>
+                      <Link
+                        href={`/map?lat=${sub.capturedLat}&lng=${sub.capturedLng}&name=${encodeURIComponent(sub.questTitle)}`}
+                        className="flex items-center gap-1 font-bold text-[var(--color-brand-primary)] hover:underline"
+                        title="View verified checkpoint in map"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>On-Site Checkpoint</span>
+                      </Link>
                       <span>•</span>
                       <span>{sub.category.replace('_', ' ')}</span>
                       {sub.rewardPoints > 0 && (

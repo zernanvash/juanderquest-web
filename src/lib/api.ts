@@ -2,10 +2,11 @@ import axios from 'axios';
 import { previewRequestHeaders, previewGeneration, previewEnabled } from './preview';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1';
-export const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://admin.jdq.zernanvash.dev';
+export const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://admin.juanderquest.app';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -15,10 +16,6 @@ api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     if (previewEnabled() && (config.method || 'get').toLowerCase() !== 'get' && !config.url?.startsWith('/auth/')) {
       throw new Error('Evaluator preview is read-only. Exit preview before making changes.');
-    }
-    const token = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
     }
     if (!config.url?.includes('/qa/capabilities') && (config.method || 'get').toLowerCase() === 'get') {
       Object.assign(config.headers, previewRequestHeaders());
@@ -33,12 +30,20 @@ api.interceptors.response.use((response) => {
   if (scope !== undefined && scope !== previewGeneration()) throw new Error('Preview scope changed; response discarded.');
   return response;
 }, (error) => {
+  if (typeof window !== 'undefined' &&
+      error.response?.status === 401 &&
+      !error.config?.url?.startsWith('/auth/')) {
+    window.dispatchEvent(new CustomEvent('jdq:session-expired'));
+  }
   if (typeof window !== 'undefined' && error.config?.jdqScope === previewGeneration() && error.config?.headers?.['x-include-test'] === 'true' &&
       [401, 403, 503].includes(error.response?.status)) {
     window.dispatchEvent(new CustomEvent('jdq:preview-rejected', { detail: error.response.status }));
   }
   return Promise.reject(error);
 });
+
+export const isUnauthorizedError = (error: unknown): boolean =>
+  axios.isAxiosError(error) && error.response?.status === 401;
 
 export const uuid = (): string =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -65,6 +70,7 @@ export interface UserModel {
   avatarUrl: string;
   role: 'user' | 'admin' | 'qa';
   points: number; // demo_points
+  handle?: string | null;
 }
 
 export interface QuestModel {
@@ -179,11 +185,13 @@ export interface SpotModel {
   hours: Record<string, string>;
   amenities: string[];
   imageUrl: string;
+  photos?: string[];
   assetIds?: string[];
   sourceType: string;
   sourceName: string;
   trustLevel: string;
   questId?: string;
+  createdBy?: string;
   distanceKm?: number;
   recommendationScore?: number;
   recommendationReasons: string[];
@@ -256,11 +264,17 @@ export function normalizeSpot(raw: any): SpotModel {
     hours: raw.hours || {},
     amenities: raw.amenities || [],
     imageUrl: raw.image_url || DEFAULT_SPOT_IMAGES[raw.slug] || '',
+    photos: [
+      raw.image_url || DEFAULT_SPOT_IMAGES[raw.slug],
+      ...(Array.isArray(raw.attached_assets) ? raw.attached_assets.map((a: { url?: string }) => a?.url).filter(Boolean) : []),
+      ...(Array.isArray(raw.photos) ? raw.photos : []),
+    ].filter(Boolean).filter((url, idx, arr) => arr.indexOf(url) === idx) as string[],
     assetIds: raw.asset_ids || [],
     sourceType: raw.source_type,
     sourceName: raw.source_name,
     trustLevel: raw.trust_level,
     questId: raw.quest_id,
+    createdBy: raw.created_by || raw.createdBy,
     distanceKm: raw.distance_km === undefined ? undefined : Number(raw.distance_km),
     recommendationScore: Number(raw.recommendation_score) || 0,
     recommendationReasons: raw.recommendation_reasons || [],
@@ -283,6 +297,7 @@ type BackendUser = {
   avatar_url: string;
   role: 'user' | 'admin';
   demo_points: number;
+  handle?: string | null;
 };
 
 export function normalizeUser(raw: BackendUser): UserModel {
@@ -294,6 +309,7 @@ export function normalizeUser(raw: BackendUser): UserModel {
     avatarUrl: raw.avatar_url || '',
     role: raw.role,
     points: Number(raw.demo_points) || 0,
+    handle: raw.handle || null,
   };
 }
 
@@ -333,6 +349,22 @@ export function normalizeQuest(raw: BackendQuest): QuestModel {
     markerImageUrl: raw.marker_image_url || '',
     isTest: Boolean(raw.is_test),
   };
+}
+
+export interface CreateAuthorQuestInput {
+  title: string;
+  description: string;
+  category: 'eco' | 'cultural' | 'food_trade';
+  radius_meters?: number;
+  reward_points?: number;
+}
+
+export async function createAuthorQuest(spotId: string, input: CreateAuthorQuestInput): Promise<QuestModel> {
+  const res = await api.post(`/spots/${spotId}/quests`, input);
+  if (!res.data?.success) {
+    throw new Error(res.data?.error?.message || 'Failed to create quest for destination');
+  }
+  return normalizeQuest(res.data.data);
 }
 
 type BackendProposal = {

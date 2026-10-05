@@ -1,5 +1,6 @@
 'use client';
 import { travelerProfileHref } from '@/lib/preview';
+import { appRoutes } from '@/lib/routes';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
@@ -157,7 +158,7 @@ function SearchResultsContent() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       {/* Search Header Bar */}
       <div className="rounded-3xl border border-[#E3DFD5] bg-white p-4 sm:p-6 shadow-xs space-y-4">
         <form onSubmit={handleSearchSubmit} className="relative flex items-center">
@@ -166,7 +167,7 @@ function SearchResultsContent() {
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder="Search places, people or quests (e.g. Hundred Islands, @juan, Trek)..."
+            placeholder="Search places, people, or quests (e.g. beach, @juan, hiking)…"
             aria-label="Search query"
             maxLength={100}
             className="w-full h-12 rounded-full border border-[#E3DFD5] bg-[#FAF9F5] pl-12 pr-12 text-sm sm:text-base font-semibold text-[#2C221E] placeholder:text-[#837560]/70 focus:border-[#2D6A4F] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#2D6A4F]/10 transition-all"
@@ -221,7 +222,7 @@ function SearchResultsContent() {
           </div>
           <div className="space-y-1">
             <h2 className="text-lg sm:text-xl font-bold text-[#2C221E]">
-              Discover Pangasinan
+              Discover places and people
             </h2>
             <p className="text-xs sm:text-sm text-[#837560] max-w-md mx-auto">
               Type at least 2 characters to search tourist destinations, community travelers, and gamified quest bounties.
@@ -311,14 +312,14 @@ function SearchResultsContent() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {group.items.map((rawItem) => {
                       if (group.type === 'places') {
                         const place = rawItem as PlaceResultItem;
                         return (
                           <Link
                             key={place.id}
-                            href={`/explore/${place.slug}`}
+                            href={appRoutes.spot(place.id)}
                             className="flex items-center gap-3 p-3 rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5]/40 hover:bg-white hover:border-[#2D6A4F]/60 transition-all shadow-2xs group"
                           >
                             <div className="h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-stone-100 border border-[#E3DFD5] flex items-center justify-center">
@@ -391,7 +392,7 @@ function SearchResultsContent() {
                         return (
                           <Link
                             key={quest.id}
-                            href={`/quests/${quest.id}`}
+                            href={appRoutes.quest(quest.id)}
                             className="flex items-center gap-3 p-3 rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5]/40 hover:bg-white hover:border-[#2D6A4F]/60 transition-all shadow-2xs group"
                           >
                             <div className="h-14 w-14 shrink-0 rounded-xl bg-amber-50 border border-amber-200 text-[#B45309] flex items-center justify-center">
@@ -440,14 +441,14 @@ function SearchResultsContent() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {tabItems.map((rawItem) => {
                 if (activeTab === 'places') {
                   const place = rawItem as PlaceResultItem;
                   return (
                     <Link
                       key={place.id}
-                      href={`/explore/${place.slug}`}
+                      href={appRoutes.spot(place.id)}
                       className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#E3DFD5] bg-white hover:border-[#2D6A4F]/60 transition-all shadow-xs group"
                     >
                       <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-stone-100 border border-[#E3DFD5] flex items-center justify-center">
@@ -522,7 +523,7 @@ function SearchResultsContent() {
                   return (
                     <Link
                       key={quest.id}
-                      href={`/quests/${quest.id}`}
+                      href={appRoutes.quest(quest.id)}
                       className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#E3DFD5] bg-white hover:border-[#2D6A4F]/60 transition-all shadow-xs group"
                     >
                       <div className="h-16 w-16 shrink-0 rounded-xl bg-amber-50 border border-amber-200 text-[#B45309] flex items-center justify-center">

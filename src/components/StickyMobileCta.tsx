@@ -37,7 +37,7 @@ export function StickyMobileCta() {
       ) : (
         <a
           data-analytics-label="sticky_download"
-          href="/download/juanderquest-latest.apk"
+          href="/download"
           className="flex-1 rounded-xl border border-[#2D6A4F] px-3 py-3 text-center text-sm font-black text-[#2D6A4F] active:scale-98 transition"
         >
           Get Android App

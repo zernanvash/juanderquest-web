@@ -14,11 +14,9 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
   const [versionInfo, setVersionInfo] = useState<{
     versionName: string;
     downloadUrl: string;
-    fileName?: string;
   }>({
     versionName: 'alpha-latest',
-    downloadUrl: 'https://jdq.zernanvash.dev/api/v1/app/download',
-    fileName: 'juanderquest-latest.apk',
+    downloadUrl: '/download',
   });
 
   useEffect(() => {
@@ -46,8 +44,7 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
         if (res.success && res.data) {
           setVersionInfo({
             versionName: res.data.versionName || 'alpha-latest',
-            downloadUrl: res.data.downloadUrl || 'https://jdq.zernanvash.dev/api/v1/app/download',
-            fileName: res.data.fileName || 'juanderquest-latest.apk',
+            downloadUrl: '/download',
           });
         }
       })
@@ -105,7 +102,6 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
             {isAndroid ? (
               <a
                 href={versionInfo.downloadUrl}
-                download={versionInfo.fileName}
                 className="inline-flex items-center gap-1 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xs transition active:scale-95 shrink-0"
               >
                 <Download className="w-3 h-3" />

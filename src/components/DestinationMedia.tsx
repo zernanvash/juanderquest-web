@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import Link from 'next/link';
 import { MapPin, Film, AlertCircle, RefreshCw } from 'lucide-react';
 import { isVideoMedia } from '@/lib/api';
 
@@ -13,6 +14,7 @@ interface DestinationMediaProps {
   priority?: boolean;
   className?: string;
   hideUnavailable?: boolean;
+  href?: string;
 }
 
 export const DestinationMedia: React.FC<DestinationMediaProps> = ({
@@ -24,6 +26,7 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
   priority = false,
   className = '',
   hideUnavailable = false,
+  href,
 }) => {
   const [loadError, setLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -77,7 +80,7 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
 
   // Failed state or no source URL provided
   if (!src || loadError) {
-    return (
+    const placeholderContent = (
       <div
         className={`relative w-full ${aspectClass} bg-gradient-to-br from-[#FAF9F5] via-[#F2EFE9] to-[#E3DFD5] border-y border-[#E3DFD5] flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden ${className}`}
         role="img"
@@ -97,7 +100,7 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
             </p>
             {municipality && (
               <p className="text-[11px] text-[#7D5800] font-semibold">
-                {municipality}, Pangasinan
+                {municipality}
               </p>
             )}
           </div>
@@ -125,12 +128,26 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
         </div>
       </div>
     );
+
+    if (href && !loadError) {
+      return (
+        <Link
+          href={href}
+          className="block w-full cursor-pointer focus:outline-none group/placeholder"
+          aria-label={`View details for ${destinationName || alt}`}
+        >
+          {placeholderContent}
+        </Link>
+      );
+    }
+
+    return placeholderContent;
   }
 
   // Normal image rendering with smooth loaded transition & retry keying
   const imageSrcWithRetry = retryCount > 0 ? `${src}${src.includes('?') ? '&' : '?'}retry=${retryCount}` : src;
 
-  return (
+  const imageCard = (
     <div className={`relative w-full ${aspectClass} max-h-[480px] bg-[#FAF9F5] overflow-hidden ${className}`}>
       {/* Background skeleton while loading */}
       {!isLoaded && (
@@ -153,4 +170,18 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
       />
     </div>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block w-full cursor-pointer focus:outline-none group/media overflow-hidden"
+        aria-label={`View details for ${destinationName || alt}`}
+      >
+        {imageCard}
+      </Link>
+    );
+  }
+
+  return imageCard;
 };

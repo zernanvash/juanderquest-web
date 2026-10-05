@@ -17,22 +17,22 @@ export default function RootPage() {
     <div className="min-h-screen bg-[var(--color-bg-canvas)] flex flex-col justify-between text-[var(--color-text-primary)] selection:bg-[var(--color-brand-accent)]/30">
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {/* Top Hero Section */}
-        <section className="mx-auto max-w-7xl px-5 sm:px-8 py-12 md:py-20 lg:py-24">
+        <section className="mx-auto max-w-7xl px-4 sm:px-8 py-8 md:py-20 lg:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             
             {/* Left Column: Travel Headline & Value Proposition */}
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)] text-xs font-black tracking-wide border border-[var(--color-brand-primary)]/20">
                 <Sparkles className="w-3.5 h-3.5 text-[var(--color-brand-accent)]" />
-                <span>Pangasinan Tourism &amp; Heritage Platform</span>
+                <span>Community-powered travel</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[var(--color-brand-brown)] tracking-tight leading-[1.15]">
-                Find your next Pangasinan adventure—and build a travel passport worth sharing.
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[var(--color-brand-brown)] tracking-tight leading-[1.15] break-words">
+                Find your next adventure—and build a travel passport worth sharing.
               </h1>
 
               <p className="text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-2xl font-normal">
-                Explore secluded beaches, historic heritage shrines, and family-run food stops across 44 Pangasinan municipalities. Browse instantly on the web or unlock AR quests on Android.
+                Discover local destinations, heritage, food, and experiences with the communities that know them best. The current pilot destination catalog starts in Pangasinan.
               </p>
 
               {/* Action CTAs */}
@@ -40,7 +40,7 @@ export default function RootPage() {
                 <Link
                   data-analytics-label="hero_explore"
                   href="/explore"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] px-7 py-4 text-center font-black text-white shadow-md hover:shadow-lg transition active:scale-98 min-h-[48px]"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] px-5 sm:px-7 py-3.5 sm:py-4 text-center font-black text-white shadow-md hover:shadow-lg transition active:scale-98 min-h-[48px]"
                 >
                   <Compass className="w-5 h-5 text-[var(--color-brand-accent)]" />
                   <span>Explore Destinations</span>
@@ -49,24 +49,25 @@ export default function RootPage() {
 
                 <a
                   data-analytics-label="hero_download"
-                  href="/download/juanderquest-latest.apk"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] px-6 py-3.5 text-center font-black text-[var(--color-brand-primary)] transition active:scale-98 min-h-[48px]"
+                  href="/download"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-light)] px-4 sm:px-6 py-3.5 text-center font-black text-[var(--color-brand-primary)] transition active:scale-98 min-h-[48px]"
                 >
                   <Download className="w-4 h-4" />
                   <span>Get Android App</span>
                 </a>
               </div>
 
+
               {/* Trust Indicators */}
               <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--color-text-muted)] pt-2 font-semibold">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-[var(--color-brand-primary)]" />
-                  <span>Zero account required to browse</span>
+                  <span>Connect a wallet to explore the web app</span>
                 </div>
                 <span>•</span>
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-[var(--color-brand-primary)]" />
-                  <span>44 Municipalities &amp; Cities</span>
+                  <span>Local places, real stories</span>
                 </div>
               </div>
             </div>
@@ -78,7 +79,7 @@ export default function RootPage() {
                 <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-gradient-to-br from-[var(--color-brand-primary)] to-[var(--color-brand-primary-hover)]">
                   <Image
                     src="/bg_landscape.png"
-                    alt="Scenic Pangasinan landscape"
+                    alt="Illustrated coastal hills and shoreline"
                     fill
                     priority
                     sizes="(max-width: 768px) 90vw, 40vw"
@@ -134,8 +135,8 @@ export default function RootPage() {
         </section>
 
         {/* The 4-Step Traveler Journey (Discover → Save → Visit → Earn) */}
-        <section className="bg-white border-y border-[var(--color-border-default)] py-16 sm:py-20">
-          <div className="mx-auto max-w-7xl px-5 sm:px-8 space-y-12">
+        <section className="bg-white border-y border-[var(--color-border-default)] py-12 sm:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8 space-y-10 sm:space-y-12">
             
             <div className="text-center max-w-2xl mx-auto space-y-3">
               <span className="text-xs font-black uppercase tracking-wider text-[var(--color-brand-primary)]">
@@ -145,13 +146,13 @@ export default function RootPage() {
                 From first browse to verified traveler passport.
               </h2>
               <p className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-relaxed">
-                A simple, open, and gamified way to experience Pangasinan tourism while supporting local MSME communities.
+                A community-powered way to discover destinations and support local businesses wherever the journey takes you.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {/* Step 1: Discover */}
-              <div className="p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/40 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
+              <div className="p-4 sm:p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/40 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-100/80 text-[var(--color-brand-primary)] flex items-center justify-center font-black">
                   <Compass className="w-6 h-6" />
                 </div>
@@ -165,7 +166,7 @@ export default function RootPage() {
               </div>
 
               {/* Step 2: Save */}
-              <div className="p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-[var(--color-brand-accent)]/50 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
+              <div className="p-4 sm:p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-[var(--color-brand-accent)]/50 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
                 <div className="w-12 h-12 rounded-2xl bg-amber-100/80 text-[var(--color-brand-accent-dark)] flex items-center justify-center font-black">
                   <Bookmark className="w-6 h-6" />
                 </div>
@@ -174,12 +175,12 @@ export default function RootPage() {
                   <h3 className="font-black text-lg text-[var(--color-brand-brown)]">Save on Device</h3>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                  Bookmark favorite destinations to your private travel logbook without needing to register or link a wallet.
+                  Connect a wallet to save favorite destinations to your personal travel collection.
                 </p>
               </div>
 
               {/* Step 3: Visit */}
-              <div className="p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-blue-300 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
+              <div className="p-4 sm:p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-blue-300 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
                 <div className="w-12 h-12 rounded-2xl bg-blue-100/80 text-blue-700 flex items-center justify-center font-black">
                   <MapPin className="w-6 h-6" />
                 </div>
@@ -193,7 +194,7 @@ export default function RootPage() {
               </div>
 
               {/* Step 4: Earn */}
-              <div className="p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-[var(--color-brand-brown)]/40 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
+              <div className="p-4 sm:p-6 rounded-3xl bg-[var(--color-bg-canvas)] border border-[var(--color-border-default)] hover:border-[var(--color-brand-brown)]/40 hover:shadow-md transition-all duration-200 space-y-3 shadow-2xs">
                 <div className="w-12 h-12 rounded-2xl bg-amber-200/70 text-[var(--color-brand-brown)] flex items-center justify-center font-black">
                   <Trophy className="w-6 h-6" />
                 </div>
@@ -222,6 +223,7 @@ export default function RootPage() {
 
         {/* Academic Capstone Attribution */}
         <section className="mx-auto max-w-4xl px-5 sm:px-8 py-12 text-center text-xs text-[var(--color-text-muted)] space-y-2">
+          <p>Original capstone research title</p>
           <p className="font-bold text-[var(--color-brand-brown)]">
             JuanDerQuest: A Gamified Blockchain-based System for Promoting Tourist Destinations in Pangasinan
           </p>

@@ -1,26 +1,16 @@
-'use client';
+import { notFound } from 'next/navigation';
+import CampaignDetailClient from '@/components/CampaignDetailClient';
+import { isResourceId } from '@/lib/routes';
+import { getServerApiBaseUrl } from '@/lib/search';
 
-import React, { useEffect, use, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-
-function RedirectContent({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const qs = searchParams.toString();
-    const target = `/quests/campaigns/${id}${qs ? `?${qs}` : ''}`;
-    router.replace(target);
-  }, [id, router, searchParams]);
-
-  return null;
-}
-
-export default function CampaignDetailRedirectPage({ params }: { params: Promise<{ id: string }> }) {
-  return (
-    <Suspense fallback={null}>
-      <RedirectContent params={params} />
-    </Suspense>
-  );
+export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!isResourceId(id)) notFound();
+  const response = await fetch(`${getServerApiBaseUrl()}/campaigns/${encodeURIComponent(id)}`, {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(6000),
+  });
+  if (response.status === 404) notFound();
+  if (!response.ok) throw new Error(`Campaign lookup failed (HTTP ${response.status})`);
+  return <CampaignDetailClient params={Promise.resolve({ id })} />;
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup } from 'leaflet';
+import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer as LeafletTileLayer } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { createQuestPinHtml, createSpotPinHtml } from '@/lib/map-icons';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
+import { appRoutes } from '@/lib/routes';
 
 import {
   MapPin,
@@ -32,6 +33,7 @@ const MAP_CENTER: [number, number] = [16.03, 120.33];
 // One map host per browser session; retain rendered tiles and viewport state between route visits.
 let retainedMap: LeafletMap | null = null;
 let retainedHost: HTMLDivElement | null = null;
+let retainedTileLayer: LeafletTileLayer | null = null;
 
 export default function QuestMapPage() {
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
@@ -43,6 +45,7 @@ export default function QuestMapPage() {
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tilesUnavailable, setTilesUnavailable] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletMap | null>(null);
@@ -83,8 +86,22 @@ export default function QuestMapPage() {
         const searchParams = new URLSearchParams(window.location.search);
         const urlLat = parseFloat(searchParams.get('lat') || '');
         const urlLng = parseFloat(searchParams.get('lng') || '');
+        const urlSpot = searchParams.get('spot');
+        const urlQuest = searchParams.get('quest');
 
-        if (!isNaN(urlLat) && !isNaN(urlLng)) {
+        if (urlSpot) {
+          const matchedSpot = loadedSpots.find((s) => s.id === urlSpot || s.slug === urlSpot);
+          if (matchedSpot) {
+            setSelectedItem({ type: 'spot', data: matchedSpot });
+            setIsDetailsCollapsed(false);
+          }
+        } else if (urlQuest) {
+          const matchedQuest = loadedQuests.find((q) => q.id === urlQuest);
+          if (matchedQuest) {
+            setSelectedItem({ type: 'quest', data: matchedQuest });
+            setIsDetailsCollapsed(false);
+          }
+        } else if (!isNaN(urlLat) && !isNaN(urlLng)) {
           const matchedSpot = loadedSpots.find(
             (s) => Math.abs(s.gpsLat - urlLat) < 0.005 && Math.abs(s.gpsLng - urlLng) < 0.005
           );
@@ -142,6 +159,8 @@ export default function QuestMapPage() {
     if (!container) return;
 
     let isDisposed = false;
+    const onTileError = () => setTilesUnavailable(true);
+    const onTileLoad = () => setTilesUnavailable(false);
 
     (async () => {
       const L = (await import('leaflet')).default;
@@ -176,7 +195,7 @@ export default function QuestMapPage() {
 
           L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-          L.tileLayer(MAP_TILE_URL, {
+          retainedTileLayer = L.tileLayer(MAP_TILE_URL, {
             maxZoom: MAP_TILE_MAX_ZOOM,
             attribution: MAP_TILE_ATTRIBUTION,
           }).addTo(map);
@@ -186,6 +205,9 @@ export default function QuestMapPage() {
           retainedMap = map;
           retainedHost = host;
         }
+
+        retainedTileLayer?.on('tileerror', onTileError);
+        retainedTileLayer?.on('tileload', onTileLoad);
 
         // Multi-stage dimension invalidation to ensure proper rendering after container layout
         const activeMap = mapInstanceRef.current;
@@ -215,6 +237,8 @@ export default function QuestMapPage() {
 
     return () => {
       isDisposed = true;
+      retainedTileLayer?.off('tileerror', onTileError);
+      retainedTileLayer?.off('tileload', onTileLoad);
       resizeObserver.disconnect();
       markersLayerRef.current?.clearLayers();
       mapInstanceRef.current = null;
@@ -313,7 +337,7 @@ export default function QuestMapPage() {
 
   return (
     <Navigation fullBleed>
-      <ErrorBoundary fallbackTitle="Unable to display Pangasinan Map">
+      <ErrorBoundary fallbackTitle="Unable to display destination map">
         <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
           {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
@@ -395,7 +419,7 @@ export default function QuestMapPage() {
                     </div>
                     <div className="min-w-0">
                       <h1 className="text-xs sm:text-sm font-black text-[#582F0E] leading-tight truncate">
-                        Pangasinan Tourism Map
+                        Destination Map
                       </h1>
                       <span className="text-[10px] text-[#837560] font-semibold block truncate">
                         {quests.length} Quests • {spots.length} Spots Active
@@ -648,8 +672,8 @@ export default function QuestMapPage() {
                           : selectedItem.data.municipality}
                       </span>
                     </div>
-                    <span className="font-mono text-[10px] text-gray-500 shrink-0 ml-2">
-                      {selectedItem.data.gpsLat.toFixed(3)}, {selectedItem.data.gpsLng.toFixed(3)}
+                    <span className="text-[10px] font-bold text-[#2D6A4F] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0 ml-2">
+                      Verified Pin
                     </span>
                   </div>
 
@@ -671,7 +695,7 @@ export default function QuestMapPage() {
 
                     {selectedItem.type === 'quest' ? (
                       <Link
-                        href={`/quests/${selectedItem.data.id}`}
+                        href={appRoutes.quest(selectedItem.data.id)}
                         className="min-w-0 min-h-[44px] py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-1 transition active:scale-95"
                       >
                         <span className="truncate">View Quest</span>
@@ -679,7 +703,7 @@ export default function QuestMapPage() {
                       </Link>
                     ) : (
                       <Link
-                        href={`/spots/${(selectedItem.data as SpotModel).slug}`}
+                        href={appRoutes.spot((selectedItem.data as SpotModel).id)}
                         className="min-w-0 min-h-[44px] py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-1 transition active:scale-95"
                       >
                         <span className="truncate">View Spot</span>
@@ -742,7 +766,7 @@ export default function QuestMapPage() {
           {loading && (
             <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-[#E3DFD5] shadow-md flex items-center gap-2 text-xs font-bold text-[#582F0E]">
               <RotateCw className="w-3.5 h-3.5 animate-spin text-[#2D6A4F]" />
-              <span>Loading Pangasinan Map Markers...</span>
+              <span>Loading destination markers...</span>
             </div>
           )}
 
@@ -756,6 +780,15 @@ export default function QuestMapPage() {
                 className="underline ml-2 text-[#2D6A4F] hover:text-[#1B4332] cursor-pointer"
               >
                 Retry
+              </button>
+            </div>
+          )}
+
+          {tilesUnavailable && (
+            <div role="status" className="absolute bottom-20 left-4 right-4 z-20 rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-xs font-semibold text-amber-900 shadow-md sm:right-auto sm:max-w-sm">
+              Map tiles are unavailable in this local setup. Pins and place details still work.{' '}
+              <button type="button" onClick={() => retainedTileLayer?.redraw()} className="min-h-11 font-bold underline underline-offset-2">
+                Retry tiles
               </button>
             </div>
           )}

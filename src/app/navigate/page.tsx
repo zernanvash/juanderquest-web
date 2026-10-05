@@ -53,9 +53,12 @@ function NavigateContent() {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
 
-  const [route, setRoute] = useState<RouteModel | null>(null);
+  const [routeResult, setRouteResult] = useState<{ key: string; value: RouteModel } | null>(null);
+  const routeInputKey = [userLocation?.lat, userLocation?.lng, destination.lat, destination.lng, costing, avoidCongested].join(':');
+  const route = routeResult?.key === routeInputKey ? routeResult.value : null;
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+  const routeRequestId = useRef(0);
   const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null);
   const [showDirectionsDrawer, setShowDirectionsDrawer] = useState(true);
   const [isControlsCollapsed, setIsControlsCollapsed] = useState(false);
@@ -79,7 +82,7 @@ function NavigateContent() {
         name,
         lat,
         lng,
-        address: address || 'Pangasinan, Philippines',
+        address: address || name,
       });
     }
   }, [searchParams]);
@@ -125,8 +128,10 @@ function NavigateContent() {
   // 2. Fetch Route from Valhalla backend service
   const loadRoute = useCallback(async () => {
     if (!userLocation) return;
+    const requestId = ++routeRequestId.current;
     setLoadingRoute(true);
     setRouteError(null);
+    setRouteResult(null);
 
     try {
       const data = await fetchRoute({
@@ -137,13 +142,16 @@ function NavigateContent() {
         costing,
         avoidCongested,
       });
-      setRoute(data);
+      if (requestId === routeRequestId.current) setRouteResult({ key: routeInputKey, value: data });
     } catch (err: any) {
-      setRouteError(err.message || 'Could not calculate navigation route.');
+      if (requestId === routeRequestId.current) {
+        setRouteResult(null);
+        setRouteError(err.message || 'Could not calculate navigation route.');
+      }
     } finally {
-      setLoadingRoute(false);
+      if (requestId === routeRequestId.current) setLoadingRoute(false);
     }
-  }, [userLocation, destination, costing, avoidCongested]);
+  }, [userLocation, destination, costing, avoidCongested, routeInputKey]);
 
   useEffect(() => {
     if (userLocation) {
@@ -555,7 +563,7 @@ function NavigateContent() {
       {loadingRoute && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-[#E3DFD5] shadow-lg flex items-center gap-2 text-xs font-bold text-[#2D6A4F]">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Calculating road network on Azure VM...</span>
+          <span>Calculating route with the Valhalla engine...</span>
         </div>
       )}
 
@@ -563,7 +571,7 @@ function NavigateContent() {
       {routeError && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-amber-50/95 backdrop-blur-md px-4 py-2.5 rounded-xl border border-amber-200 shadow-lg flex items-center gap-2 text-xs font-bold text-amber-900">
           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>{routeError}</span>
+          <span role="alert">Route guidance is unavailable in this local setup. The map remains usable; retry when the routing engine is running. {routeError}</span>
           <button onClick={loadRoute} className="underline ml-2 font-bold cursor-pointer">Retry</button>
         </div>
       )}

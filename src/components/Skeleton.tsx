@@ -85,26 +85,35 @@ export const QuestCardSkeleton: React.FC = () => {
  */
 export const SpotDetailSkeleton: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Hero Banner */}
-      <Skeleton className="w-full h-72 sm:h-96 rounded-3xl" />
+    <div className="w-full space-y-8">
+      {/* Full-Screen Hero Banner */}
+      <div className="w-full h-[calc(100vh-64px)] sm:h-[calc(100dvh-64px)] bg-black">
+        <Skeleton className="w-full h-full bg-stone-800/60 rounded-none" />
+      </div>
 
       {/* Info Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl p-6 border border-[#E3DFD5] space-y-3">
-            <Skeleton className="w-32 h-5 rounded-lg" />
-            <Skeleton className="w-3/4 h-8 rounded-lg" />
-            <Skeleton className="w-full h-4 rounded-md" />
-            <Skeleton className="w-full h-4 rounded-md" />
-            <Skeleton className="w-2/3 h-4 rounded-md" />
-          </div>
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E3DFD5] space-y-4">
+          <Skeleton className="w-32 h-6 rounded-full" />
+          <Skeleton className="w-2/3 h-10 rounded-xl" />
+          <Skeleton className="w-1/3 h-5 rounded-md" />
         </div>
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-6 border border-[#E3DFD5] space-y-3">
-            <Skeleton className="w-28 h-5 rounded-lg" />
-            <Skeleton className="w-full h-10 rounded-xl" />
-            <Skeleton className="w-full h-10 rounded-xl" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8 space-y-6">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E3DFD5] space-y-4">
+              <Skeleton className="w-40 h-6 rounded-lg" />
+              <Skeleton className="w-full h-4 rounded-md" />
+              <Skeleton className="w-full h-4 rounded-md" />
+              <Skeleton className="w-3/4 h-4 rounded-md" />
+            </div>
+          </div>
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-white rounded-3xl p-6 border border-[#E3DFD5] space-y-4">
+              <Skeleton className="w-28 h-5 rounded-lg" />
+              <Skeleton className="w-full h-12 rounded-xl" />
+              <Skeleton className="w-full h-12 rounded-xl" />
+            </div>
           </div>
         </div>
       </div>

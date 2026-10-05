@@ -48,7 +48,7 @@ export default function AboutPage() {
     {
       icon: ShoppingBag,
       title: 'MSME Merchant Escrow',
-      desc: 'Tourists redeem earned reward tokens for exclusive discounts at local Pangasinan craft salt makers, seafood grills, and artisan shops.',
+      desc: 'Travelers can use rewards with participating local makers, restaurants, and shops as merchant partnerships become available.',
     },
     {
       icon: Vote,
@@ -58,7 +58,7 @@ export default function AboutPage() {
     {
       icon: ShieldCheck,
       title: 'Authentic Heritage First',
-      desc: 'Designed specifically for the municipalities of Pangasinan to celebrate cultural identity and empower local communities.',
+      desc: 'Designed to celebrate local identities and support communities, beginning with our Pangasinan pilot.',
     },
   ];
 
@@ -73,11 +73,11 @@ export default function AboutPage() {
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--color-brand-brown)]">
-            JuanDerQuest: Gamified Tourism for Pangasinan
+            JuanDerQuest: Gamified Tourism for Local Communities
           </h1>
 
           <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
-            A gamified system engineered to promote tourist destinations, preserve heritage, and stimulate local micro, small, and medium enterprises (MSMEs) across the province of Pangasinan.
+            A gamified tourism platform for discovering destinations, preserving heritage, and supporting local businesses. Our first pilot and current destination catalog are in Pangasinan.
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export default function AboutPage() {
 
         {/* Quick Links */}
         <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border-default)]">
-          <span className="text-xs text-[var(--color-text-muted)] font-medium">Ready to explore Pangasinan?</span>
+          <span className="text-xs text-[var(--color-text-muted)] font-medium">Ready to discover local places?</span>
           <div className="flex items-center gap-3">
             <Link
               href="/explore"

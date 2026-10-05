@@ -145,6 +145,7 @@ export interface PublicUserProfile {
   status_text: string | null;
   scout_reputation: number;
   is_public: boolean;
+  is_test?: boolean;
   follower_count?: number;
   following_count?: number;
   created_at: string;
@@ -183,8 +184,9 @@ export async function fetchPublicUserProfile(
   const url = `${cleanBase}/users/${encodeURIComponent(idOrHandle)}/profile`;
 
   try {
-    const res = await fetch(url, {
-      method: 'GET',
+      const res = await fetch(url, {
+        method: 'GET',
+        credentials: isServer ? 'omit' : 'include',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

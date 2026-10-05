@@ -100,7 +100,7 @@ export interface ThemeConfig {
  */
 export const PANGASINAN_EMERALD_THEME: ThemeConfig = {
   id: 'pangasinan-emerald',
-  name: 'Pangasinan Emerald & Sun',
+  name: 'Coastal Emerald & Sun',
   description: 'Authentic warm coastal palette with pine green and sun gold accents',
   colors: {
     brand: {
@@ -186,7 +186,7 @@ export const PANGASINAN_EMERALD_THEME: ThemeConfig = {
 export const COASTAL_AZURE_THEME: ThemeConfig = {
   ...PANGASINAN_EMERALD_THEME,
   id: 'coastal-azure',
-  name: 'Lingayen Gulf Azure',
+  name: 'Coastal Azure',
   description: 'Deep gulf blue with golden sunshine accents',
   colors: {
     ...PANGASINAN_EMERALD_THEME.colors,
@@ -211,7 +211,7 @@ export const COASTAL_AZURE_THEME: ThemeConfig = {
 export const SUNSET_TERRACOTTA_THEME: ThemeConfig = {
   ...PANGASINAN_EMERALD_THEME,
   id: 'sunset-terracotta',
-  name: 'Bolinao Sunset Terracotta',
+  name: 'Sunset Terracotta',
   description: 'Warm terracotta and sunset glow for twilight touring',
   colors: {
     ...PANGASINAN_EMERALD_THEME.colors,

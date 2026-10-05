@@ -8,6 +8,7 @@ export interface PublicTravelerSummary {
   bio: string | null;
   status_text: string | null;
   scout_reputation: number;
+  is_test?: boolean;
   follower_count?: number;
   following_count?: number;
   is_unavailable?: boolean;

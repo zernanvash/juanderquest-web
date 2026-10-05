@@ -168,7 +168,7 @@ export default function VotePage() {
   return (
     <Navigation>
       <ErrorBoundary fallbackTitle="Unable to display Governance Proposals">
-        <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="space-y-6 w-full">
           {/* Header Banner */}
           <div className="p-6 md:p-8 rounded-3xl bg-white border border-[var(--color-border-default)] shadow-xs relative overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
@@ -176,7 +176,7 @@ export default function VotePage() {
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
                   <span className="text-xs font-black tracking-wider text-[var(--color-brand-accent-dark)] uppercase">
-                    Pangasinan Tourism DAO Arena
+                    Community Tourism Governance
                   </span>
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]">
                     mJDQ Governance
@@ -188,7 +188,7 @@ export default function VotePage() {
                 <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-2xl leading-relaxed">
                   {config
                     ? `Cast community votes (${voteFeeSplit?.fee} mJDQ per vote). ${(config.burnBps / 100).toFixed(0)}% is permanently burned and ${(100 - config.burnBps / 100).toFixed(0)}% enters the LGU tourism improvement escrow.`
-                    : 'Cast community votes to approve new eco-trails and heritage sites in Pangasinan.'}
+                    : 'Cast community votes on local tourism and conservation proposals.'}
                 </p>
               </div>
 
@@ -265,7 +265,7 @@ export default function VotePage() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Bolinao, Pangasinan"
+                      placeholder="e.g. Municipality, province"
                       value={locationName}
                       onChange={(e) => setLocationName(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl bg-white border border-[#D5C4AC] text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
@@ -332,7 +332,8 @@ export default function VotePage() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5">
+                <ProposalCardSkeleton />
                 <ProposalCardSkeleton />
                 <ProposalCardSkeleton />
                 <ProposalCardSkeleton />
@@ -352,7 +353,7 @@ export default function VotePage() {
                 No active proposals found. Click &quot;Suggest Destination&quot; above to create one!
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5 items-start">
                 {proposals.map((prop) => {
                   const userVote = votedMap[prop.id];
                   const totalVotes = prop.yesVotes + prop.noVotes;

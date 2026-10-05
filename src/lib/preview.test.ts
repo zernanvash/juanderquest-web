@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PreviewGate } from './preview';
 
 describe('preview authorization gate', () => {
@@ -28,5 +28,12 @@ describe('preview authorization gate', () => {
     expect(gate.status).toBe('forbidden');
     await gate.enable('token', async () => { throw { response: { status: 503 } }; });
     expect(gate.status).toBe('unavailable');
+  });
+  it('does not publish a cache scope change for an already disabled gate', () => {
+    const changed = vi.fn();
+    const gate = new PreviewGate(changed);
+    gate.disable();
+    gate.disable();
+    expect(changed).not.toHaveBeenCalled();
   });
 });

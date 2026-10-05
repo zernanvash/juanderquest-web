@@ -1,16 +1,19 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { PreviewGate, PreviewStatus, setPreviewAuthorization, storedToken } from './preview';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { PreviewStatus } from './preview';
 import { invalidateCache } from './cache';
+import { isTravelerSession } from './traveler-session';
 import { useRouter } from 'next/navigation';
-import { api, ADMIN_URL, normalizeUser, normalizeWallet, UserModel, WalletModel } from './api';
+import { api, ADMIN_URL, isUnauthorizedError, normalizeUser, normalizeWallet, UserModel, WalletModel } from './api';
 
 interface AuthContextType {
   user: UserModel | null;
   token: string | null;
   wallet: WalletModel | null;
   isLoading: boolean;
+  sessionUnavailable: boolean;
+  retrySession: () => void;
   isPreviewActive: boolean;
   togglePreview: () => void;
   dismissPreview: () => void;
@@ -19,7 +22,8 @@ interface AuthContextType {
   loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<boolean>;
   loginWithWallet: (address: string, signature: string, rememberMe: boolean) => Promise<boolean>;
   loginWithLocalWallet: (address: string, rememberMe: boolean) => Promise<boolean>;
-  logout: () => void;
+  loginAsGuest: (rememberMe: boolean) => Promise<boolean>;
+  logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshWallet: () => Promise<void>;
 }
@@ -41,128 +45,89 @@ export const shouldStayInTravelerApp = (): boolean => {
   return sessionStorage.getItem('jdq_app_view') === 'true';
 };
 
+export const clearStoredSession = (): void => {
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.removeItem('jdq_token');
+    storage.removeItem('jdq_user');
+  }
+};
+
+// A server outage does not invalidate an HttpOnly cookie. Only a definitive
+// unauthorized response may redirect a traveler to sign-in.
+export const sessionFailureDisposition = (error: unknown): 'signed_out' | 'retryable' =>
+  isUnauthorizedError(error) ? 'signed_out' : 'retryable';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserModel | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const [sessionRetry, setSessionRetry] = useState(0);
 
-  const [previewStatus, setPreviewStatus] = useState<PreviewStatus>('off');
-  const [previewEpoch, setPreviewEpoch] = useState(0);
-  const identityRef = useRef(token);
-  identityRef.current = token;
-  const gateRef = useRef<PreviewGate | null>(null);
-  if (!gateRef.current) gateRef.current = new PreviewGate((status) => {
-    setPreviewAuthorization(status === 'active' ? identityRef.current : null);
-    invalidateCache();
-    setPreviewStatus(status);
-    setPreviewEpoch((epoch) => epoch + 1);
-    window.dispatchEvent(new Event('jdq:preview-mode-changed'));
-  });
-  const isPreviewActive = previewStatus === 'active';
-  const enablePreview = () => gateRef.current!.enable(identityRef.current, async () => {
-    const res = await api.get('/qa/capabilities', { timeout: 8000 });
-    return res.data?.success === true && res.data?.data?.can_preview_test_data === true;
-  });
-  const dismissPreview = () => {
-    try {
-      sessionStorage.removeItem('jdq_preview_requested');
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        if (url.searchParams.has('preview')) {
-          url.searchParams.delete('preview');
-          window.history.replaceState({}, '', url.toString());
-        }
-      }
-    } catch {}
-    gateRef.current!.disable('off');
-  };
-  const togglePreview = () => {
-    if (gateRef.current!.status === 'active' || gateRef.current!.status === 'checking') {
-      try { sessionStorage.removeItem('jdq_preview_requested'); } catch {}
-      gateRef.current!.disable('off');
-    } else if (
-      gateRef.current!.status === 'forbidden' ||
-      gateRef.current!.status === 'unavailable' ||
-      gateRef.current!.status === 'sign_in_required'
-    ) {
-      dismissPreview();
-    } else {
-      try { sessionStorage.setItem('jdq_preview_requested', 'true'); sessionStorage.setItem('jdq_app_view', 'true'); } catch {}
-      void enablePreview();
-    }
-  };
+  // The old evaluator switch is retired. Fictional content has a dedicated,
+  // read-only guest page; wallet sessions browse the ordinary app.
+  const previewStatus: PreviewStatus = 'off';
+  const isPreviewActive = false;
+  const togglePreview = () => {};
+  const dismissPreview = () => {};
 
   useEffect(() => {
-    try {
-      // Old preview/passkey values are not proof of authorization.
-      for (const storage of [localStorage, sessionStorage]) {
-        storage.removeItem('jdq_qa_preview');
-        storage.removeItem('jdq_qa_passkey');
-      }
-      if (new URLSearchParams(window.location.search).get('preview') === 'true') {
-        sessionStorage.setItem('jdq_preview_requested', 'true');
-        sessionStorage.setItem('jdq_app_view', 'true');
-      }
-    } catch {}
-  }, []);
-  useEffect(() => {
-    gateRef.current!.disable();
-    try {
-      if (sessionStorage.getItem('jdq_preview_requested') === 'true') void enablePreview();
-    } catch {}
-    return () => { gateRef.current!.disable(); };
-  }, [token]);
-  useEffect(() => {
-    const rejected = (event: Event) => {
-      const status = (event as CustomEvent<number>).detail;
-      gateRef.current!.disable(status === 401 ? 'sign_in_required' : status === 403 ? 'forbidden' : 'unavailable');
-    };
-    const changedStorage = (event: StorageEvent) => {
-      if (event.key === 'jdq_token' || event.key === null) {
-        gateRef.current!.disable();
-        setUser(null);
-        setWallet(null);
-        setToken(storedToken());
-        // Restore the new tab's identity through the normal validated session path.
-        window.location.reload();
-      }
-    };
-    window.addEventListener('jdq:preview-rejected', rejected);
-    window.addEventListener('storage', changedStorage);
-    return () => { window.removeEventListener('jdq:preview-rejected', rejected); window.removeEventListener('storage', changedStorage); };
-  }, []);
-
-  useEffect(() => {
-    const savedToken = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
-    const savedUser = localStorage.getItem('jdq_user') || sessionStorage.getItem('jdq_user');
-    if (savedToken && savedUser) {
+    let cancelled = false;
+    const restoreSession = async () => {
+      setIsLoading(true);
       try {
-        const raw = JSON.parse(savedUser);
-        // Validate stored user shape; discard broken sessions (Phase C repair).
-        if (isStoredUser(raw) && raw.display_name && typeof raw.demo_points === 'number') {
-          const restored = normalizeUser(raw as Parameters<typeof normalizeUser>[0]);
-          // Preserve the admin handoff across reloads unless user opted into traveler app view / preview.
-          if (restored.role === 'admin' && !shouldStayInTravelerApp()) {
-            window.location.assign(adminHandoffUrl(savedToken));
-            return;
-          }
-          setToken(savedToken);
-          setUser(restored);
-        } else {
-          localStorage.removeItem('jdq_token');
-          localStorage.removeItem('jdq_user');
-          sessionStorage.removeItem('jdq_token');
-          sessionStorage.removeItem('jdq_user');
+        let response;
+        try {
+          response = await api.get('/auth/me');
+        } catch (error) {
+          const legacyToken = localStorage.getItem('jdq_token') || sessionStorage.getItem('jdq_token');
+          if (!isUnauthorizedError(error) || !legacyToken) throw error;
+          response = await api.post('/auth/session/upgrade', { remember_me: Boolean(localStorage.getItem('jdq_token')) }, { headers: { Authorization: `Bearer ${legacyToken}` } });
         }
-      } catch (e) {
-        localStorage.removeItem('jdq_token');
-        localStorage.removeItem('jdq_user');
-        sessionStorage.removeItem('jdq_token');
-        sessionStorage.removeItem('jdq_user');
+        if (!response.data?.success) throw new Error('Session validation failed');
+        const restored = normalizeUser(response.data.data);
+        clearStoredSession();
+        if (!cancelled) {
+          setToken('cookie-session');
+          setUser(restored);
+          setSessionUnavailable(false);
+        }
+      } catch (error) {
+        if (sessionFailureDisposition(error) === 'signed_out') {
+          clearStoredSession();
+          invalidateCache();
+          if (!cancelled) {
+            setToken(null);
+            setUser(null);
+            setWallet(null);
+            setSessionUnavailable(false);
+          }
+        } else if (!cancelled) {
+          // Keep the cookie and any in-memory identity, but the route gate
+          // blocks protected content until the backend confirms the session.
+          setSessionUnavailable(true);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+    void restoreSession();
+    return () => { cancelled = true; };
+  }, [sessionRetry]);
+
+  useEffect(() => {
+    const expireSession = () => {
+      clearStoredSession();
+      invalidateCache();
+      setToken(null);
+      setUser(null);
+      setWallet(null);
+      setSessionUnavailable(false);
+      setIsLoading(false);
+    };
+    window.addEventListener('jdq:session-expired', expireSession);
+    return () => window.removeEventListener('jdq:session-expired', expireSession);
   }, []);
 
   const refreshProfile = async () => {
@@ -171,11 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.data?.success) {
         const normalized = normalizeUser(res.data.data);
         setUser(normalized);
-        const storage = localStorage.getItem('jdq_token') ? localStorage : sessionStorage;
-        storage.setItem('jdq_user', JSON.stringify(res.data.data));
+        setSessionUnavailable(false);
       }
     } catch (e) {
-      console.error('Failed to refresh profile', e);
+      if (!isUnauthorizedError(e)) console.error('Failed to refresh profile', e);
     }
   };
 
@@ -184,17 +148,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.get('/wallet');
       if (res.data?.success) {
-        setWallet(normalizeWallet(res.data.data));
+        const nextWallet = normalizeWallet(res.data.data);
+        setWallet((prev) => {
+          if (prev && nextWallet.balanceMjdq > prev.balanceMjdq) {
+            const diff = nextWallet.balanceMjdq - prev.balanceMjdq;
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('jdq:reward-received', {
+                  detail: { diff, total: nextWallet.balanceMjdq },
+                })
+              );
+            }
+          }
+          return nextWallet;
+        });
       }
     } catch (e) {
-      console.error('Failed to refresh wallet', e);
+      if (!isUnauthorizedError(e)) console.error('Failed to refresh wallet', e);
     }
   };
 
   useEffect(() => {
-    if (token) {
+    if (!token) return;
+    refreshWallet();
+
+    const handleFocus = () => {
       refreshWallet();
-    }
+      refreshProfile();
+    };
+
+    const interval = setInterval(() => {
+      refreshWallet();
+    }, 12000);
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [token]);
 
   const loginWithSeed = async (seedId: string): Promise<boolean> => {
@@ -202,17 +193,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.post('/auth/demo-login', { seed_id: seedId });
       if (res.data?.success) {
-        const authToken = res.data.data.token;
         const normalized = normalizeUser(res.data.data.user);
         // Admin users hand off to dashboard unless explicitly in traveler app view / preview mode.
         if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
-          window.location.assign(adminHandoffUrl(authToken));
+          window.location.assign(adminHandoffUrl(res.data.data.token));
           return false;
         }
-        setToken(authToken);
+        invalidateCache();
+        setToken('cookie-session');
         setUser(normalized);
-        localStorage.setItem('jdq_token', authToken);
-        localStorage.setItem('jdq_user', JSON.stringify(res.data.data.user));
+        setSessionUnavailable(false);
+        clearStoredSession();
         setIsLoading(false);
         return true;
       }
@@ -228,20 +219,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.post('/auth/simulated-wallet-login', { username, password });
       if (res.data?.success) {
-        const authToken = res.data.data.token;
         const normalized = normalizeUser(res.data.data.user);
         if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
-          window.location.assign(adminHandoffUrl(authToken));
+          window.location.assign(adminHandoffUrl(res.data.data.token));
           return false;
         }
-        const storage = rememberMe ? localStorage : sessionStorage;
-        localStorage.removeItem('jdq_token');
-        localStorage.removeItem('jdq_user');
-        sessionStorage.removeItem('jdq_token');
-        sessionStorage.removeItem('jdq_user');
-        storage.setItem('jdq_token', authToken);
-        storage.setItem('jdq_user', JSON.stringify(res.data.data.user));
-        setToken(authToken);
+        clearStoredSession();
+        invalidateCache();
+        setToken('cookie-session');
         setUser(normalized);
         setIsLoading(false);
         return true;
@@ -253,29 +238,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const storeWalletSession = (data: { token: string; user: Parameters<typeof normalizeUser>[0] }, rememberMe: boolean) => {
+  const storeWalletSession = (data: { token: string; user: Parameters<typeof normalizeUser>[0] }) => {
     const user = normalizeUser(data.user);
     if (user.role === 'admin' && !shouldStayInTravelerApp()) {
       window.location.assign(adminHandoffUrl(data.token));
       return;
     }
-    const storage = rememberMe ? localStorage : sessionStorage;
-    localStorage.removeItem('jdq_token');
-    localStorage.removeItem('jdq_user');
-    sessionStorage.removeItem('jdq_token');
-    sessionStorage.removeItem('jdq_user');
-    storage.setItem('jdq_token', data.token);
-    storage.setItem('jdq_user', JSON.stringify(data.user));
-    setToken(data.token);
+    clearStoredSession();
+    invalidateCache();
+    setToken('cookie-session');
     setUser(user);
+    setSessionUnavailable(false);
   };
 
   const loginWithWallet = async (address: string, signature: string, rememberMe: boolean) => {
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/wallet/login', { address, signature });
+      const res = await api.post('/auth/wallet/login', { address, signature, remember_me: rememberMe });
       if (res.data?.success) {
-        storeWalletSession(res.data.data, rememberMe);
+        storeWalletSession(res.data.data);
         return true;
       }
     } catch (e) {
@@ -289,9 +270,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithLocalWallet = async (address: string, rememberMe: boolean) => {
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/wallet/local-login', { address });
+      const res = await api.post('/auth/wallet/local-login', { address, remember_me: rememberMe });
       if (res.data?.success) {
-        storeWalletSession(res.data.data, rememberMe);
+        storeWalletSession(res.data.data);
         return true;
       }
     } catch {
@@ -302,16 +283,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const logout = () => {
-    gateRef.current!.disable();
-    sessionStorage.removeItem('jdq_preview_requested');
+  const logout = async () => {
+    // The cookie is HttpOnly: only the server can clear it. Keep the visible
+    // session intact if that request fails, so a refresh cannot silently log in again.
+    await api.post('/auth/logout');
+    invalidateCache();
     setToken(null);
     setUser(null);
     setWallet(null);
-    localStorage.removeItem('jdq_token');
-    localStorage.removeItem('jdq_user');
-    sessionStorage.removeItem('jdq_token');
-    sessionStorage.removeItem('jdq_user');
+    setSessionUnavailable(false);
+    clearStoredSession();
+  };
+
+  const loginAsGuest = async (rememberMe: boolean): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const res = await api.post('/auth/guest-login', { remember_me: rememberMe });
+      if (!res.data?.success) return false;
+      clearStoredSession();
+      invalidateCache();
+      setWallet(null);
+      setUser(normalizeUser(res.data.data.user));
+      setToken('cookie-session');
+      setSessionUnavailable(false);
+      return true;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -321,6 +319,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         wallet,
         isLoading,
+        sessionUnavailable,
+        retrySession: () => setSessionRetry(value => value + 1),
         isPreviewActive,
         togglePreview,
         dismissPreview,
@@ -329,12 +329,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithSimulatedWallet,
         loginWithWallet,
         loginWithLocalWallet,
+        loginAsGuest,
         logout,
         refreshProfile,
         refreshWallet,
       }}
     >
-      <React.Fragment key={previewEpoch}>{children}</React.Fragment>
+      {children}
     </AuthContext.Provider>
   );
 };
@@ -349,14 +350,15 @@ export const useAuth = () => {
 
 // Guard for pages that require a traveler session. Redirects to the login page.
 export const useRequireAuth = (): { user: UserModel; token: string; isReady: boolean } => {
-  const { user, token, isLoading } = useAuth();
+  const { user, token, isLoading, sessionUnavailable } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace('/login');
+    if (!isLoading && !sessionUnavailable && !isTravelerSession(user)) {
+      const path = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/login?redirect=${encodeURIComponent(path)}`);
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, sessionUnavailable, user, router]);
 
-  return { user: user as UserModel, token: token as string, isReady: !isLoading && !!user };
+  return { user: user as UserModel, token: token as string, isReady: !isLoading && !sessionUnavailable && isTravelerSession(user) };
 };

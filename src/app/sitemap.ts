@@ -1,8 +1,17 @@
 import type { MetadataRoute } from 'next';
-import { PUBLISHED_DESTINATIONS } from '@/lib/destinations';
+import { appRoutes, isResourceId } from '@/lib/routes';
+import { getServerApiBaseUrl } from '@/lib/search';
+
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://jdq.zernanvash.dev';
+  const isPresentation = process.env.NEXT_PUBLIC_JDQ_PRESENTATION_MODE === 'true' ||
+    process.env.NEXT_DIST_DIR === '.next-presentation';
+  if (isPresentation) {
+    return [];
+  }
+
+  const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://juanderquest.app';
   const now = new Date();
 
   // Core public discovery routes
@@ -22,13 +31,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/terms`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
-  // Dynamic destination routes: enumerate published verified spots, excluding QA synthetic records
-  const spotRoutes: MetadataRoute.Sitemap = PUBLISHED_DESTINATIONS.map((spot) => ({
-    url: `${base}/spots/${spot.slug}`,
-    lastModified: spot.updatedAt ? new Date(spot.updatedAt) : now,
-    changeFrequency: 'weekly',
-    priority: 0.85,
-  }));
+  // The public API is the source of truth; QA and unpublished records are omitted there.
+  let spotRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const response = await fetch(`${getServerApiBaseUrl()}/spots`, { cache: 'no-store', signal: AbortSignal.timeout(6000) });
+    if (response.ok) {
+      const body = await response.json();
+      if (body?.success && Array.isArray(body.data)) {
+        spotRoutes = body.data.filter((spot: { id?: string; is_test?: boolean }) =>
+          typeof spot.id === 'string' && isResourceId(spot.id) && !spot.is_test
+        ).map((spot: { id: string; updated_at?: string }) => ({
+          url: `${base}${appRoutes.spot(spot.id)}`,
+          lastModified: spot.updated_at ? new Date(spot.updated_at) : now,
+          changeFrequency: 'weekly' as const,
+          priority: 0.85,
+        }));
+      }
+    }
+  } catch {
+    // Keep the static sitemap available during a backend outage.
+  }
 
   return [...staticRoutes, ...spotRoutes];
 }

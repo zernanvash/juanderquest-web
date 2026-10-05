@@ -1,11 +1,16 @@
 export type PreviewStatus = 'off' | 'checking' | 'active' | 'sign_in_required' | 'forbidden' | 'unavailable';
+import { appRoutes } from './routes';
 
 /** Per-provider state. URL/localStorage are intent only, never authorization. */
 export class PreviewGate {
   status: PreviewStatus = 'off';
   private generation = 0;
   constructor(private changed: (status: PreviewStatus) => void = () => {}) {}
-  private update(status: PreviewStatus) { this.status = status; this.changed(status); }
+  private update(status: PreviewStatus) {
+    if (this.status === status) return;
+    this.status = status;
+    this.changed(status);
+  }
   disable(status: PreviewStatus = 'off') { this.generation++; this.update(status); }
   async enable(token: string | null, check: () => Promise<boolean>) {
     const generation = ++this.generation;
@@ -43,5 +48,5 @@ export function previewRequestHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${authorizedToken}`, 'x-include-test': 'true' };
 }
 export function travelerProfileHref(id: string) {
-  return `${previewEnabled() ? '/preview/users/' : '/users/'}${encodeURIComponent(id)}`;
+  return appRoutes.user(id);
 }

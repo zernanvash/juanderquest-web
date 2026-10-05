@@ -1,16 +1,17 @@
 import type { Metadata } from 'next';
 import { getServerApiBaseUrl } from './search';
 import type { JuanChoiceDetail } from './juanchoice';
+import { appRoutes } from './routes';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function publicJuanChoiceMetadata(campaignId: string, candidateId?: string): Promise<Metadata> {
   const path = candidateId
-    ? `/choice/${encodeURIComponent(campaignId)}/candidates/${encodeURIComponent(candidateId)}`
-    : `/choice/${encodeURIComponent(campaignId)}`;
+    ? appRoutes.choiceCandidate(campaignId, candidateId)
+    : appRoutes.choice(campaignId);
   const fallback: Metadata = {
     title: 'JuanChoice community round',
-    description: 'Explore a Pangasinan community spotlight round on JuanDerQuest.',
+    description: 'Explore a community destination spotlight round on JuanDerQuest.',
     alternates: { canonical: path },
     robots: { index: false, follow: false },
   };
@@ -33,7 +34,7 @@ export async function publicJuanChoiceMetadata(campaignId: string, candidateId?:
       : `${detail.campaign.theme} | JuanChoice`;
     const description = candidate
       ? `Discover ${candidate.spot_name ?? 'this destination'} in the ${detail.campaign.theme} community spotlight round. Every voter earns equal Civic XP and one stamp.`
-      : `Explore ${detail.campaign.theme}, a free Pangasinan community spotlight round. Every voter earns equal Civic XP and one stamp.`;
+      : `Explore ${detail.campaign.theme}, a free community destination spotlight round. Every voter earns equal Civic XP and one stamp.`;
     return {
       title, description, alternates: { canonical: path },
       openGraph: { title, description, url: path, images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'JuanDerQuest community spotlight' }] },
