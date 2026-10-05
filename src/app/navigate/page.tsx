@@ -12,16 +12,11 @@ import {
   MapPin,
   Loader2,
   AlertCircle,
-  ArrowLeft,
   Route as RouteIcon,
   Compass,
   LocateFixed,
-  ChevronRight,
   ExternalLink,
   ListOrdered,
-  X,
-  ChevronDown,
-  ChevronUp,
   RotateCw,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
@@ -29,7 +24,7 @@ import { fetchRoute, RouteModel, api, SpotModel, normalizeSpot } from '@/lib/api
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { createUserLocationPinHtml, createDestinationPinHtml, createStepPinHtml } from '@/lib/map-icons';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
-
+import { MapWorkspacePanel, MobileSnapState, MapWorkspaceTab } from '@/components/MapWorkspacePanel';
 
 function NavigateContent() {
   const searchParams = useSearchParams();
@@ -51,7 +46,12 @@ function NavigateContent() {
   const [avoidCongested, setAvoidCongested] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
-  const [locError, setLocError] = useState<string | null>(null);
+  const [, setLocError] = useState<string | null>(null);
+
+  // Panel state
+  const [activeTab, setActiveTab] = useState<'options' | 'guidance'>('options');
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  const [mobileSnap, setMobileSnap] = useState<MobileSnapState>('half');
 
   const [routeResult, setRouteResult] = useState<{ key: string; value: RouteModel } | null>(null);
   const routeInputKey = [userLocation?.lat, userLocation?.lng, destination.lat, destination.lng, costing, avoidCongested].join(':');
@@ -60,8 +60,6 @@ function NavigateContent() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const routeRequestId = useRef(0);
   const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null);
-  const [showDirectionsDrawer, setShowDirectionsDrawer] = useState(true);
-  const [isControlsCollapsed, setIsControlsCollapsed] = useState(false);
 
   const [allSpots, setAllSpots] = useState<SpotModel[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -184,8 +182,6 @@ function NavigateContent() {
           attribution: MAP_TILE_ATTRIBUTION,
         }).addTo(map);
 
-
-
         markersGroupRef.current = L.featureGroup().addTo(map);
         mapInstanceRef.current = map;
       }
@@ -274,7 +270,6 @@ function NavigateContent() {
     const L = (await import('leaflet')).default;
     const map = mapInstanceRef.current;
 
-    // Approximate step coordinate along polyline index
     const coordIndex = Math.min(
       Math.floor((stepIndex / Math.max(1, route.maneuvers.length - 1)) * (route.coordinates.length - 1)),
       route.coordinates.length - 1
@@ -306,56 +301,132 @@ function NavigateContent() {
     }
   }, []);
 
+  // Tabs definition for Workspace Panel
+  const tabs: MapWorkspaceTab[] = [
+    {
+      id: 'options',
+      label: 'Route',
+      icon: RouteIcon,
+      badge: route ? route.summary.durationFormatted : null,
+    },
+    {
+      id: 'guidance',
+      label: 'Guidance',
+      icon: ListOrdered,
+      badge: route ? `${route.maneuvers.length}` : null,
+    },
+  ];
+
   return (
     <div className="relative w-full h-full flex-1 bg-stone-100 overflow-hidden select-none">
       {/* 1. Edge-to-Edge Full Viewport Leaflet Map Canvas */}
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
 
-      {/* 2. Top-Left Floating Controls Overlay Panel */}
-      <div className="absolute top-4 left-4 right-4 sm:right-auto sm:left-6 z-10 max-w-lg pointer-events-auto transition-all duration-200">
-        <div className="bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-[#E3DFD5] shadow-xl space-y-3">
-          {/* Header Row with Back Button & Collapser */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <button
-                onClick={() => router.back()}
-                className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-[#582F0E] flex items-center justify-center transition cursor-pointer active:scale-95 shrink-0"
-                aria-label="Go Back"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black text-[#7D5800] uppercase tracking-wider">Independent Route</span>
-                  <span className="px-1.5 py-0.5 rounded bg-[#2D6A4F]/10 text-[#2D6A4F] text-[9px] font-black">
-                    Valhalla Engine
-                  </span>
+      {/* 2. UNIFIED RESPONSIVE MAP WORKSPACE PANEL */}
+      <MapWorkspacePanel
+        title={`Route to ${destination.name}`}
+        subtitle={destination.address}
+        badge={{ label: 'Valhalla Engine', variant: 'emerald' }}
+        backButton={{
+          onClick: () => router.back(),
+          label: 'Back to Explorer',
+        }}
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(tabId) => setActiveTab(tabId as 'options' | 'guidance')}
+        isDesktopCollapsed={isDesktopCollapsed}
+        onDesktopCollapseChange={setIsDesktopCollapsed}
+        mobileSnap={mobileSnap}
+        onMobileSnapChange={setMobileSnap}
+        // Floating Top-Right Tools Stack
+        floatingTools={
+          <>
+            <button
+              type="button"
+              onClick={handleFitRouteBounds}
+              title="Fit Full Route Bounds"
+              aria-label="Fit full route in view"
+              className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+            >
+              <Compass className="w-5 h-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={acquireLocation}
+              title="Acquire Current Location"
+              aria-label="Acquire current GPS location"
+              className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+            >
+              <LocateFixed className={`w-5 h-5 ${locating ? 'animate-spin text-[#FFB703]' : ''}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={loadRoute}
+              title="Recalculate Route"
+              aria-label="Recalculate route"
+              className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+            >
+              <RotateCw className={`w-5 h-5 ${loadingRoute ? 'animate-spin text-[#2D6A4F]' : ''}`} />
+            </button>
+          </>
+        }
+        // Mobile Peek Bar Content Slot
+        peekContent={
+          route ? (
+            <div className="flex items-center justify-between gap-2 w-full min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <NavIcon className="w-3.5 h-3.5 text-[#FFB703]" />
                 </div>
-                <h1 className="text-xs sm:text-sm font-black text-[#582F0E] truncate leading-tight">
-                  Route to {destination.name}
-                </h1>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-[#2D6A4F]">{route.summary.durationFormatted}</span>
+                    <span className="text-[10px] text-stone-500 font-bold">({route.summary.distanceKm} km)</span>
+                  </div>
+                  <p className="text-[10px] text-[#837560] font-semibold truncate leading-tight">
+                    To {destination.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab('guidance');
+                  setMobileSnap('half');
+                }}
+                className="min-h-[32px] px-2.5 rounded-xl bg-[#2D6A4F] text-white text-[11px] font-bold flex items-center gap-1 shadow-2xs shrink-0 cursor-pointer"
+              >
+                <ListOrdered className="w-3 h-3 text-[#FFB703]" />
+                <span>Steps ({route.maneuvers.length})</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-7 h-7 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <NavIcon className="w-3.5 h-3.5 text-[#FFB703]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black text-[#582F0E] truncate">Navigating to {destination.name}</p>
+                <p className="text-[10px] text-[#837560] font-semibold truncate leading-tight">
+                  {loadingRoute ? 'Calculating route...' : 'Tap to adjust route options'}
+                </p>
               </div>
             </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setIsControlsCollapsed(!isControlsCollapsed)}
-                className="w-8 h-8 rounded-lg bg-stone-50 hover:bg-stone-100 text-stone-600 transition cursor-pointer flex items-center justify-center active:scale-95"
-                title={isControlsCollapsed ? 'Expand Controls' : 'Collapse Controls'}
-                aria-label={isControlsCollapsed ? 'Expand Controls' : 'Collapse Controls'}
-              >
-                {isControlsCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Collapsible Controls Body */}
-          {!isControlsCollapsed && (
-            <div className="space-y-2.5 pt-1 border-t border-[#E3DFD5]/60 animate-in fade-in duration-150">
-              {/* Destination Selector Dropdown */}
-              {allSpots.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-gray-500 shrink-0">Destination:</span>
+          )
+        }
+      >
+        {/* TAB 1: ROUTE OPTIONS & METRICS */}
+        {activeTab === 'options' && (
+          <div className="space-y-3.5">
+            {/* Destination Quick Selector */}
+            {allSpots.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-[#837560] block">Destination</label>
+                <div className="relative flex items-center">
+                  <MapPin className="w-4 h-4 text-[#2D6A4F] absolute left-3 pointer-events-none" />
                   <select
                     value={destination.name}
                     onChange={(e) => {
@@ -369,7 +440,7 @@ function NavigateContent() {
                         });
                       }
                     }}
-                    className="flex-1 bg-[#FAF9F5] border border-[#D5C4AC] text-xs font-bold text-[#582F0E] py-1.5 px-2.5 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-[#2D6A4F] truncate"
+                    className="w-full bg-[#FAF9F5] border border-[#D5C4AC] text-xs font-bold text-[#582F0E] py-2 pl-9 pr-3 rounded-xl outline-none cursor-pointer focus:ring-2 focus:ring-[#2D6A4F] truncate"
                   >
                     {allSpots.map((s) => (
                       <option key={s.id} value={s.name}>
@@ -378,10 +449,13 @@ function NavigateContent() {
                     ))}
                   </select>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Travel Mode Selector */}
-              <div className="grid grid-cols-4 gap-1.5 bg-[#FAF9F5] p-1 rounded-xl border border-[#E3DFD5]">
+            {/* Travel Mode Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-[#837560] block">Travel Costing Mode</label>
+              <div className="grid grid-cols-4 gap-1.5 bg-[#FAF9F5] p-1 rounded-2xl border border-[#E3DFD5]">
                 {[
                   { id: 'auto', label: 'Driving', icon: Car },
                   { id: 'motorcycle', label: 'Moto', icon: RouteIcon },
@@ -393,173 +467,168 @@ function NavigateContent() {
                   return (
                     <button
                       key={m.id}
+                      type="button"
                       onClick={() => setCosting(m.id as any)}
                       title={m.title || m.label}
-                      className={`py-1.5 px-1 rounded-lg text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition cursor-pointer active:scale-95 ${
+                      className={`py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition cursor-pointer active:scale-95 ${
                         active
                           ? 'bg-[#2D6A4F] text-white shadow-xs'
                           : 'text-[#582F0E] hover:bg-white'
                       }`}
                     >
-                      <Icon className="w-3.5 h-3.5" />
+                      <Icon className="w-4 h-4" />
                       <span>{m.label}</span>
                     </button>
                   );
                 })}
               </div>
+            </div>
 
-              {/* Overcrowding Diversion Switch */}
-              <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/70 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" />
-                  <div>
-                    <span className="text-[11px] font-bold text-[#582F0E] block leading-tight">Anti-Crowd Diversion</span>
-                    <span className="text-[9px] text-gray-600 block">
-                      Avoid active tourist bottlenecks
-                    </span>
-                  </div>
+            {/* Anti-Crowd Diversion Switch */}
+            <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/70 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 text-[#7D5800] flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-[#2D6A4F]" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAvoidCongested(!avoidCongested)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
-                    avoidCongested ? 'bg-[#2D6A4F]' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                      avoidCongested ? 'translate-x-4.5' : 'translate-x-0.5'
-                    }`}
-                  />
-                </button>
+                <div>
+                  <span className="text-xs font-black text-[#582F0E] block leading-tight">Anti-Crowd Diversion</span>
+                  <span className="text-[10px] text-[#837560] font-semibold block">
+                    Bypasses surging Pangasinan tourist bottlenecks
+                  </span>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setAvoidCongested(!avoidCongested)}
+                aria-pressed={avoidCongested}
+                className={`relative inline-flex h-5.5 w-10 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
+                  avoidCongested ? 'bg-[#2D6A4F]' : 'bg-stone-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition-transform ${
+                    avoidCongested ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
 
-              {/* Route Metric Summary */}
-              {route && (
-                <div className="flex items-center justify-between bg-[#FFFDF7] px-3 py-2 rounded-xl border border-[#E8DCB8]">
+            {/* Route Metric Summary Card */}
+            {route && (
+              <div className="p-3.5 bg-[#FFFDF7] rounded-2xl border border-[#E8DCB8] space-y-2">
+                <div className="flex items-baseline justify-between">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-base font-bold text-[#2D6A4F]">{route.summary.durationFormatted}</span>
-                    <span className="text-xs font-semibold text-[#582F0E]">({route.summary.distanceKm} km)</span>
+                    <span className="text-xl font-black text-[#2D6A4F]">{route.summary.durationFormatted}</span>
+                    <span className="text-xs font-bold text-[#582F0E]">({route.summary.distanceKm} km)</span>
                   </div>
                   {route.summary.hasCrowdDiversion && (
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#2D6A4F] text-white text-[10px] font-bold shadow-xs">
+                    <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#2D6A4F] text-white text-[10px] font-bold shadow-xs">
                       <ShieldCheck className="w-3 h-3" />
                       <span>Tranquil Route</span>
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* 3. Top-Right Floating Map Tool Controls */}
-      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 flex flex-col gap-2 pointer-events-auto">
-        <button
-          onClick={handleFitRouteBounds}
-          title="Fit Full Route Bounds"
-          className="w-10 h-10 rounded-xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
-        >
-          <Compass className="w-5 h-5" />
-        </button>
-
-        <button
-          onClick={acquireLocation}
-          title="Acquire Current Location"
-          className="w-10 h-10 rounded-xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
-        >
-          <LocateFixed className={`w-5 h-5 ${locating ? 'animate-spin text-[#FFB703]' : ''}`} />
-        </button>
-
-        <button
-          onClick={() => setShowDirectionsDrawer(!showDirectionsDrawer)}
-          title={showDirectionsDrawer ? 'Hide Directions' : 'Show Directions'}
-          className={`w-10 h-10 rounded-xl backdrop-blur-md border border-[#E3DFD5] shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer ${
-            showDirectionsDrawer ? 'bg-[#2D6A4F] text-white' : 'bg-white/95 text-[#582F0E] hover:bg-white'
-          }`}
-        >
-          <ListOrdered className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* 4. Bottom-Left / Bottom Floating Turn Guidance Drawer */}
-      {route && showDirectionsDrawer && (
-        <div className="absolute bottom-20 lg:bottom-6 left-4 right-4 sm:left-6 sm:right-auto sm:w-96 z-10 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <div className="bg-white/98 backdrop-blur-md rounded-2xl p-4 border border-[#E3DFD5] shadow-2xl space-y-3 relative max-h-[380px] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#E3DFD5]">
-              <div className="flex items-center gap-1.5">
-                <NavIcon className="w-4 h-4 text-[#2D6A4F]" />
-                <h2 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
-                  Turn Guidance ({route.maneuvers.length} steps)
-                </h2>
-              </div>
-              <button
-                onClick={() => setShowDirectionsDrawer(false)}
-                className="p-1 rounded-md text-gray-400 hover:text-gray-700 transition cursor-pointer"
-                title="Minimize Drawer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Maneuver Steps List */}
-            <div className="space-y-1.5 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-              {route.maneuvers.map((step, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => handleStepClick(idx)}
-                  className={`p-2.5 rounded-xl border transition cursor-pointer ${
-                    activeStepIndex === idx
-                      ? 'bg-[#2D6A4F]/10 border-[#2D6A4F]'
-                      : 'bg-[#FAF9F5] border-[#E3DFD5] hover:bg-stone-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-white border border-[#D5C4AC] text-[#582F0E] font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-[#582F0E] leading-snug">{step.instruction}</p>
-                      {step.streetName && (
-                        <p className="text-[10px] text-[#7D5800] font-semibold mt-0.5 truncate">{step.streetName}</p>
-                      )}
-                    </div>
-                    <span className="text-[10px] font-extrabold text-stone-500 whitespace-nowrap">
-                      {step.distanceMeters >= 1000
-                        ? `${(step.distanceMeters / 1000).toFixed(1)} km`
-                        : `${step.distanceMeters} m`}
-                    </span>
-                  </div>
+                <div className="pt-2 border-t border-[#E8DCB8]/60 flex items-center justify-between text-[11px]">
+                  <span className="text-[#837560] font-semibold">{route.maneuvers.length} Navigation steps ready</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('guidance')}
+                    className="text-[#2D6A4F] font-black hover:underline cursor-pointer"
+                  >
+                    View Guidance →
+                  </button>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
 
             {/* External Navigation Trigger */}
-            <div className="pt-2 border-t border-[#E3DFD5] flex items-center justify-between gap-2">
+            <div className="pt-1">
               <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 py-2 px-3 rounded-xl bg-[#FAF9F5] hover:bg-stone-100 text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-1.5 transition active:scale-95"
+                className="w-full py-2.5 px-3 rounded-xl bg-[#FAF9F5] hover:bg-stone-100 text-[#582F0E] font-bold text-xs border border-[#E3DFD5] flex items-center justify-center gap-2 transition active:scale-95"
               >
-                <span>Google Maps</span>
-                <ExternalLink className="w-3 h-3 text-stone-400" />
+                <span>Open in Google Maps fallback</span>
+                <ExternalLink className="w-3.5 h-3.5 text-stone-400" />
               </a>
-
-              <button
-                onClick={handleFitRouteBounds}
-                className="py-2 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#245740] text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs transition active:scale-95 cursor-pointer"
-              >
-                <span>Fit Route</span>
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 5. Loading Toast Banner */}
+        {/* TAB 2: TURN GUIDANCE STEPS */}
+        {activeTab === 'guidance' && (
+          <div className="space-y-3">
+            {route ? (
+              <>
+                <div className="flex items-center justify-between pb-1 border-b border-[#E3DFD5] text-[11px]">
+                  <span className="text-[#837560] font-bold">
+                    {route.maneuvers.length} Steps • {route.summary.distanceKm} km total
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleFitRouteBounds}
+                    className="text-[#2D6A4F] font-bold hover:underline cursor-pointer"
+                  >
+                    Fit Route View
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  {route.maneuvers.map((step, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleStepClick(idx)}
+                      className={`p-2.5 rounded-2xl border transition cursor-pointer ${
+                        activeStepIndex === idx
+                          ? 'bg-[#2D6A4F]/10 border-[#2D6A4F]'
+                          : 'bg-white border-[#E3DFD5] hover:bg-[#FAF9F5]'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-5 h-5 rounded-full bg-[#FAF9F5] border border-[#D5C4AC] text-[#582F0E] font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-[#582F0E] leading-snug">{step.instruction}</p>
+                          {step.streetName && (
+                            <p className="text-[10px] text-[#7D5800] font-semibold mt-0.5 truncate">{step.streetName}</p>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-extrabold text-stone-500 whitespace-nowrap">
+                          {step.distanceMeters >= 1000
+                            ? `${(step.distanceMeters / 1000).toFixed(1)} km`
+                            : `${step.distanceMeters} m`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="p-6 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-center space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-stone-100 text-[#582F0E] flex items-center justify-center mx-auto">
+                  <ListOrdered className="w-5 h-5 text-[#2D6A4F]" />
+                </div>
+                <p className="text-xs font-bold text-[#582F0E]">No guidance calculated yet</p>
+                <p className="text-[11px] text-[#837560]">
+                  {loadingRoute ? 'Calculating navigation steps...' : 'Select your travel mode to generate turn-by-turn guidance.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('options')}
+                  className="mt-2 py-1.5 px-3 rounded-xl bg-[#2D6A4F] text-white text-xs font-bold transition cursor-pointer"
+                >
+                  Configure Route
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </MapWorkspacePanel>
+
+      {/* 3. Loading Toast Banner */}
       {loadingRoute && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-[#E3DFD5] shadow-lg flex items-center gap-2 text-xs font-bold text-[#2D6A4F]">
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -567,7 +636,7 @@ function NavigateContent() {
         </div>
       )}
 
-      {/* 6. Error Banner */}
+      {/* 4. Error Banner */}
       {routeError && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-amber-50/95 backdrop-blur-md px-4 py-2.5 rounded-xl border border-amber-200 shadow-lg flex items-center gap-2 text-xs font-bold text-amber-900">
           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
