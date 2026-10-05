@@ -118,6 +118,7 @@ body {
   font-family: var(--font-body);
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
   overscroll-behavior-y: none;
 }
 
@@ -286,6 +287,54 @@ h1, h2, h3, h4, h5, h6 {
   50% { transform: translateY(-4px); }
 }
 
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.35) rotate(-8deg); }
+  50% { transform: scale(0.95) rotate(4deg); }
+  75% { transform: scale(1.1) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes float-up-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.85);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.05);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-22px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-34px) scale(0.95);
+  }
+}
+
+@keyframes button-sheen {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  30%, 100% {
+    transform: translateX(250%) rotate(45deg);
+  }
+}
+
+@keyframes badge-glint {
+  0%, 80% {
+    filter: brightness(1) drop-shadow(0 0 0 rgba(255, 183, 3, 0));
+  }
+  90% {
+    filter: brightness(1.25) drop-shadow(0 0 8px rgba(255, 183, 3, 0.6));
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0 rgba(255, 183, 3, 0));
+  }
+}
+
 .animate-vine-sway {
   animation: vine-sway 4s ease-in-out infinite;
 }
@@ -312,6 +361,66 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-glow {
   animation: pulse-glow 3s infinite ease-in-out;
+}
+
+.animate-heart-pop {
+  animation: heart-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.animate-float-up {
+  animation: float-up-fade 1.8s ease-out forwards;
+}
+
+.badge-glint {
+  animation: badge-glint 4s ease-in-out infinite;
+}
+
+/* Gamified interactive button micro-interactions */
+.btn-tactile {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.btn-tactile:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.03);
+}
+
+.btn-tactile:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* Subtle gleaming sheen sweep for primary gamified action buttons */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-sheen::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  transform: translateX(-100%) rotate(45deg);
+  animation: button-sheen 5s infinite;
+  pointer-events: none;
+}
+
+/* Hover depth lift for game cards and vouchers */
+.card-alive {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.2s ease;
+}
+
+.card-alive:hover {
+  transform: translateY(-3px) scale(1.008);
+  box-shadow: 0 12px 28px -6px rgba(45, 106, 79, 0.12), 0 4px 10px -2px rgba(43, 35, 25, 0.05);
 }
 
 /* Touch targets and accessible interaction states */

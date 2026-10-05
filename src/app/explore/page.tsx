@@ -1,5 +1,6 @@
 'use client';
 import { travelerProfileHref } from '@/lib/preview';
+import { appRoutes } from '@/lib/routes';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -113,8 +114,165 @@ export default function ExplorePage() {
   const topHeroSpot = visibleSpots[0] || null;
   const spotlightSpot = visibleSpots.length > 1 ? visibleSpots[1] : null;
 
+  const exploreSidePanel = (
+    <div className="space-y-4">
+      {/* Spotlight Card */}
+      {spotlightSpot && (
+        <article className="overflow-hidden rounded-2xl border border-emerald-200/90 bg-white shadow-xs">
+          <Link href={appRoutes.spot(spotlightSpot.id)} className="block group">
+            <DestinationMedia
+              src={spotlightSpot.imageUrl}
+              alt={spotlightSpot.name}
+              destinationName={spotlightSpot.name}
+              municipality={spotlightSpot.municipality}
+              aspectRatio="card"
+            />
+          </Link>
+          <div className="space-y-2.5 p-4">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#2D6A4F]">
+              <Sparkles className="h-3 w-3" />
+              Spotlight Destination
+            </span>
+            <div>
+              <h2 className="text-base font-black leading-snug text-[#582F0E]">
+                {spotlightSpot.name}
+              </h2>
+              <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-[#2D6A4F]">
+                <MapPin className="h-3 w-3" />
+                {spotlightSpot.municipality}
+              </p>
+            </div>
+            <p className="line-clamp-2 text-xs leading-relaxed text-[#514532]">
+              {spotlightSpot.description}
+            </p>
+            <Link
+              href={appRoutes.spot(spotlightSpot.id)}
+              className="flex w-full items-center justify-center rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] px-3 py-2 text-xs font-bold text-white transition shadow-xs active:scale-95 min-h-[38px]"
+            >
+              Explore Destination
+            </Link>
+          </div>
+        </article>
+      )}
+
+      {/* JuanChoice Spotlight Rail */}
+      <JuanChoiceRail />
+
+      {/* Community Scouts Discovery */}
+      <div className="bg-white rounded-2xl p-4 border border-[#E3DFD5] shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
+          <div>
+            <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
+              Community Scouts
+            </h3>
+            <span className="text-[10px] font-bold text-[#837560]">Public Travelers</span>
+          </div>
+        </div>
+
+        {loadingScouts ? (
+          <div className="py-4 text-center">
+            <span className="text-xs text-[#837560]">Loading scouts...</span>
+          </div>
+        ) : scoutError ? (
+          <p role="alert" className="py-3 text-xs text-red-800">{scoutError}</p>
+        ) : scouts.length === 0 ? (
+          <div className="py-3 text-center px-2 space-y-1">
+            <p className="text-xs font-bold text-[#582F0E]">No public scouts yet</p>
+            <p className="text-[10px] text-[#837560]">
+              Enable your public profile in settings to appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {scouts.map((profile) => {
+              const initials = profile.display_name
+                .split(' ')
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((w) => w[0].toUpperCase())
+                .join('');
+
+              return (
+                <Link
+                  key={profile.id}
+                  href={travelerProfileHref(profile.id)}
+                  className="flex items-center justify-between gap-2.5 rounded-xl p-2.5 hover:bg-[#FAF9F5] border border-transparent hover:border-[#E3DFD5] transition group min-h-[44px]"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] text-[11px] font-black text-white shadow-2xs group-hover:ring-2 group-hover:ring-[#FFB703]/50 transition overflow-hidden">
+                      {profile.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{initials || 'TR'}</span>
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                          {profile.display_name}
+                        </span>
+                        {profile.is_test && <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-900">Fictional</span>}
+                      </div>
+                      <span className="block truncate text-[10px] text-[#837560]">
+                        {profile.handle ? `@${profile.handle} · ` : ''}
+                        {profile.scout_reputation ?? 0} Rep
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform">
+                    →
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Saved Places Highlights */}
+      {savedSpotHighlights.length > 0 && (
+        <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 shadow-xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[9px] font-black uppercase tracking-wider text-[#B45309]">
+                Itinerary Planning
+              </span>
+              <h4 className="text-xs font-black text-[#582F0E]">Saved on this device</h4>
+            </div>
+            <Link href="/saved" className="text-[10px] font-bold text-[#2D6A4F] hover:underline">
+              Library ({savedLibrary.spots.length}) →
+            </Link>
+          </div>
+
+          <div className="space-y-1.5 pt-1">
+            {savedSpotHighlights.map((spot) => (
+              <Link
+                key={spot.id}
+                href={appRoutes.spot(spot.id)}
+                className="flex items-center gap-2.5 rounded-xl border border-amber-200/70 bg-white/90 p-2 text-xs transition hover:border-[#FFB703] hover:shadow-2xs group"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100/70 text-[#B45309]">
+                  <Bookmark className="h-4 w-4 fill-current text-[#B45309]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                    {spot.name}
+                  </p>
+                  <p className="flex items-center gap-1 text-[10px] text-[#837560]">
+                    <MapPin className="h-2.5 w-2.5 text-[#2D6A4F]" />
+                    {spot.municipality}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <Navigation>
+    <Navigation sidePanel={exploreSidePanel} sidePanelTitle="Explorer Highlights">
       <div className="space-y-4 lg:space-y-0 lg:h-full lg:max-h-full lg:min-h-0">
         {/* Structured 3-Column Post Stream (Desktop: Left shortcuts, Center feed, Right spotlight/leaderboard)
             Mobile: Center feed leads first with order-1, shortcuts follow with order-2, right rail with order-3 */}
@@ -152,7 +310,7 @@ export default function ExplorePage() {
                   {loading && spots.length === 0 ? 'Refreshing feed...' : 'Community Feed'}
                 </span>
                 <p className="text-[10px] text-[var(--color-text-muted)]">
-                  Ranked with Pangasinan municipal diversity
+                  Balanced across local communities
                 </p>
               </div>
 
@@ -214,7 +372,7 @@ export default function ExplorePage() {
                               Featured Destination
                             </span>
                             <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
-                              Curated Pangasinan highlight
+                              Featured destination
                             </span>
                           </div>
                         )}
@@ -234,7 +392,7 @@ export default function ExplorePage() {
                           <div className="ml-auto flex items-center gap-1.5 flex-wrap">
                             {spot.questId && (
                               <Link
-                                href={`/quests/${spot.questId}`}
+                                href={appRoutes.quest(spot.questId)}
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFFBEB] text-[#92400E] font-bold text-[9px] border border-[#FDE68A] hover:bg-[#FEF3C7] transition"
                               >
                                 <Trophy className="w-2.5 h-2.5 text-[#D97706]" />
@@ -257,14 +415,14 @@ export default function ExplorePage() {
                         </div>
 
                         {/* Title */}
-                        <Link href={`/spots/${spot.slug}`} className="block group">
+                        <Link href={appRoutes.spot(spot.id)} className="block group">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h2 className="text-base sm:text-lg font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition leading-snug">
                               {spot.name}
                             </h2>
                             {spot.isTest && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                QA Test Fixture
+                                Fictional alpha post
                               </span>
                             )}
                           </div>
@@ -277,7 +435,7 @@ export default function ExplorePage() {
                               <AlertTriangle className="w-3.5 h-3.5 text-[#D95D00] shrink-0" />
                               <span className="font-bold">Peak Activity Reported</span>
                             </div>
-                            <Link href={`/spots/${spot.slug}`} className="text-[10px] font-bold underline text-[#D95D00]">
+                            <Link href={appRoutes.spot(spot.id)} className="text-[10px] font-bold underline text-[#D95D00]">
                               Alternatives →
                             </Link>
                           </div>
@@ -303,6 +461,7 @@ export default function ExplorePage() {
                           priority={index === 0}
                           aspectRatio="card"
                           hideUnavailable
+                          href={appRoutes.spot(spot.id)}
                           className="border-y border-[#E3DFD5]"
                         />
 
@@ -314,7 +473,7 @@ export default function ExplorePage() {
                           <button
                             type="button"
                             onClick={() => handleToggleLike(spot.id)}
-                            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl transition duration-150 transform active:scale-90 min-h-[40px] ${
+                            className={`btn-tactile flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl transition duration-150 min-h-[40px] cursor-pointer ${
                               likeState.isLiked
                                 ? 'bg-rose-50 text-rose-600 font-bold border border-rose-200'
                                 : 'hover:bg-[#FAF9F5] text-[#582F0E] border border-transparent'
@@ -324,7 +483,7 @@ export default function ExplorePage() {
                             <Heart
                               className={`w-4 h-4 transition ${
                                 likeState.isLiked
-                                  ? 'fill-rose-600 text-rose-600 scale-110'
+                                  ? 'fill-rose-600 text-rose-600 scale-110 animate-heart-pop'
                                   : 'text-[#837560]'
                               }`}
                             />
@@ -373,7 +532,7 @@ export default function ExplorePage() {
                         <div className="flex items-center gap-1.5 shrink-0">
                           {spot.questId && (
                             <Link
-                              href={`/quests/${spot.questId}`}
+                              href={appRoutes.quest(spot.questId)}
                               className="hidden sm:inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-extrabold shadow-2xs transition min-h-[40px]"
                             >
                               <Trophy className="w-3.5 h-3.5 text-[#582F0E]" />
@@ -406,7 +565,7 @@ export default function ExplorePage() {
                           <div className="p-2.5 rounded-xl bg-white border border-[#E3DFD5] text-xs space-y-1.5 text-[#514532]">
                             <p className="flex items-start gap-1.5">
                               <MapPin className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0 mt-0.5" />
-                              <span>{spot.address || `${spot.municipality}, Pangasinan`}</span>
+                              <span>{spot.address || spot.municipality}</span>
                             </p>
                             {spot.subcategory && (
                               <p className="text-[11px] text-[#7D5800] font-semibold pl-5">
@@ -469,7 +628,7 @@ export default function ExplorePage() {
                 {/* Automatically observed inside the independent feed scroll pane. */}
                   <div ref={sentinelRef} className="pt-2 text-center" aria-live="polite">
                     {error && <p className="text-sm text-[#BC4749] mb-2">{error}</p>}
-                    {!hasMore && !error && !loadingMore && <p className="text-sm text-[#837560] mb-2">You're caught up. Checking for new posts…</p>}
+                    {!hasMore && !error && !loadingMore && <p className="text-sm text-[#837560] mb-2">You&apos;re caught up. Checking for new posts…</p>}
                     {(hasMore || error || loadingMore) && <button
                       type="button"
                       onClick={handleLoadMore}
@@ -485,11 +644,11 @@ export default function ExplorePage() {
             )}
           </div>
 
-          {/* Left Actions & Discovery Column - ORDER 2 on Mobile, ORDER 1 on Desktop */}
+          {/* Left Actions & Discovery Column - Desktop Only (Mobile uses top hamburger drawer) */}
           <aside
             aria-label="Explore shortcuts"
             tabIndex={0}
-            className="order-2 lg:order-1 explore-scroll space-y-3"
+            className="hidden lg:block lg:order-1 explore-scroll space-y-3"
           >
             {/* Quick Portal Shortcuts */}
             <div className="bg-white rounded-2xl p-5 border border-[#E3DFD5] shadow-xs space-y-3">
@@ -610,7 +769,7 @@ export default function ExplorePage() {
                   {savedSpotHighlights.map((spot) => (
                     <Link
                       key={spot.id}
-                      href={`/spots/${spot.slug}`}
+                      href={appRoutes.spot(spot.id)}
                       className="flex items-center gap-2.5 rounded-xl border border-amber-200/70 bg-white/90 p-2 text-xs transition hover:border-[#FFB703] hover:shadow-2xs group"
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100/70 text-[#B45309]">
@@ -684,6 +843,7 @@ export default function ExplorePage() {
                               <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
                                 {profile.display_name}
                               </span>
+                              {profile.is_test && <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-900">Fictional</span>}
                             </div>
                             <span className="block truncate text-[10px] text-[#837560]">
                               {profile.handle ? `@${profile.handle} · ` : ''}
@@ -702,16 +862,16 @@ export default function ExplorePage() {
             </div>
           </aside>
 
-          {/* Right Column: Destination Spotlight & Preview Standings - ORDER 3 */}
+          {/* Right Column: Destination Spotlight & Preview Standings - Desktop Only (Mobile uses top hamburger drawer) */}
           <aside
             aria-label="Destination recommendations"
             tabIndex={0}
-            className="order-3 lg:order-3 explore-scroll space-y-3"
+            className="hidden lg:block lg:order-3 explore-scroll space-y-3"
           >
             {/* Spotlight Card: Shows distinct spot, not identical duplicate of hero spot */}
             {spotlightSpot && (
               <article className="overflow-hidden rounded-2xl border border-emerald-200/90 bg-white shadow-xs hover:shadow-md transition-all duration-300">
-                <Link href={`/spots/${spotlightSpot.slug}`} className="block group">
+                <Link href={appRoutes.spot(spotlightSpot.id)} className="block group">
                   <DestinationMedia
                     src={spotlightSpot.imageUrl}
                     alt={spotlightSpot.name}
@@ -731,14 +891,14 @@ export default function ExplorePage() {
                     </h2>
                     <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-[#2D6A4F]">
                       <MapPin className="h-3 w-3" />
-                      {spotlightSpot.municipality} · Pangasinan
+                      {spotlightSpot.municipality}
                     </p>
                   </div>
                   <p className="line-clamp-2 text-xs leading-relaxed text-[#514532]">
                     {spotlightSpot.description}
                   </p>
                   <Link
-                    href={`/spots/${spotlightSpot.slug}`}
+                    href={appRoutes.spot(spotlightSpot.id)}
                     className="flex w-full items-center justify-center rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] px-3 py-2 text-xs font-bold text-white transition shadow-xs active:scale-95 min-h-[38px]"
                   >
                     Explore Destination

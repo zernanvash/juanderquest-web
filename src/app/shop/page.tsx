@@ -21,6 +21,8 @@ import {
   Copy,
   ExternalLink,
 } from 'lucide-react';
+import { VoucherRippingOverlay } from '@/components/VoucherRippingOverlay';
+import { AnimatedCounter } from '@/components/AnimatedCounter';
 
 export default function ShopPage() {
   const { user, refreshProfile } = useAuth();
@@ -29,9 +31,13 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // In-Page Active Redemption State (No Modals)
+  // In-Page Active Redemption State
   const [activeUnwrapVoucherId, setActiveUnwrapVoucherId] = useState<string | null>(null);
   const [redemption, setRedemption] = useState<RedemptionModel | null>(null);
+  const [claimedVoucher, setClaimedVoucher] = useState<{
+    voucher: VoucherModel;
+    redemption: RedemptionModel;
+  } | null>(null);
   const [redeeming, setRedeeming] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -70,7 +76,10 @@ export default function ShopPage() {
       });
 
       if (res.data?.success) {
-        setRedemption(normalizeRedemption(res.data.data));
+        const red = normalizeRedemption(res.data.data);
+        setRedemption(red);
+        setClaimedVoucher({ voucher, redemption: red });
+        setActiveUnwrapVoucherId(null);
         refreshProfile();
       } else {
         setRedeemError(res.data?.error?.message || 'Redemption failed');
@@ -94,7 +103,7 @@ export default function ShopPage() {
   return (
     <Navigation>
       <ErrorBoundary fallbackTitle="Unable to display Merchant Shop">
-        <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="space-y-6 w-full">
           {/* Header Banner */}
           <div className="p-6 md:p-8 rounded-3xl bg-white border border-[var(--color-border-default)] shadow-xs relative overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -102,7 +111,7 @@ export default function ShopPage() {
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
                   <span className="text-xs font-black tracking-wider text-[var(--color-brand-accent-dark)] uppercase">
-                    Pangasinan MSME Rewards Hub
+                    Local Merchant Rewards
                   </span>
                   <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]">
                     Local Merchant Loot
@@ -112,7 +121,7 @@ export default function ShopPage() {
                   Merchant Voucher Shop
                 </h1>
                 <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-xl leading-relaxed">
-                  Redeem your earned JuanDerQuest Points for discount vouchers at verified local partner restaurants, souvenir craft shops, and homestays across Pangasinan.
+                  Explore local partner rewards as they become available. Our first merchant pilot focuses on Pangasinan communities.
                 </p>
               </div>
 
@@ -124,12 +133,26 @@ export default function ShopPage() {
                 <div>
                   <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Available Points</div>
                   <div className="text-lg font-black text-[var(--color-brand-brown)]">
-                    {user?.points ?? 0} PTS
+                    <AnimatedCounter value={user?.points ?? 0} suffix=" PTS" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Ripping Ticket Celebration Overlay */}
+          {claimedVoucher && (
+            <VoucherRippingOverlay
+              isOpen={Boolean(claimedVoucher)}
+              onClose={() => setClaimedVoucher(null)}
+              voucherTitle={claimedVoucher.voucher.title}
+              merchantName={claimedVoucher.voucher.merchantName}
+              costPoints={claimedVoucher.voucher.costPoints}
+              redemptionCode={claimedVoucher.redemption.code}
+              description={claimedVoucher.voucher.description}
+              userPointsLeft={(user?.points ?? 0) - claimedVoucher.voucher.costPoints}
+            />
+          )}
 
           {/* Active Unwrapped Voucher Showcase (In-Page Banner) */}
           {redemption && (
@@ -176,7 +199,7 @@ export default function ShopPage() {
             </div>
           )}
 
-          {/* Vouchers Grid Layout (Full 12 Columns / Multi-Column Cards) */}
+          {/* Vouchers Grid Layout (Responsive Multi-Column Cards) */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-black text-[#582F0E]">
@@ -186,7 +209,8 @@ export default function ShopPage() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5">
+                <VoucherCardSkeleton />
                 <VoucherCardSkeleton />
                 <VoucherCardSkeleton />
                 <VoucherCardSkeleton />
@@ -206,7 +230,7 @@ export default function ShopPage() {
                 No merchant vouchers listed at this moment. Check back soon!
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5 items-start">
                 {vouchers.map((v) => {
                   const isUnwrapOpen = activeUnwrapVoucherId === v.id;
                   const canAfford = user && user.points >= v.costPoints;
@@ -214,7 +238,7 @@ export default function ShopPage() {
                   return (
                     <article
                       key={v.id}
-                      className="bg-white rounded-3xl p-6 border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md transition duration-200 flex flex-col justify-between space-y-5"
+                      className="card-alive bg-white rounded-3xl p-6 border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md flex flex-col justify-between space-y-5"
                     >
                       <div className="space-y-4">
                         {/* Header Badge */}
@@ -239,7 +263,7 @@ export default function ShopPage() {
 
                         {/* Inline Unwrap Confirmation Box (No Modal) */}
                         {isUnwrapOpen && (
-                          <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-[#E8DCB8] space-y-3 animate-fade-in">
+                          <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-[#E8DCB8] space-y-3 animate-fade-in shadow-inner">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-black text-[#582F0E]">
                                 Unwrap for {v.costPoints} PTS?
@@ -259,7 +283,7 @@ export default function ShopPage() {
                               <button
                                 type="button"
                                 onClick={() => setActiveUnwrapVoucherId(null)}
-                                className="py-2 px-3 rounded-xl border border-[#D5C4AC] text-xs font-bold text-gray-600 hover:bg-white cursor-pointer"
+                                className="btn-tactile py-2 px-3 rounded-xl border border-[#D5C4AC] text-xs font-bold text-gray-600 hover:bg-white cursor-pointer"
                               >
                                 Cancel
                               </button>
@@ -267,7 +291,7 @@ export default function ShopPage() {
                                 type="button"
                                 onClick={() => handleRedeem(v)}
                                 disabled={redeeming}
-                                className="py-2 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-black shadow-xs cursor-pointer disabled:opacity-50"
+                                className="btn-tactile btn-sheen py-2 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-black shadow-xs cursor-pointer disabled:opacity-50"
                               >
                                 {redeeming ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirm'}
                               </button>
@@ -285,9 +309,9 @@ export default function ShopPage() {
                               setActiveUnwrapVoucherId(v.id);
                             }}
                             disabled={!canAfford}
-                            className={`w-full py-3.5 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-xs ${
+                            className={`btn-tactile w-full py-3.5 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
                               canAfford
-                                ? 'bg-[#2D6A4F] hover:bg-[#1B4332] text-white'
+                                ? 'btn-sheen bg-[#2D6A4F] hover:bg-[#1B4332] text-white'
                                 : 'bg-[#FAF9F5] text-gray-400 border border-[#E3DFD5] cursor-not-allowed'
                             }`}
                           >
