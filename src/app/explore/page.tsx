@@ -22,7 +22,8 @@ import {
   Zap,
   ChevronDown,
   Info,
-  Clock
+  Clock,
+  Flag
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { useAuth } from '@/lib/auth';
@@ -34,14 +35,15 @@ import { JuanChoiceSpotlightCard } from '@/components/JuanChoiceSpotlightCard';
 import { getPublicJuanChoiceSpotlight, planJuanChoicePlacement, type JuanChoiceSpotlight } from '@/lib/juanchoice';
 import { fetchPublicTravelers, type PublicTravelerSummary } from '@/lib/social';
 import { DestinationMedia } from '@/components/DestinationMedia';
+import { SpotFieldLogSection } from '@/components/SpotFieldLogSection';
+import { SpotReportModal } from '@/components/SpotReportModal';
 
 export default function ExplorePage() {
   const { user } = useAuth();
   const { spots, loading, loadingMore, error, hasMore, expired, sentinelRef, feedRef, loadSpots, handleLoadMore } = useRankedFeed(user?.id || 'guest');
   const [likes, setLikes] = useState<Record<string, { isLiked: boolean }>>({});
   const [openTips, setOpenTips] = useState<Record<string, boolean>>({});
-  const [userTips, setUserTips] = useState<Record<string, string[]>>({});
-  const [tipInput, setTipInput] = useState<Record<string, string>>({});
+  const [reportingSpot, setReportingSpot] = useState<{ id: string; name: string } | null>(null);
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
   const [scouts, setScouts] = useState<PublicTravelerSummary[]>([]);
   const [loadingScouts, setLoadingScouts] = useState(true);
@@ -90,16 +92,6 @@ export default function ExplorePage() {
 
   const handleToggleTips = (spotId: string) => {
     setOpenTips((prev) => ({ ...prev, [spotId]: !prev[spotId] }));
-  };
-
-  const handleAddTip = (spotId: string) => {
-    const text = tipInput[spotId]?.trim();
-    if (!text) return;
-    setUserTips((prev) => ({
-      ...prev,
-      [spotId]: [...(prev[spotId] || []), text],
-    }));
-    setTipInput((prev) => ({ ...prev, [spotId]: '' }));
   };
 
   const toggleSave = (spotId: string) => {
@@ -355,7 +347,6 @@ export default function ExplorePage() {
                 {visibleSpots.map((spot, index) => {
                   const likeState = likes[spot.id] || { isLiked: false };
                   const isTipsOpen = Boolean(openTips[spot.id]);
-                  const customTips = userTips[spot.id] || [];
                   const isFeaturedHero = index === 0;
 
                   return (<React.Fragment key={spot.id}>
@@ -388,7 +379,7 @@ export default function ExplorePage() {
                             Shared by <strong className="text-[var(--color-brand-brown)]">{spot.sourceName}</strong>
                           </span>
 
-                          {/* Provenance Badge, Server Recommendation Reason & Quest */}
+                          {/* Provenance Badge, Server Recommendation Reason, Quest & Report */}
                           <div className="ml-auto flex items-center gap-1.5 flex-wrap">
                             {spot.questId && (
                               <Link
@@ -411,6 +402,18 @@ export default function ExplorePage() {
                                 <span>LGU Verified</span>
                               </span>
                             )}
+
+                            {/* Report Inaccurate Info / Hazard / Content */}
+                            <button
+                              type="button"
+                              onClick={() => setReportingSpot({ id: spot.id, name: spot.name })}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold text-[#837560] hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition cursor-pointer"
+                              title="Report inaccurate info, hazard, or inappropriate post"
+                              aria-label={`Report post for ${spot.name}`}
+                            >
+                              <Flag className="w-2.5 h-2.5" />
+                              <span className="hidden sm:inline">Report</span>
+                            </button>
                           </div>
                         </div>
 
@@ -492,16 +495,25 @@ export default function ExplorePage() {
                             </span>
                           </button>
 
-                          {/* Practical Tips Toggle */}
+                          {/* Scout Field Logs Toggle (Unique JuanDerQuest Community Intelligence) */}
                           <button
                             type="button"
                             onClick={() => handleToggleTips(spot.id)}
-                            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl transition text-[#582F0E] min-h-[40px] text-xs font-bold ${
-                              isTipsOpen ? 'bg-emerald-50 text-[#2D6A4F]' : 'hover:bg-[#FAF9F5]'
+                            className={`btn-tactile flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl transition duration-150 min-h-[40px] text-xs font-bold cursor-pointer ${
+                              isTipsOpen
+                                ? 'bg-emerald-50 text-[#2D6A4F] border border-emerald-200 shadow-2xs'
+                                : 'hover:bg-[#FAF9F5] text-[#582F0E] border border-transparent'
                             }`}
+                            aria-label={isTipsOpen ? 'Hide scout field logbook' : 'Open scout field logbook'}
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-[#837560]" />
-                            <span><span className="hidden sm:inline">Traveler </span>Tips</span>
+                            <Compass
+                              className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                isTipsOpen ? 'rotate-45 text-[#2D6A4F]' : 'text-[#837560]'
+                              }`}
+                            />
+                            <span>
+                              <span className="hidden sm:inline">Scout </span>Field Logs
+                            </span>
                           </button>
 
                           {/* Bookmark / Save */}
@@ -518,9 +530,9 @@ export default function ExplorePage() {
                             <Bookmark
                               className={`w-3.5 h-3.5 ${
                                 isSaved('spots', spot.id)
-                                  ? 'fill-current text-[#B45309]'
-                                  : 'text-[#837560]'
-                              }`}
+                                ? 'fill-current text-[#B45309]'
+                                : 'text-[#837560]'
+                            }`}
                             />
                             <span className="text-xs font-bold">
                               {isSaved('spots', spot.id) ? 'Saved' : 'Save'}
@@ -550,73 +562,24 @@ export default function ExplorePage() {
                         </div>
                       </div>
 
-                      {/* Traveler Tips Section */}
+                      {/* Scout Field Logbook & Dispatches (Gamified Community Intelligence) */}
                       {isTipsOpen && (
-                        <div className="px-4 py-3 sm:px-5 sm:py-4 bg-[#FAF9F5] border-t border-[#E3DFD5] space-y-2.5 animate-fadeIn">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold text-[#582F0E] flex items-center gap-1.5">
-                              <Info className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                              <span>Practical Venue Details</span>
-                            </h4>
-                            <span className="text-[10px] text-[#837560]">Factual spot notes</span>
-                          </div>
-
-                          {/* Address & Venue Facts */}
-                          <div className="p-2.5 rounded-xl bg-white border border-[#E3DFD5] text-xs space-y-1.5 text-[#514532]">
-                            <p className="flex items-start gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0 mt-0.5" />
-                              <span>{spot.address || spot.municipality}</span>
-                            </p>
+                        <div className="px-3.5 py-4 sm:px-5 sm:py-5 bg-[#FAF9F5] border-t border-[#E3DFD5] space-y-4 animate-fadeIn">
+                          {/* Venue Quick Address & Classification */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-white border border-[#E3DFD5] text-xs text-[#514532]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <MapPin className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" />
+                              <span className="truncate">{spot.address || spot.municipality}</span>
+                            </div>
                             {spot.subcategory && (
-                              <p className="text-[11px] text-[#7D5800] font-semibold pl-5">
-                                Type: {spot.subcategory.replace('_', ' ')}
-                              </p>
+                              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-[#7D5800] border border-amber-200 capitalize">
+                                {spot.subcategory.replace('_', ' ')}
+                              </span>
                             )}
                           </div>
 
-                          {/* User-added Session Notes */}
-                          {customTips.length > 0 && (
-                            <div className="space-y-1.5">
-                              <p className="text-[10px] font-bold text-[#837560] uppercase">
-                                Your Session Notes:
-                              </p>
-                              {customTips.map((tip, idx) => (
-                                <div
-                                  key={idx}
-                                  className="p-2 rounded-lg bg-white border border-[#E3DFD5] text-xs text-[#514532] flex items-start gap-1.5"
-                                >
-                                  <span className="text-[#2D6A4F] font-bold text-xs">✓</span>
-                                  <p>{tip}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Add Note / Tip Input */}
-                          <div className="flex items-center gap-1.5 pt-1">
-                            <label htmlFor={`tip-input-${spot.id}`} className="sr-only">
-                              Add traveler tip for {spot.name}
-                            </label>
-                            <input
-                              id={`tip-input-${spot.id}`}
-                              type="text"
-                              value={tipInput[spot.id] || ''}
-                              onChange={(e) =>
-                                setTipInput({ ...tipInput, [spot.id]: e.target.value })
-                              }
-                              onKeyDown={(e) => e.key === 'Enter' && handleAddTip(spot.id)}
-                              placeholder="Add a travel tip or private note..."
-                              className="flex-1 px-3 py-1.5 rounded-xl bg-white text-xs border border-[#E3DFD5] outline-none focus:border-[#2D6A4F] min-h-[36px]"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleAddTip(spot.id)}
-                              className="p-2 rounded-xl bg-[#2D6A4F] text-white hover:bg-[#1B4332] transition min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
-                              aria-label="Save tip note"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          {/* Dedicated JuanDerQuest Scout Field Log Section */}
+                          <SpotFieldLogSection spotId={spot.id} spotName={spot.name} />
                         </div>
                       )}
                     </article>
@@ -911,6 +874,16 @@ export default function ExplorePage() {
           </aside>
         </div>
       </div>
+
+      {/* Tourism Moderation & Flag Report Modal */}
+      {reportingSpot && (
+        <SpotReportModal
+          isOpen={Boolean(reportingSpot)}
+          spotId={reportingSpot.id}
+          spotName={reportingSpot.name}
+          onClose={() => setReportingSpot(null)}
+        />
+      )}
     </Navigation>
   );
 }
