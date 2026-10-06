@@ -56,33 +56,47 @@ function MapUrlSync({
   quests: QuestModel[];
 }) {
   const searchParams = useSearchParams();
+  const lastProcessedKeyRef = useRef<string>('');
 
   useEffect(() => {
-    const areaQuery = searchParams.get('area') || searchParams.get('q');
+    const areaQuery = searchParams.get('area') || searchParams.get('q') || '';
+    const spotQuery = searchParams.get('spot') || '';
+    const questQuery = searchParams.get('quest') || '';
+    const currentKey = `${areaQuery}:${spotQuery}:${questQuery}`;
+
+    // Prevent infinite re-render cycles
+    if (currentKey === lastProcessedKeyRef.current) {
+      return;
+    }
+
     if (areaQuery) {
       const matched = findAreaByIdOrName(areaQuery);
       if (matched) {
+        lastProcessedKeyRef.current = currentKey;
         onSelectArea(matched);
         return;
       }
     }
 
-    const spotQuery = searchParams.get('spot');
     if (spotQuery && spots.length > 0) {
       const matched = spots.find((s) => s.id === spotQuery || s.slug === spotQuery);
       if (matched) {
+        lastProcessedKeyRef.current = currentKey;
         onSelectSpot(matched);
         return;
       }
     }
 
-    const questQuery = searchParams.get('quest');
     if (questQuery && quests.length > 0) {
       const matched = quests.find((q) => q.id === questQuery);
       if (matched) {
+        lastProcessedKeyRef.current = currentKey;
         onSelectQuest(matched);
+        return;
       }
     }
+
+    lastProcessedKeyRef.current = currentKey;
   }, [searchParams, spots, quests, onSelectArea, onSelectSpot, onSelectQuest]);
 
   return null;
@@ -463,13 +477,21 @@ export default function QuestMapPage() {
 
   // Center on a wide geographic area (e.g. Pangasinan province, Bolinao municipality)
   const handleSelectArea = useCallback((area: AreaDefinition) => {
-    setActiveArea(area);
+    setActiveArea((prev) => (prev?.id === area.id ? prev : area));
     setSelectedItem(null);
     setIsDesktopCollapsed(true);
     setMobileSnap('peek');
     const map = mapInstanceRef.current || retainedMap;
     if (map) {
-      map.flyTo(area.center, area.zoom, { duration: 1.0 });
+      try {
+        if ((map as any)._loaded) {
+          map.flyTo(area.center, area.zoom, { duration: 1.0 });
+        } else {
+          map.setView(area.center, area.zoom);
+        }
+      } catch (e) {
+        console.warn('Map camera flight deferred:', e);
+      }
     }
   }, []);
 
@@ -478,7 +500,15 @@ export default function QuestMapPage() {
     setActiveArea(null);
     const map = mapInstanceRef.current || retainedMap;
     if (map) {
-      map.flyTo(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM, { duration: 1.0 });
+      try {
+        if ((map as any)._loaded) {
+          map.flyTo(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM, { duration: 1.0 });
+        } else {
+          map.setView(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM);
+        }
+      } catch (e) {
+        console.warn('Map camera flight deferred:', e);
+      }
     }
   }, []);
 
@@ -490,9 +520,27 @@ export default function QuestMapPage() {
     setIsDesktopCollapsed(false);
     const map = mapInstanceRef.current || retainedMap;
     if (map) {
-      map.setView([data.gpsLat, data.gpsLng], Math.max(map.getZoom(), 13), { animate: true });
+      try {
+        map.setView([data.gpsLat, data.gpsLng], Math.max(map.getZoom(), 13), { animate: true });
+      } catch (e) {
+        console.warn('Map view update deferred:', e);
+      }
     }
   }, []);
+
+  const handleSelectSpot = useCallback(
+    (spot: SpotModel) => {
+      handleSelectItem('spot', spot);
+    },
+    [handleSelectItem]
+  );
+
+  const handleSelectQuest = useCallback(
+    (quest: QuestModel) => {
+      handleSelectItem('quest', quest);
+    },
+    [handleSelectItem]
+  );
 
   return (
     <Navigation fullBleed>
@@ -500,8 +548,8 @@ export default function QuestMapPage() {
         <Suspense fallback={null}>
           <MapUrlSync
             onSelectArea={handleSelectArea}
-            onSelectSpot={(spot) => handleSelectItem('spot', spot)}
-            onSelectQuest={(quest) => handleSelectItem('quest', quest)}
+            onSelectSpot={handleSelectSpot}
+            onSelectQuest={handleSelectQuest}
             spots={spots}
             quests={quests}
           />
@@ -510,32 +558,6 @@ export default function QuestMapPage() {
         <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
           {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
-
-          {/* Floating Area Territory Badge on Map (when an area is active) */}
-          {activeArea && (
-            <div className="absolute top-4 left-4 z-20 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-emerald-300 shadow-md text-xs font-bold text-[#1B4332]">
-                <div className="w-5 h-5 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center shrink-0">
-                  <Compass className="w-3 h-3 text-[#FFB703]" />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] uppercase font-black tracking-wider text-[#2D6A4F]">
-                    {activeArea.type}:
-                  </span>
-                  <span className="text-[#2C221E] font-black">{activeArea.name}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleClearActiveArea}
-                  className="p-1 rounded-full hover:bg-emerald-100 text-[#2D6A4F] transition cursor-pointer"
-                  title="Reset to whole country"
-                  aria-label="Reset area view"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* UNIFIED RESPONSIVE MAP WORKSPACE PANEL */}
           <MapWorkspacePanel
@@ -569,6 +591,18 @@ export default function QuestMapPage() {
             // Floating tools (Top-right)
             floatingTools={
               <>
+                {activeArea && (
+                  <button
+                    type="button"
+                    onClick={handleClearActiveArea}
+                    title={`Clear ${activeArea.name} (Reset to whole country)`}
+                    aria-label="Clear area filter"
+                    className="w-10 h-10 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-[#2D6A4F] shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={handleFitBounds}
