@@ -137,3 +137,37 @@ export function createStepPinHtml(stepNumber: number): string {
     </div>
   `.trim();
 }
+
+export function createRegionalBeaconHtml(count: number, regionName: string = 'Pangasinan'): string {
+  return `
+    <div class="group relative flex flex-col items-center cursor-pointer select-none transition-transform duration-200 ease-out hover:scale-105 active:scale-95" style="width: 190px; height: 76px;">
+      <!-- Glowing radar pulse wave -->
+      <span class="animate-ping absolute top-3 inline-flex h-10 w-10 rounded-full bg-[#2D6A4F] opacity-35"></span>
+
+      <!-- Interactive Regional Pill Badge -->
+      <div class="relative z-10 flex items-center gap-2.5 bg-[#1B4332] text-white px-3.5 py-2 rounded-2xl border-2 border-[#FFB703] shadow-xl hover:bg-[#2D6A4F] transition-colors">
+        <div class="w-7 h-7 rounded-xl bg-[#FFB703] text-[#582F0E] flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+          📍
+        </div>
+        <div class="flex flex-col text-left leading-tight pr-1">
+          <span class="text-xs font-black tracking-wide text-white flex items-center gap-1">
+            <span>${regionName}</span>
+            <span class="text-[9px] bg-[#FFB703] text-[#582F0E] px-1.5 py-0.2 rounded-full font-black">
+              ${count}
+            </span>
+          </span>
+          <span class="text-[10px] text-amber-200 font-semibold flex items-center gap-0.5 mt-0.5">
+            <span>Click to zoom in</span>
+            <span>→</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Stem needle pointing down to province center -->
+      <div class="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-[#FFB703] -mt-0.5"></div>
+      <!-- Ground contact soft shadow -->
+      <div class="w-12 h-2.5 bg-black/35 rounded-full blur-[1px] mt-0.5"></div>
+    </div>
+  `.trim();
+}
+
