@@ -515,69 +515,24 @@ button, a, input, select, textarea {
   text-shadow: none !important;
 }
 
-/* Leaflet clickable City & Municipality area labels */
-.leaflet-area-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  pointer-events: auto;
-  white-space: nowrap;
+/* Interactive transparent hitboxes over existing map tile place names */
+.leaflet-area-hitbox {
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
   user-select: none;
   transform: translate(-50%, -50%);
-  padding: 2px 7px;
   border-radius: 9999px;
-  transition: all 0.15s ease-out;
+  transition: all 0.2s ease-out;
 }
 
-.area-label-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 9999px;
-  background-color: #1B4332;
-  box-shadow: 0 0 0 1.5px #FAF9F5;
-  flex-shrink: 0;
+.leaflet-area-hitbox:hover {
+  background: rgba(255, 255, 255, 0.42) !important;
+  box-shadow: 0 0 14px rgba(27, 67, 50, 0.25);
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
-.area-label-dot-major {
-  width: 6px;
-  height: 6px;
-  background-color: #935610;
-}
-
-.area-label-text {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #374151;
-  text-shadow:
-    -1.5px -1.5px 0 #FAF9F5,
-     1.5px -1.5px 0 #FAF9F5,
-    -1.5px  1.5px 0 #FAF9F5,
-     1.5px  1.5px 0 #FAF9F5,
-     0px    1px   3px rgba(0, 0, 0, 0.35);
-  transition: all 0.15s ease-out;
-}
-
-.area-label-text-major {
-  font-size: 12px;
-  font-weight: 800;
-  color: #111827;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.leaflet-area-label:hover {
-  background-color: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  transform: translate(-50%, -50%) scale(1.08);
-}
-
-.leaflet-area-label:hover .area-label-text {
-  color: #1B4332;
-  text-shadow: none;
-}
 
 .jq-marker {
   width: 36px;

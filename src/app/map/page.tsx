@@ -9,7 +9,7 @@ import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib
 import { fetchWithCache } from '@/lib/cache';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { createQuestPinHtml, createSpotPinHtml, createAreaLabelHtml } from '@/lib/map-icons';
+import { createQuestPinHtml, createSpotPinHtml, createAreaHitboxHtml } from '@/lib/map-icons';
 import { declutterItems } from '@/lib/map-declutter';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
@@ -349,6 +349,28 @@ export default function QuestMapPage() {
           };
 
           const onMapClick = (e: any) => {
+            if (!e?.latlng) return;
+
+            // Check if traveler clicked directly on or near an existing place/town name on the map tile
+            const clickPt = activeMap.latLngToContainerPoint(e.latlng);
+            let matchedArea: AreaDefinition | null = null;
+            let closestDist = 38; // px proximity threshold around the name on the tile
+
+            for (const area of KNOWN_AREAS) {
+              if (area.id === 'philippines' || area.id === 'luzon' || area.id === 'ilocos') continue;
+              const pt = activeMap.latLngToContainerPoint(area.center);
+              const dist = Math.hypot(clickPt.x - pt.x, clickPt.y - pt.y);
+              if (dist < closestDist) {
+                closestDist = dist;
+                matchedArea = area;
+              }
+            }
+
+            if (matchedArea) {
+              handleSelectArea(matchedArea);
+              return;
+            }
+
             const z = activeMap.getZoom();
             if (z < DESTINATIONS_MIN_ZOOM) {
               const targetZoom = Math.min(Math.max(z + 3, REGIONAL_ZOOM), 12);
@@ -541,43 +563,18 @@ export default function QuestMapPage() {
         }
       });
 
-      // 2. Render clickable cartographic City & Municipality map names (zoom <= 12)
-      if (currentZoom <= 12 && (!filterType || filterType === 'all')) {
+      // 2. Render transparent interactive hitboxes over existing map tile place names (zoom <= 13)
+      if (currentZoom <= 13 && (!filterType || filterType === 'all')) {
         const candidateAreas = KNOWN_AREAS.filter((a) => {
           if (a.id === 'philippines' || a.id === 'luzon' || a.id === 'ilocos') return false;
-          if (!isInViewport(a.center[0], a.center[1])) return false;
-
-          if (currentZoom <= 8) {
-            // Macro: province + 4 component cities
-            return a.type === 'province' || a.type === 'city';
-          }
-          if (currentZoom <= 10) {
-            // Regional: cities + prominent hub municipalities
-            const regionalHubs = new Set([
-              'pangasinan', 'dagupan', 'alaminos', 'san-carlos', 'urdaneta',
-              'bolinao', 'lingayen', 'manaoag', 'rosales', 'tayug', 'sual', 'bani'
-            ]);
-            return regionalHubs.has(a.id);
-          }
-          // Zoom 11-12: all municipalities in Pangasinan
-          return a.type === 'city' || a.type === 'municipality';
+          return isInViewport(a.center[0], a.center[1]);
         });
 
         candidateAreas.forEach((area) => {
-          const pt = toScreenPoint(area.center[0], area.center[1]);
-          // Check collision with already placed destination pins or previous area labels
-          const collides = occupiedScreenPoints.some((occ) => {
-            return Math.abs(occ.x - pt.x) < 65 && Math.abs(occ.y - pt.y) < 35;
-          });
-          if (collides) return;
-
-          occupiedScreenPoints.push(pt);
-
-          const isMajor = area.type === 'city' || area.type === 'province';
           const areaIcon = L.divIcon({
             className: 'leaflet-custom-marker',
-            html: createAreaLabelHtml(area.name, isMajor),
-            iconAnchor: [0, 0],
+            html: createAreaHitboxHtml(area.name),
+            iconAnchor: [38, 16],
           });
 
           L.marker(area.center, { icon: areaIcon })
