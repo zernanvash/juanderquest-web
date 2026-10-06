@@ -8,7 +8,7 @@ import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib
 import { fetchWithCache } from '@/lib/cache';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { createQuestPinHtml, createSpotPinHtml, createRegionalBeaconHtml } from '@/lib/map-icons';
+import { createQuestPinHtml, createSpotPinHtml } from '@/lib/map-icons';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
 import { appRoutes } from '@/lib/routes';
@@ -179,6 +179,9 @@ export default function QuestMapPage() {
         if (retainedMap && retainedHost) {
           container.replaceChildren(retainedHost);
           mapInstanceRef.current = retainedMap;
+          if (typeof window !== 'undefined' && !window.location.search && !fittedRef.current) {
+            retainedMap.setView(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM, { animate: false });
+          }
           setCurrentZoom(retainedMap.getZoom());
 
           if (!markersLayerRef.current) {
@@ -226,8 +229,10 @@ export default function QuestMapPage() {
           };
 
           const onMapClick = (e: any) => {
-            if (activeMap.getZoom() < DESTINATIONS_MIN_ZOOM) {
-              activeMap.flyTo(e.latlng, REGIONAL_ZOOM, { duration: 1.0 });
+            const z = activeMap.getZoom();
+            if (z < DESTINATIONS_MIN_ZOOM) {
+              const targetZoom = Math.min(Math.max(z + 3, REGIONAL_ZOOM), 12);
+              activeMap.flyTo(e.latlng, targetZoom, { duration: 0.8 });
             } else {
               setSelectedItem(null);
             }
@@ -296,24 +301,8 @@ export default function QuestMapPage() {
       ];
       allCoordinatesRef.current = allCoordinates;
 
-      if (!isZoomedIn) {
-        // Macro view: Render only the Regional Hub Beacon over Pangasinan
-        const totalCount = quests.length + spots.length;
-        const beaconIcon = L.divIcon({
-          className: 'leaflet-custom-marker',
-          html: createRegionalBeaconHtml(totalCount, 'Pangasinan'),
-          iconSize: [190, 76],
-          iconAnchor: [95, 74],
-        });
-
-        L.marker(PANGASINAN_CENTER, { icon: beaconIcon })
-          .on('click', (e) => {
-            if (e?.originalEvent) e.originalEvent.stopPropagation();
-            map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
-          })
-          .addTo(group);
-      } else {
-        // Regional/Destination view: Render individual quest and spot pins
+      // Only render destination pins when zoomed in past threshold (like Google Maps)
+      if (isZoomedIn) {
         // Add Quests markers (Gold Timber Pins)
         if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
           quests
@@ -427,23 +416,17 @@ export default function QuestMapPage() {
             title={
               selectedItem
                 ? ('title' in selectedItem.data ? selectedItem.data.title : selectedItem.data.name)
-                : isZoomedIn
-                ? 'Destination Map'
-                : 'Philippines Overview'
+                : 'Destination Map'
             }
             subtitle={
               selectedItem
                 ? ('locationName' in selectedItem.data ? selectedItem.data.locationName : selectedItem.data.municipality)
-                : isZoomedIn
-                ? `${quests.length} Quests • ${spots.length} Spots`
-                : 'Pangasinan Tourism Hub'
+                : `${quests.length} Quests • ${spots.length} Spots`
             }
             badge={
               selectedItem
                 ? (selectedItem.type === 'quest' ? { label: 'Quest', variant: 'amber' } : { label: 'Spot', variant: 'emerald' })
-                : isZoomedIn
-                ? { label: 'Interactive', variant: 'emerald' }
-                : { label: 'Zoom to Explore', variant: 'amber' }
+                : { label: 'Interactive', variant: 'emerald' }
             }
             isDesktopCollapsed={isDesktopCollapsed}
             onDesktopCollapseChange={setIsDesktopCollapsed}
@@ -455,7 +438,7 @@ export default function QuestMapPage() {
                 <button
                   type="button"
                   onClick={handleFitBounds}
-                  title={isZoomedIn ? 'Fit All Pangasinan Pins' : 'Zoom to Pangasinan'}
+                  title="Fit All Coordinates"
                   aria-label="Fit all markers in view"
                   className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
                 >
@@ -516,7 +499,7 @@ export default function QuestMapPage() {
                     <span>Go</span>
                   </Link>
                 </div>
-              ) : isZoomedIn ? (
+              ) : (
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <div className="w-7 h-7 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 shadow-2xs">
                     <MapPin className="w-3.5 h-3.5 text-[#FFB703]" />
@@ -527,34 +510,6 @@ export default function QuestMapPage() {
                       {quests.length + spots.length} places pinned across Pangasinan
                     </p>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-2 w-full min-w-0">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="w-7 h-7 rounded-xl bg-[#1B4332] text-[#FFB703] flex items-center justify-center shrink-0 shadow-2xs">
-                      <Compass className="w-3.5 h-3.5 text-[#FFB703]" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-xs font-black text-[#582F0E] truncate">Pangasinan Hub</h2>
-                      <p className="text-[10px] text-[#837560] font-semibold truncate leading-tight">
-                        Click map to explore {quests.length + spots.length} places
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const map = mapInstanceRef.current || retainedMap;
-                      if (map) {
-                        map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
-                      }
-                    }}
-                    className="min-h-[30px] px-2.5 rounded-xl bg-[#2D6A4F] text-white text-[10px] font-bold flex items-center gap-1 shadow-2xs shrink-0 cursor-pointer active:scale-95"
-                  >
-                    <NavIcon className="w-2.5 h-2.5 text-[#FFB703]" />
-                    <span>Zoom In</span>
-                  </button>
                 </div>
               )
             }
@@ -674,41 +629,6 @@ export default function QuestMapPage() {
                   </button>
                 </div>
               </div>
-            ) : !isZoomedIn ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-gradient-to-b from-stone-50 to-[#FAF9F5] border border-[#E3DFD5] text-center space-y-3 shadow-2xs">
-                  <div className="w-12 h-12 rounded-2xl bg-[#1B4332] text-[#FFB703] flex items-center justify-center mx-auto shadow-md">
-                    <Compass className="w-6 h-6 text-[#FFB703]" />
-                  </div>
-                  <div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-[#7D5800] border border-amber-200">
-                      Regional Hub • Pangasinan
-                    </span>
-                    <h3 className="text-sm font-black text-[#582F0E] mt-1.5">Pangasinan Tourism Zone</h3>
-                    <p className="text-xs text-[#837560] mt-1 leading-relaxed">
-                      {quests.length + spots.length} curated destinations and quest trails waiting across the province.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const map = mapInstanceRef.current || retainedMap;
-                      if (map) {
-                        map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
-                      }
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-                  >
-                    <NavIcon className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>Zoom In to Pangasinan ({quests.length + spots.length} Places)</span>
-                  </button>
-
-                  <p className="text-[11px] text-[#837560] italic leading-normal">
-                    💡 Click anywhere on the map or tap the regional beacon to reveal destination markers.
-                  </p>
-                </div>
-              </div>
             ) : (
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-center space-y-2.5">
@@ -757,22 +677,6 @@ export default function QuestMapPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Reset to Macro Overview Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const map = mapInstanceRef.current || retainedMap;
-                    if (map) {
-                      setSelectedItem(null);
-                      map.flyTo(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM, { duration: 1.0 });
-                    }
-                  }}
-                  className="w-full py-2.5 px-3 rounded-xl border border-[#E3DFD5] bg-white hover:bg-[#FAF9F5] text-[#582F0E] text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Compass className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                  <span>Zoom out to Philippines view</span>
-                </button>
               </div>
             )}
           </MapWorkspacePanel>
