@@ -458,7 +458,7 @@ export default function QuestMapPage() {
               const icon = L.divIcon({
                 className: 'leaflet-custom-marker',
                 html: createQuestPinHtml(isSelected, isSaved('quests', q.id), q.title, q.category),
-                iconAnchor: [14, 14],
+                iconAnchor: [18, 44],
               });
 
               L.marker([q.gpsLat, q.gpsLng], { icon })
@@ -470,7 +470,7 @@ export default function QuestMapPage() {
             });
         }
 
-        // Add Destination Spots markers (Photo Thumbnail Circle / Category Icon + Visible Place Name Label)
+        // Add Destination Spots markers (Classic Teardrop Pin + Visible Place Name Label)
         if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
           spots
             .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
@@ -486,7 +486,7 @@ export default function QuestMapPage() {
                   s.category,
                   s.subcategory
                 ),
-                iconAnchor: [14, 14],
+                iconAnchor: [18, 44],
               });
 
               L.marker([s.gpsLat, s.gpsLng], { icon })
