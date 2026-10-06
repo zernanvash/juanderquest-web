@@ -15,6 +15,14 @@ export interface AreaDefinition {
   center: [number, number];
   zoom: number;
   keywords: string[];
+  source?: 'local' | 'osm';
+}
+
+export function areaToHref(area: AreaDefinition): string {
+  if (area.source === 'osm') {
+    return `/map?lat=${area.center[0]}&lng=${area.center[1]}&zoom=${area.zoom}&name=${encodeURIComponent(area.name)}&type=${area.type}`;
+  }
+  return `/map?area=${area.id}`;
 }
 
 export const KNOWN_AREAS: AreaDefinition[] = [

@@ -22,7 +22,7 @@ import {
   normalizeSearchQuery,
   isProcessableQuery,
 } from '@/lib/search';
-import { AreaDefinition } from '@/lib/areas';
+import { AreaDefinition, areaToHref } from '@/lib/areas';
 
 export type FlatItem =
   | { groupType: 'areas'; item: AreaDefinition; href: string }
@@ -219,7 +219,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                     return (
                       <Link
                         key={area.id}
-                        href={`/map?area=${area.id}`}
+                        href={areaToHref(area)}
                         onClick={onClose}
                         onMouseEnter={() => setSelectedIndex(itemIdx)}
                         className={`flex items-center justify-between p-2.5 rounded-xl sm:rounded-2xl border transition-all duration-150 group ${
@@ -229,7 +229,9 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="h-9 w-9 shrink-0 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
+                          <div className={`h-9 w-9 shrink-0 rounded-xl flex items-center justify-center shadow-2xs group-hover:scale-105 transition ${
+                            area.source === 'osm' ? 'bg-[#1D3557] text-[#A8DADC]' : 'bg-[#2D6A4F] text-white'
+                          }`}>
                             <Compass className="h-4 w-4 text-[#FFB703]" />
                           </div>
                           <div className="min-w-0">
@@ -237,9 +239,15 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                               <h4 className="text-xs sm:text-sm font-extrabold text-[#582F0E] group-hover:text-[#2D6A4F] transition truncate">
                                 {area.name}
                               </h4>
-                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white border border-emerald-200 text-[#2D6A4F] shrink-0">
-                                {area.type}
-                              </span>
+                              {area.source === 'osm' ? (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 shrink-0">
+                                  OSM Live
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white border border-emerald-200 text-[#2D6A4F] shrink-0">
+                                  {area.type}
+                                </span>
+                              )}
                             </div>
                             <p className="text-[11px] text-[#837560] truncate">{area.subtitle}</p>
                           </div>
@@ -421,13 +429,16 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
             <div className="pt-2 border-t border-[#E3DFD5] space-y-1.5">
               {matchedAreas.length > 0 && (
                 <Link
-                  href={`/map?area=${matchedAreas[0].id}`}
+                  href={areaToHref(matchedAreas[0])}
                   onClick={onClose}
                   className="w-full flex items-center justify-between p-2.5 rounded-xl sm:rounded-2xl text-xs font-bold transition-all bg-[#D8F3DC] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white group"
                 >
                   <div className="flex items-center gap-2">
                     <Compass className="h-3.5 w-3.5 text-[#2D6A4F] group-hover:text-[#FFB703]" />
-                    <span>Explore &ldquo;{matchedAreas[0].name}&rdquo; on Interactive Map</span>
+                    <span>
+                      Explore &ldquo;{matchedAreas[0].name}&rdquo; on Interactive Map
+                      {matchedAreas[0].source === 'osm' ? ' (OSM)' : ''}
+                    </span>
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-wider opacity-90 group-hover:opacity-100 flex items-center gap-1">
                     Fly to Map <ArrowRight className="h-3 w-3" />

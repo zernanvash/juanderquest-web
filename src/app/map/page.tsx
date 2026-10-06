@@ -62,7 +62,10 @@ function MapUrlSync({
     const areaQuery = searchParams.get('area') || searchParams.get('q') || '';
     const spotQuery = searchParams.get('spot') || '';
     const questQuery = searchParams.get('quest') || '';
-    const currentKey = `${areaQuery}:${spotQuery}:${questQuery}`;
+    const latParam = searchParams.get('lat') || '';
+    const lngParam = searchParams.get('lng') || '';
+    const nameParam = searchParams.get('name') || '';
+    const currentKey = `${areaQuery}:${spotQuery}:${questQuery}:${latParam}:${lngParam}:${nameParam}`;
 
     // Prevent infinite re-render cycles
     if (currentKey === lastProcessedKeyRef.current) {
@@ -74,6 +77,27 @@ function MapUrlSync({
       if (matched) {
         lastProcessedKeyRef.current = currentKey;
         onSelectArea(matched);
+        return;
+      }
+    }
+
+    // Dynamic OpenStreetMap territory parameters (?lat=...&lng=...&name=...)
+    if (latParam && lngParam && nameParam) {
+      const lat = parseFloat(latParam);
+      const lng = parseFloat(lngParam);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const osmArea: AreaDefinition = {
+          id: `osm-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+          name: nameParam,
+          type: (searchParams.get('type') as any) || 'city',
+          subtitle: searchParams.get('subtitle') || 'Territory via OpenStreetMap',
+          center: [lat, lng],
+          zoom: parseInt(searchParams.get('zoom') || '13', 10),
+          keywords: [nameParam.toLowerCase()],
+          source: 'osm',
+        };
+        lastProcessedKeyRef.current = currentKey;
+        onSelectArea(osmArea);
         return;
       }
     }
@@ -163,6 +187,8 @@ export default function QuestMapPage() {
         const urlSpot = searchParams.get('spot');
         const urlQuest = searchParams.get('quest');
 
+        const urlName = searchParams.get('name');
+
         if (urlArea) {
           const matchedArea = findAreaByIdOrName(urlArea);
           if (matchedArea) {
@@ -170,6 +196,20 @@ export default function QuestMapPage() {
             setIsDesktopCollapsed(true);
             setMobileSnap('peek');
           }
+        } else if (!isNaN(urlLat) && !isNaN(urlLng) && urlName) {
+          const osmArea: AreaDefinition = {
+            id: `osm-${urlLat.toFixed(4)}-${urlLng.toFixed(4)}`,
+            name: urlName,
+            type: (searchParams.get('type') as any) || 'city',
+            subtitle: searchParams.get('subtitle') || 'Territory via OpenStreetMap',
+            center: [urlLat, urlLng],
+            zoom: parseInt(searchParams.get('zoom') || '13', 10),
+            keywords: [urlName.toLowerCase()],
+            source: 'osm',
+          };
+          setActiveArea(osmArea);
+          setIsDesktopCollapsed(true);
+          setMobileSnap('peek');
         } else if (urlSpot) {
           const matchedSpot = loadedSpots.find((s) => s.id === urlSpot || s.slug === urlSpot);
           if (matchedSpot) {
@@ -353,6 +393,41 @@ export default function QuestMapPage() {
     };
   }, []);
 
+  // Center on an item and open details, zooming in like Google Maps
+  const handleSelectItem = useCallback((type: 'quest' | 'spot', data: QuestModel | SpotModel) => {
+    setSelectedItem({ type, data });
+    setActiveArea(null);
+    setMobileSnap('half');
+    setIsDesktopCollapsed(false);
+    const map = mapInstanceRef.current || retainedMap;
+    if (map) {
+      try {
+        const targetZoom = Math.max(map.getZoom(), 15);
+        if ((map as any)._loaded) {
+          map.flyTo([data.gpsLat, data.gpsLng], targetZoom, { duration: 0.8 });
+        } else {
+          map.setView([data.gpsLat, data.gpsLng], targetZoom);
+        }
+      } catch (e) {
+        console.warn('Map view update deferred:', e);
+      }
+    }
+  }, []);
+
+  const handleSelectSpot = useCallback(
+    (spot: SpotModel) => {
+      handleSelectItem('spot', spot);
+    },
+    [handleSelectItem]
+  );
+
+  const handleSelectQuest = useCallback(
+    (quest: QuestModel) => {
+      handleSelectItem('quest', quest);
+    },
+    [handleSelectItem]
+  );
+
   // 2. Render Markers on Map when Data or Filters Update
   useEffect(() => {
     const map = mapInstanceRef.current || retainedMap;
@@ -374,7 +449,7 @@ export default function QuestMapPage() {
 
       // Only render destination pins when zoomed in past threshold (like Google Maps)
       if (isZoomedIn) {
-        // Add Quests markers (Gold Timber Pins)
+        // Add Quests markers (Expedition Compass Icon + Visible Title Label)
         if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
           quests
             .filter((q) => filterType !== 'saved' || isSaved('quests', q.id))
@@ -382,24 +457,20 @@ export default function QuestMapPage() {
               const isSelected = selectedItem?.type === 'quest' && selectedItem.data.id === q.id;
               const icon = L.divIcon({
                 className: 'leaflet-custom-marker',
-                html: createQuestPinHtml(isSelected, isSaved('quests', q.id)),
-                iconSize: [36, 46],
-                iconAnchor: [18, 44],
+                html: createQuestPinHtml(isSelected, isSaved('quests', q.id), q.title, q.category),
+                iconAnchor: [14, 14],
               });
 
               L.marker([q.gpsLat, q.gpsLng], { icon })
                 .on('click', (e) => {
                   if (e?.originalEvent) e.originalEvent.stopPropagation();
-                  setSelectedItem({ type: 'quest', data: q });
-                  setMobileSnap('half');
-                  setIsDesktopCollapsed(false);
-                  map.setView([q.gpsLat, q.gpsLng], Math.max(map.getZoom(), 12), { animate: true });
+                  handleSelectItem('quest', q);
                 })
                 .addTo(group);
             });
         }
 
-        // Add Destination Spots markers (Emerald Forest Pins)
+        // Add Destination Spots markers (Photo Thumbnail Circle / Category Icon + Visible Place Name Label)
         if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
           spots
             .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
@@ -407,18 +478,21 @@ export default function QuestMapPage() {
               const isSelected = selectedItem?.type === 'spot' && selectedItem.data.id === s.id;
               const icon = L.divIcon({
                 className: 'leaflet-custom-marker',
-                html: createSpotPinHtml(isSelected, isSaved('spots', s.id)),
-                iconSize: [36, 46],
-                iconAnchor: [18, 44],
+                html: createSpotPinHtml(
+                  isSelected,
+                  isSaved('spots', s.id),
+                  s.name,
+                  s.imageUrl,
+                  s.category,
+                  s.subcategory
+                ),
+                iconAnchor: [14, 14],
               });
 
               L.marker([s.gpsLat, s.gpsLng], { icon })
                 .on('click', (e) => {
                   if (e?.originalEvent) e.originalEvent.stopPropagation();
-                  setSelectedItem({ type: 'spot', data: s });
-                  setMobileSnap('half');
-                  setIsDesktopCollapsed(false);
-                  map.setView([s.gpsLat, s.gpsLng], Math.max(map.getZoom(), 12), { animate: true });
+                  handleSelectItem('spot', s);
                 })
                 .addTo(group);
             });
@@ -431,6 +505,7 @@ export default function QuestMapPage() {
         const urlArea = searchParams.get('area') || searchParams.get('q');
         const urlLat = parseFloat(searchParams.get('lat') || '');
         const urlLng = parseFloat(searchParams.get('lng') || '');
+        const urlName = searchParams.get('name');
         const urlSpot = searchParams.get('spot');
         const urlQuest = searchParams.get('quest');
 
@@ -445,7 +520,22 @@ export default function QuestMapPage() {
         }
 
         if (!isNaN(urlLat) && !isNaN(urlLng)) {
-          map.setView([urlLat, urlLng], FOCUSED_ZOOM, { animate: true });
+          const zoomParam = parseInt(searchParams.get('zoom') || '', 10);
+          const zoom = !isNaN(zoomParam) ? zoomParam : (urlName ? 13 : FOCUSED_ZOOM);
+          if (urlName) {
+            const dynamicArea: AreaDefinition = {
+              id: `osm-${urlLat.toFixed(4)}-${urlLng.toFixed(4)}`,
+              name: urlName,
+              type: (searchParams.get('type') as any) || 'city',
+              subtitle: searchParams.get('subtitle') || 'Territory via OpenStreetMap',
+              center: [urlLat, urlLng],
+              zoom,
+              keywords: [urlName.toLowerCase()],
+              source: 'osm',
+            };
+            setActiveArea(dynamicArea);
+          }
+          map.setView([urlLat, urlLng], zoom, { animate: true });
           fittedRef.current = true;
           return;
         }
@@ -473,7 +563,7 @@ export default function QuestMapPage() {
     return () => {
       isDisposed = true;
     };
-  }, [quests, spots, filterType, selectedItem?.data.id, savedLibrary, isSaved, isZoomedIn]);
+  }, [quests, spots, filterType, selectedItem?.data.id, savedLibrary, isSaved, isZoomedIn, handleSelectItem]);
 
   // Center on a wide geographic area (e.g. Pangasinan province, Bolinao municipality)
   const handleSelectArea = useCallback((area: AreaDefinition) => {
@@ -511,36 +601,6 @@ export default function QuestMapPage() {
       }
     }
   }, []);
-
-  // Center on an item and open details
-  const handleSelectItem = useCallback((type: 'quest' | 'spot', data: QuestModel | SpotModel) => {
-    setSelectedItem({ type, data });
-    setActiveArea(null);
-    setMobileSnap('half');
-    setIsDesktopCollapsed(false);
-    const map = mapInstanceRef.current || retainedMap;
-    if (map) {
-      try {
-        map.setView([data.gpsLat, data.gpsLng], Math.max(map.getZoom(), 13), { animate: true });
-      } catch (e) {
-        console.warn('Map view update deferred:', e);
-      }
-    }
-  }, []);
-
-  const handleSelectSpot = useCallback(
-    (spot: SpotModel) => {
-      handleSelectItem('spot', spot);
-    },
-    [handleSelectItem]
-  );
-
-  const handleSelectQuest = useCallback(
-    (quest: QuestModel) => {
-      handleSelectItem('quest', quest);
-    },
-    [handleSelectItem]
-  );
 
   return (
     <Navigation fullBleed>

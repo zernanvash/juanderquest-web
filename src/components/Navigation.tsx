@@ -28,7 +28,7 @@ import { Footer } from '@/components/Footer';
 import { SearchSuggestionsDropdown } from '@/components/SearchSuggestionsDropdown';
 import { useSearchPreview } from '@/lib/use-search-preview';
 import { normalizeSearchQuery, isProcessableQuery } from '@/lib/search';
-import { findAreaByIdOrName } from '@/lib/areas';
+import { findAreaByIdOrName, areaToHref } from '@/lib/areas';
 import { CelebrationEffects, triggerCelebration } from '@/components/CelebrationEffects';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 
@@ -241,13 +241,13 @@ export const Navigation: React.FC<{
         return;
       }
 
-      // Smart geographic area detection (e.g. Pangasinan, Bolinao, Alaminos, Dagupan)
+      // Smart geographic area detection (e.g. Pangasinan, Bolinao, Alaminos, Dagupan, or live OSM)
       const areaMatch =
         findAreaByIdOrName(normalized) ||
         (matchedAreas && matchedAreas.length > 0 ? matchedAreas[0] : null);
       if (areaMatch) {
         handleCloseSearch();
-        router.push(`/map?area=${areaMatch.id}`);
+        router.push(areaToHref(areaMatch));
         return;
       }
 

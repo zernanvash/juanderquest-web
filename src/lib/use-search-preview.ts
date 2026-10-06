@@ -13,10 +13,12 @@ import {
 import { appRoutes } from '@/lib/routes';
 import { travelerProfileHref } from '@/lib/preview';
 import { FlatItem } from '@/components/SearchSuggestionsDropdown';
-import { findMatchingAreas, AreaDefinition } from '@/lib/areas';
+import { findMatchingAreas, AreaDefinition, areaToHref } from '@/lib/areas';
+import { fetchOsmAreas } from '@/lib/osm';
 
 export function useSearchPreview(query: string, isOpen: boolean) {
   const [groups, setGroups] = useState<SearchGroup[]>([]);
+  const [osmAreas, setOsmAreas] = useState<AreaDefinition[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +29,17 @@ export function useSearchPreview(query: string, isOpen: boolean) {
     if (!isOpen) return [];
     const normalized = normalizeSearchQuery(query);
     if (!isProcessableQuery(normalized)) return [];
-    return findMatchingAreas(normalized).slice(0, 3);
-  }, [query, isOpen]);
+
+    const local = findMatchingAreas(normalized).slice(0, 3);
+    const localNames = new Set(local.map((a) => a.name.toLowerCase()));
+
+    // Merge live OpenStreetMap territories not already matched by local catalog
+    const additionalOsm = osmAreas
+      .filter((osm) => !localNames.has(osm.name.toLowerCase()) && !localNames.has(osm.id.toLowerCase()))
+      .slice(0, 3);
+
+    return [...local, ...additionalOsm];
+  }, [query, isOpen, osmAreas]);
 
   const executeSearch = useCallback(async (rawTerm: string) => {
     if (abortControllerRef.current) {
@@ -38,6 +49,7 @@ export function useSearchPreview(query: string, isOpen: boolean) {
     const normalized = normalizeSearchQuery(rawTerm);
     if (!isProcessableQuery(normalized)) {
       setGroups([]);
+      setOsmAreas([]);
       setLoading(false);
       setError(null);
       return;
@@ -50,15 +62,22 @@ export function useSearchPreview(query: string, isOpen: boolean) {
     setError(null);
 
     try {
-      const response = await fetchSearchPreview(normalized, 'all', controller.signal);
+      const [searchRes, liveOsm] = await Promise.all([
+        fetchSearchPreview(normalized, 'all', controller.signal),
+        normalized.length >= 3
+          ? fetchOsmAreas(normalized, controller.signal)
+          : Promise.resolve([]),
+      ]);
       if (!controller.signal.aborted) {
-        setGroups(response.data.groups || []);
+        setGroups(searchRes.data.groups || []);
+        setOsmAreas(liveOsm);
       }
     } catch (err: unknown) {
       if ((err as Error).name === 'AbortError') return;
       const msg = err instanceof Error ? err.message : 'Could not complete search.';
       setError(msg);
       setGroups([]);
+      setOsmAreas([]);
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
@@ -72,6 +91,7 @@ export function useSearchPreview(query: string, isOpen: boolean) {
         abortControllerRef.current.abort();
       }
       setGroups([]);
+      setOsmAreas([]);
       setLoading(false);
       setError(null);
       return;
@@ -87,6 +107,7 @@ export function useSearchPreview(query: string, isOpen: boolean) {
         abortControllerRef.current.abort();
       }
       setGroups([]);
+      setOsmAreas([]);
       setLoading(false);
       setError(null);
       return;
@@ -106,7 +127,7 @@ export function useSearchPreview(query: string, isOpen: boolean) {
   const flatItems: FlatItem[] = useMemo(() => {
     const list: FlatItem[] = [];
     for (const area of matchedAreas) {
-      list.push({ groupType: 'areas', item: area, href: `/map?area=${area.id}` });
+      list.push({ groupType: 'areas', item: area, href: areaToHref(area) });
     }
     for (const group of groups) {
       for (const item of group.items) {
