@@ -85,6 +85,23 @@ function formatTimeAgo(isoString: string): string {
   }
 }
 
+function getLocalComments(spotId: string): SpotComment[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(`jdq_comments_${spotId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalComments(spotId: string, items: SpotComment[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`jdq_comments_${spotId}`, JSON.stringify(items));
+  } catch {}
+}
+
 export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps) {
   const { user } = useAuth();
   const [comments, setComments] = useState<SpotComment[]>([]);
@@ -111,18 +128,27 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
   // Load comments on mount
   useEffect(() => {
     let mounted = true;
+    const cached = getLocalComments(spotId);
+    if (cached.length > 0) {
+      setComments(cached);
+      setLoading(false);
+    }
+
     const fetchComments = async () => {
-      setLoading(true);
-      setError(null);
       try {
         const res = await api.get<{ success: boolean; data: SpotComment[] }>(`/spots/${spotId}/comments`);
         if (mounted && res?.data?.data) {
-          setComments(res.data.data);
+          const serverList = res.data.data;
+          const serverIds = new Set(serverList.map((c) => c.id));
+          const localOnly = cached.filter((c) => !serverIds.has(c.id));
+          const merged = [...localOnly, ...serverList];
+          setComments(merged);
+          saveLocalComments(spotId, merged);
         }
       } catch (err: unknown) {
-        if (mounted) {
-          // Fallback demo comments if network fails
-          setComments([
+        if (mounted && cached.length === 0) {
+          // Fallback demo comments if empty
+          const fallback: SpotComment[] = [
             {
               id: 'local-demo-1',
               spot_id: spotId,
@@ -134,7 +160,9 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
               helpful_user_ids: [],
               created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
             }
-          ]);
+          ];
+          setComments(fallback);
+          saveLocalComments(spotId, fallback);
         }
       } finally {
         if (mounted) setLoading(false);
@@ -204,7 +232,12 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
       );
 
       if (res?.data?.data) {
-        setComments((prev) => [res.data.data, ...prev]);
+        const newComment = res.data.data;
+        setComments((prev) => {
+          const next = [newComment, ...prev.filter((c) => c.id !== newComment.id)];
+          saveLocalComments(spotId, next);
+          return next;
+        });
         setContent('');
         setAttachedImage(null);
         setAttachedPin(null);
@@ -229,7 +262,11 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
         created_at: new Date().toISOString(),
       };
 
-      setComments((prev) => [optimisticComment, ...prev]);
+      setComments((prev) => {
+        const next = [optimisticComment, ...prev];
+        saveLocalComments(spotId, next);
+        return next;
+      });
       setContent('');
       setAttachedImage(null);
       setAttachedPin(null);
@@ -244,8 +281,8 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
   // Toggle comment like/heart
   const handleToggleLike = async (commentId: string) => {
     const currentUserId = user?.id || 'guest-actor';
-    setComments((prev) =>
-      prev.map((c) => {
+    setComments((prev) => {
+      const next = prev.map((c) => {
         if (c.id !== commentId) return c;
         const isLiked = c.helpful_user_ids.includes(currentUserId);
         return {
@@ -255,8 +292,10 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
             ? c.helpful_user_ids.filter((id) => id !== currentUserId)
             : [...c.helpful_user_ids, currentUserId],
         };
-      })
-    );
+      });
+      saveLocalComments(spotId, next);
+      return next;
+    });
 
     try {
       await api.post(`/spots/${spotId}/comments/${commentId}/helpful`, {});

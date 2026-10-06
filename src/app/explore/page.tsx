@@ -37,6 +37,7 @@ import { DestinationMedia } from '@/components/DestinationMedia';
 import { SpotCommentSection } from '@/components/SpotCommentSection';
 import { SpotReportModal } from '@/components/SpotReportModal';
 import { PixelHeart } from '@/components/PixelIcons';
+import { getLocalLikedSpots, toggleSpotLike } from '@/lib/api';
 
 export default function ExplorePage() {
   const { user } = useAuth();
@@ -49,6 +50,42 @@ export default function ExplorePage() {
   const [loadingScouts, setLoadingScouts] = useState(true);
   const [scoutError, setScoutError] = useState('');
   const [juanChoiceSpotlight, setJuanChoiceSpotlight] = useState<JuanChoiceSpotlight | null>(null);
+
+  // Restore liked spots and open comment drawers from localStorage on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const localLikes = getLocalLikedSpots();
+      const initialMap: Record<string, { isLiked: boolean }> = {};
+      Object.keys(localLikes).forEach((id) => {
+        if (localLikes[id]) initialMap[id] = { isLiked: true };
+      });
+      setLikes((prev) => ({ ...initialMap, ...prev }));
+    } catch {}
+
+    try {
+      const savedDrawers = localStorage.getItem('jdq_open_comments');
+      if (savedDrawers) {
+        setOpenTips(JSON.parse(savedDrawers));
+      }
+    } catch {}
+  }, []);
+
+  // Merge server liked status when spots feed loads
+  useEffect(() => {
+    if (!spots.length) return;
+    setLikes((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      spots.forEach((s) => {
+        if (s.liked && !next[s.id]?.isLiked) {
+          next[s.id] = { isLiked: true };
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [spots]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,20 +115,30 @@ export default function ExplorePage() {
     };
   }, []);
 
-  const handleToggleLike = (spotId: string) => {
-    setLikes((prev) => {
-      const current = prev[spotId] || { isLiked: false };
-      return {
-        ...prev,
-        [spotId]: {
-          isLiked: !current.isLiked,
-        },
-      };
-    });
+  const handleToggleLike = async (spotId: string) => {
+    const current = likes[spotId]?.isLiked ?? Boolean(spots.find((s) => s.id === spotId)?.liked);
+    const nextLiked = !current;
+    
+    // Instant UI reaction
+    setLikes((prev) => ({
+      ...prev,
+      [spotId]: {
+        isLiked: nextLiked,
+      },
+    }));
+
+    // Persist in localStorage and sync with server
+    await toggleSpotLike(spotId, nextLiked);
   };
 
   const handleToggleTips = (spotId: string) => {
-    setOpenTips((prev) => ({ ...prev, [spotId]: !prev[spotId] }));
+    setOpenTips((prev) => {
+      const next = { ...prev, [spotId]: !prev[spotId] };
+      try {
+        localStorage.setItem('jdq_open_comments', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   const toggleSave = (spotId: string) => {
@@ -345,7 +392,7 @@ export default function ExplorePage() {
             ) : (
               <div className="space-y-4">
                 {visibleSpots.map((spot, index) => {
-                  const likeState = likes[spot.id] || { isLiked: false };
+                  const likeState = likes[spot.id] ?? { isLiked: Boolean(spot.liked) };
                   const isTipsOpen = Boolean(openTips[spot.id]);
                   const isFeaturedHero = index === 0;
 
@@ -407,12 +454,11 @@ export default function ExplorePage() {
                             <button
                               type="button"
                               onClick={() => setReportingSpot({ id: spot.id, name: spot.name })}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold text-[#837560] hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition cursor-pointer"
+                              className="inline-flex items-center justify-center p-1 rounded text-[#837560] hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition cursor-pointer"
                               title="Report inaccurate info, hazard, or inappropriate post"
                               aria-label={`Report post for ${spot.name}`}
                             >
-                              <Flag className="w-2.5 h-2.5" />
-                              <span className="hidden sm:inline">Report</span>
+                              <Flag className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
@@ -471,64 +517,60 @@ export default function ExplorePage() {
                       {/* Interactive Engagement Action Row */}
                       <div className="px-3.5 py-2.5 sm:px-5 sm:py-3 bg-white flex items-center justify-between gap-2 border-t border-[#E8E5DE]/80">
                         {/* Social / Exploration Group */}
-                        <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                           {/* Instagram-style Heart Button */}
                           <button
                             type="button"
                             onClick={() => handleToggleLike(spot.id)}
-                            className={`btn-tactile flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl transition duration-150 min-h-[40px] cursor-pointer ${
+                            className={`btn-tactile flex items-center justify-center w-10 h-10 rounded-xl transition duration-150 cursor-pointer ${
                               likeState.isLiked
-                                ? 'bg-rose-50 text-rose-600 font-bold border border-rose-200'
+                                ? 'bg-rose-50 text-rose-600 font-bold border border-rose-200 shadow-2xs'
                                 : 'hover:bg-[#FAF9F5] text-[#582F0E] border border-transparent'
                             }`}
                             aria-label={likeState.isLiked ? `Liked ${spot.name}` : `Like ${spot.name}`}
+                            title={likeState.isLiked ? 'Liked' : 'Like'}
                           >
                             <PixelHeart isLiked={likeState.isLiked} size="md" />
-                            <span className="text-xs font-extrabold">
-                              {likeState.isLiked ? 'Liked' : 'Like'}
-                            </span>
                           </button>
 
                           {/* Normal Comments Toggle */}
                           <button
                             type="button"
                             onClick={() => handleToggleTips(spot.id)}
-                            className={`btn-tactile flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl transition duration-150 min-h-[40px] text-xs font-bold cursor-pointer ${
+                            className={`btn-tactile flex items-center justify-center w-10 h-10 rounded-xl transition duration-150 cursor-pointer ${
                               isTipsOpen
                                 ? 'bg-emerald-50 text-[#2D6A4F] border border-emerald-200 shadow-2xs'
                                 : 'hover:bg-[#FAF9F5] text-[#582F0E] border border-transparent'
                             }`}
                             aria-label={isTipsOpen ? 'Hide comments' : 'Open comments'}
+                            title={isTipsOpen ? 'Hide comments' : 'Open comments'}
                           >
                             <MessageSquare
-                              className={`w-3.5 h-3.5 transition-colors ${
+                              className={`w-5 h-5 transition-colors ${
                                 isTipsOpen ? 'text-[#2D6A4F]' : 'text-[#837560]'
                               }`}
                             />
-                            <span>Comments</span>
                           </button>
 
                           {/* Bookmark / Save */}
                           <button
                             type="button"
                             onClick={() => toggleSave(spot.id)}
-                            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl transition active:scale-95 cursor-pointer min-h-[40px] ${
+                            className={`btn-tactile flex items-center justify-center w-10 h-10 rounded-xl transition active:scale-95 cursor-pointer ${
                               isSaved('spots', spot.id)
                                 ? 'bg-amber-100/80 text-[#7D5800] font-bold border border-amber-300/80 shadow-2xs'
-                                : 'hover:bg-[#FAF9F5] text-[#582F0E]'
+                                : 'hover:bg-[#FAF9F5] text-[#582F0E] border border-transparent'
                             }`}
                             aria-label={isSaved('spots', spot.id) ? 'Remove bookmark' : 'Save to device'}
+                            title={isSaved('spots', spot.id) ? 'Saved' : 'Save'}
                           >
                             <Bookmark
-                              className={`w-3.5 h-3.5 ${
+                              className={`w-5 h-5 ${
                                 isSaved('spots', spot.id)
-                                ? 'fill-current text-[#B45309]'
-                                : 'text-[#837560]'
-                            }`}
+                                  ? 'fill-current text-[#B45309]'
+                                  : 'text-[#837560]'
+                              }`}
                             />
-                            <span className="text-xs font-bold">
-                              {isSaved('spots', spot.id) ? 'Saved' : 'Save'}
-                            </span>
                           </button>
                         </div>
 
@@ -537,19 +579,21 @@ export default function ExplorePage() {
                           {spot.questId && (
                             <Link
                               href={appRoutes.quest(spot.questId)}
-                              className="hidden sm:inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-extrabold shadow-2xs transition min-h-[40px]"
+                              className="btn-tactile flex items-center justify-center w-10 h-10 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] shadow-2xs transition"
+                              aria-label={`View Quest for ${spot.name}`}
+                              title="View Quest"
                             >
-                              <Trophy className="w-3.5 h-3.5 text-[#582F0E]" />
-                              <span>Quest</span>
+                              <Trophy className="w-5 h-5 text-[#582F0E]" />
                             </Link>
                           )}
 
                           <Link
                             href={`/navigate?name=${encodeURIComponent(spot.name)}&lat=${spot.gpsLat}&lng=${spot.gpsLng}&address=${encodeURIComponent(spot.address)}`}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold shadow-2xs transition active:scale-95 min-h-[40px]"
+                            className="btn-tactile flex items-center justify-center w-10 h-10 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white shadow-2xs transition active:scale-95"
+                            aria-label={`Navigate to ${spot.name}`}
+                            title={`Navigate to ${spot.name}`}
                           >
-                            <MapPin className="w-3.5 h-3.5 text-[#FFB703]" />
-                            <span>Navigate</span>
+                            <MapPin className="w-5 h-5 text-[#FFB703]" />
                           </Link>
                         </div>
                       </div>

@@ -12,8 +12,23 @@ export const api = axios.create({
   },
 });
 
+function getOrCreateDeviceId(): string {
+  if (typeof window === 'undefined') return 'server';
+  try {
+    let deviceId = localStorage.getItem('jdq_device_id');
+    if (!deviceId) {
+      deviceId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `dev-${Date.now()}`;
+      localStorage.setItem('jdq_device_id', deviceId);
+    }
+    return deviceId;
+  } catch {
+    return 'fallback-device';
+  }
+}
+
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
+    config.headers['x-device-id'] = getOrCreateDeviceId();
     if (previewEnabled() && (config.method || 'get').toLowerCase() !== 'get' && !config.url?.startsWith('/auth/')) {
       throw new Error('Evaluator preview is read-only. Exit preview before making changes.');
     }
@@ -196,6 +211,7 @@ export interface SpotModel {
   recommendationScore?: number;
   recommendationReasons: string[];
   saved: boolean;
+  liked: boolean;
   trendScore: number;
   crowdStatus: 'quiet' | 'moderate' | 'estimated_busy' | 'unknown';
   crowdConfidence: string;
@@ -279,6 +295,7 @@ export function normalizeSpot(raw: any): SpotModel {
     recommendationScore: Number(raw.recommendation_score) || 0,
     recommendationReasons: raw.recommendation_reasons || [],
     saved: !!raw.saved,
+    liked: Boolean(raw.liked),
     trendScore: Number(raw.trend_score) || 0,
     crowdStatus: raw.crowd_status || 'unknown',
     crowdConfidence: raw.crowd_confidence || 'none',
@@ -739,4 +756,45 @@ export async function claimCampaignArrivalReward(campaignId: string, lat?: numbe
   const res = await api.post(`/campaigns/${campaignId}/claim`, { lat, lng });
   if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to claim reward');
   return res.data.data;
+}
+
+const LIKED_SPOTS_STORAGE_KEY = 'jdq_liked_spots';
+
+export function getLocalLikedSpots(): Record<string, boolean> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(LIKED_SPOTS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function setLocalSpotLiked(spotId: string, liked: boolean): Record<string, boolean> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const current = getLocalLikedSpots();
+    if (liked) {
+      current[spotId] = true;
+    } else {
+      delete current[spotId];
+    }
+    localStorage.setItem(LIKED_SPOTS_STORAGE_KEY, JSON.stringify(current));
+    return current;
+  } catch {
+    return {};
+  }
+}
+
+export async function toggleSpotLike(spotId: string, shouldLike: boolean): Promise<{ liked: boolean; spot_id: string }> {
+  // Always update local cache immediately
+  setLocalSpotLiked(spotId, shouldLike);
+  try {
+    const method = shouldLike ? api.put : api.delete;
+    const res = await method(`/spots/${spotId}/like`);
+    return res.data?.data || { liked: shouldLike, spot_id: spotId };
+  } catch (err) {
+    // Return optimistic state if network encounters an issue
+    return { liked: shouldLike, spot_id: spotId };
+  }
 }

@@ -29,7 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { api, normalizeSpot, SpotModel, isVideoMedia, createAuthorQuest } from '@/lib/api';
+import { api, normalizeSpot, SpotModel, isVideoMedia, createAuthorQuest, toggleSpotLike, getLocalLikedSpots } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { useAuth } from '@/lib/auth';
 import { SpotDetailSkeleton } from '@/components/Skeleton';
@@ -38,6 +38,7 @@ import { DestinationMedia } from '@/components/DestinationMedia';
 import { appRoutes } from '@/lib/routes';
 import { MiniMapPreview } from '@/components/MiniMapPreview';
 import { PixelHeart } from '@/components/PixelIcons';
+import { SpotCommentSection } from '@/components/SpotCommentSection';
 
 interface SpotDetailClientProps {
   slug: string;
@@ -50,8 +51,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const [error, setError] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [comments, setComments] = useState<Array<{ author: string; time: string; text: string }>>([]);
-  const [newComment, setNewComment] = useState('');
   const [activeSlide, setActiveSlide] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
@@ -123,6 +122,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
         setSpot(data.spot);
         setAlternatives(data.alternatives);
         setIsSaved(Boolean(data.spot.saved));
+        setIsLiked(Boolean(data.spot.liked) || Boolean(getLocalLikedSpots()[data.spot.id]));
         if (slug !== data.spot.id) router.replace(appRoutes.spot(data.spot.id));
         api.post(`/spots/${data.spot.id}/interactions`, { type: 'view' }).catch(() => {});
       })
@@ -194,11 +194,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     if (!spot) return;
     const nextState = !isLiked;
     setIsLiked(nextState);
-    try {
-      await api.post(`/spots/${spot.id}/interactions`, { type: 'helpful' });
-    } catch {
-      setIsLiked(!nextState);
-    }
+    await toggleSpotLike(spot.id, nextState);
   };
 
   const handleToggleSave = async () => {
@@ -210,20 +206,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     } catch {
       setIsSaved(!nextSaved);
     }
-  };
-
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-    setComments([
-      {
-        author: 'You (Traveler Note)',
-        time: 'Just now',
-        text: newComment.trim(),
-      },
-      ...comments,
-    ]);
-    setNewComment('');
   };
 
   const handleShare = async () => {
@@ -518,29 +500,29 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   <button
                     type="button"
                     onClick={handleToggleLike}
-                    className={`btn-tactile flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border transition cursor-pointer min-h-[44px] ${
+                    className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
                       isLiked
-                        ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold'
+                        ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold shadow-2xs'
                         : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-rose-300'
                     }`}
                     aria-label={isLiked ? 'Liked destination' : 'Like destination'}
+                    title={isLiked ? 'Liked' : 'Like'}
                   >
                     <PixelHeart isLiked={isLiked} size="md" />
-                    <span className="text-xs font-bold">{isLiked ? 'Liked' : 'Like'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleToggleSave}
-                    className={`btn-tactile flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border transition cursor-pointer min-h-[44px] ${
+                    className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
                       isSaved
-                        ? 'bg-amber-100 border-amber-300 text-[#7D5800] font-bold'
+                        ? 'bg-amber-100 border-amber-300 text-[#7D5800] font-bold shadow-2xs'
                         : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-amber-300'
                     }`}
                     aria-label={isSaved ? 'Saved' : 'Save'}
+                    title={isSaved ? 'Saved' : 'Save'}
                   >
-                    <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
-                    <span className="text-xs font-bold">{isSaved ? 'Saved' : 'Save'}</span>
+                    <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
                   </button>
 
                   <button
@@ -603,52 +585,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 {/* Community Traveler Notes & Tips Forum */}
                 <section className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-[#582F0E] flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5 text-[#2D6A4F]" />
-                      <span>Traveler Notes &amp; Advice</span>
-                    </h3>
-                    <span className="text-xs text-[#837560] font-semibold">{comments.length} notes</span>
-                  </div>
-
-                  {comments.length === 0 ? (
-                    <div className="p-5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-center text-xs text-[#837560]">
-                      No traveler notes recorded yet. Have you visited {spot.name}? Share a tip below to help fellow travelers!
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {comments.map((c, idx) => (
-                        <div key={idx} className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs space-y-1">
-                          <div className="flex items-center justify-between font-bold text-[#582F0E]">
-                            <span>{c.author}</span>
-                            <span className="text-[10px] text-[#837560] font-normal">{c.time}</span>
-                          </div>
-                          <p className="text-[#514532] text-xs sm:text-sm">{c.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <form onSubmit={handleAddComment} className="flex gap-2 pt-2">
-                    <label htmlFor="detail-new-tip-input" className="sr-only">
-                      Add traveler tip
-                    </label>
-                    <input
-                      id="detail-new-tip-input"
-                      name="tip"
-                      type="text"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a travel tip or venue advice..."
-                      className="flex-1 px-4 py-3 rounded-xl bg-[#FAF9F5] text-xs sm:text-sm border border-[#E3DFD5] outline-none focus:border-[#2D6A4F] min-h-[44px]"
-                    />
-                    <button
-                      type="submit"
-                      className="px-5 py-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs sm:text-sm font-bold transition cursor-pointer min-h-[44px]"
-                    >
-                      Post Note
-                    </button>
-                  </form>
+                  <SpotCommentSection spotId={spot.id} spotName={spot.name} />
                 </section>
               </div>
 
