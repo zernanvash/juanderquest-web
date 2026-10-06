@@ -310,3 +310,14 @@ export function createRegionalBeaconHtml(count: number, regionName: string = 'Pa
   `.trim();
 }
 
+export function createAreaLabelHtml(areaName: string, isCityOrProvince = false): string {
+  const safeName = escapeHtml(areaName.replace(/ City$/, ''));
+  return `
+    <div class="leaflet-area-label group cursor-pointer inline-flex items-center select-none" style="pointer-events: auto;">
+      <span class="area-label-dot ${isCityOrProvince ? 'area-label-dot-major' : ''}"></span>
+      <span class="area-label-text ${isCityOrProvince ? 'area-label-text-major' : ''}">
+        ${safeName}
+      </span>
+    </div>
+  `.trim();
+}

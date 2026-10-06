@@ -107,7 +107,7 @@ describe('Map Declutter Engine', () => {
 
     expect(macroThreshold.minDistanceX).toBeGreaterThan(regionalThreshold.minDistanceX);
     expect(regionalThreshold.minDistanceX).toBeGreaterThan(streetThreshold.minDistanceX);
-    expect(macroThreshold.showLabelsByDefault).toBe(false);
+    expect(macroThreshold.showLabelsByDefault).toBe(true);
     expect(streetThreshold.showLabelsByDefault).toBe(true);
   });
 

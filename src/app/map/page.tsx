@@ -9,13 +9,13 @@ import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib
 import { fetchWithCache } from '@/lib/cache';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { createQuestPinHtml, createSpotPinHtml, createRegionalBeaconHtml } from '@/lib/map-icons';
+import { createQuestPinHtml, createSpotPinHtml, createAreaLabelHtml } from '@/lib/map-icons';
 import { declutterItems } from '@/lib/map-declutter';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
 import { appRoutes } from '@/lib/routes';
 import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePanel';
-import { AreaDefinition, findAreaByIdOrName } from '@/lib/areas';
+import { AreaDefinition, findAreaByIdOrName, KNOWN_AREAS } from '@/lib/areas';
 
 import {
   MapPin,
@@ -458,100 +458,135 @@ export default function QuestMapPage() {
       ];
       allCoordinatesRef.current = allCoordinates;
 
-      // 1. Zoomed-In: Smart spatial decluttering and collision-free POI pins
-      if (isZoomedIn) {
-        const candidateItems: Array<{ type: 'spot' | 'quest'; data: SpotModel | QuestModel }> = [];
+      // 1. Render smart decluttered destination markers (visible & clickable at all zooms)
+      const candidateItems: Array<{ type: 'spot' | 'quest'; data: SpotModel | QuestModel }> = [];
 
-        if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
-          quests
-            .filter((q) => filterType !== 'saved' || isSaved('quests', q.id))
-            .forEach((q) => candidateItems.push({ type: 'quest', data: q }));
+      if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
+        quests
+          .filter((q) => filterType !== 'saved' || isSaved('quests', q.id))
+          .forEach((q) => candidateItems.push({ type: 'quest', data: q }));
+      }
+
+      if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
+        spots
+          .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
+          .forEach((s) => candidateItems.push({ type: 'spot', data: s }));
+      }
+
+      const bounds = map.getBounds().pad(0.15);
+      const isInViewport = (lat: number, lng: number) => bounds.contains([lat, lng]);
+      const toScreenPoint = (lat: number, lng: number) => {
+        const pt = map.latLngToContainerPoint([lat, lng]);
+        return { x: pt.x, y: pt.y };
+      };
+
+      const selectedId = selectedItem?.data.id;
+      const decluttered = declutterItems(
+        candidateItems,
+        currentZoom,
+        toScreenPoint,
+        isInViewport,
+        selectedId,
+        isSaved
+      );
+
+      // Track placed screen coordinates for collision avoidance with area labels
+      const occupiedScreenPoints: Array<{ x: number; y: number }> = [];
+
+      decluttered.forEach(({ type, data, showLabel, screenPoint }) => {
+        if (screenPoint) {
+          occupiedScreenPoints.push(screenPoint);
         }
-
-        if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
-          spots
-            .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
-            .forEach((s) => candidateItems.push({ type: 'spot', data: s }));
-        }
-
-        const bounds = map.getBounds().pad(0.15);
-        const isInViewport = (lat: number, lng: number) => bounds.contains([lat, lng]);
-        const toScreenPoint = (lat: number, lng: number) => {
-          const pt = map.latLngToContainerPoint([lat, lng]);
-          return { x: pt.x, y: pt.y };
-        };
-
-        const selectedId = selectedItem?.data.id;
-        const decluttered = declutterItems(
-          candidateItems,
-          currentZoom,
-          toScreenPoint,
-          isInViewport,
-          selectedId,
-          isSaved
-        );
-
-        decluttered.forEach(({ type, data, showLabel }) => {
-          const isSelected = selectedId === data.id;
-          if (type === 'quest') {
-            const q = data as QuestModel;
-            const icon = L.divIcon({
-              className: 'leaflet-custom-marker',
-              html: createQuestPinHtml(
-                isSelected,
-                isSaved('quests', q.id),
-                showLabel ? q.title : undefined,
-                q.category
-              ),
-              iconAnchor: [18, 44],
-            });
-
-            L.marker([q.gpsLat, q.gpsLng], { icon })
-              .on('click', (e) => {
-                if (e?.originalEvent) e.originalEvent.stopPropagation();
-                handleSelectItem('quest', q);
-              })
-              .addTo(group);
-          } else {
-            const s = data as SpotModel;
-            const icon = L.divIcon({
-              className: 'leaflet-custom-marker',
-              html: createSpotPinHtml(
-                isSelected,
-                isSaved('spots', s.id),
-                showLabel ? s.name : undefined,
-                s.imageUrl,
-                s.category,
-                s.subcategory
-              ),
-              iconAnchor: [18, 44],
-            });
-
-            L.marker([s.gpsLat, s.gpsLng], { icon })
-              .on('click', (e) => {
-                if (e?.originalEvent) e.originalEvent.stopPropagation();
-                handleSelectItem('spot', s);
-              })
-              .addTo(group);
-          }
-        });
-      } else {
-        // Macro zoom (< 9): spacious province beacon to guide travelers
-        const totalCount = quests.length + spots.length;
-        if (totalCount > 0) {
-          const beaconIcon = L.divIcon({
-            className: 'leaflet-custom-marker leaflet-beacon-marker',
-            html: createRegionalBeaconHtml(totalCount, 'Pangasinan'),
-            iconAnchor: [95, 76],
+        const isSelected = selectedId === data.id;
+        if (type === 'quest') {
+          const q = data as QuestModel;
+          const icon = L.divIcon({
+            className: 'leaflet-custom-marker',
+            html: createQuestPinHtml(
+              isSelected,
+              isSaved('quests', q.id),
+              showLabel ? q.title : undefined,
+              q.category
+            ),
+            iconAnchor: [18, 44],
           });
 
-          L.marker(PANGASINAN_CENTER, { icon: beaconIcon })
+          L.marker([q.gpsLat, q.gpsLng], { icon })
             .on('click', (e) => {
               if (e?.originalEvent) e.originalEvent.stopPropagation();
-              map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 0.8 });
+              handleSelectItem('quest', q);
+            })
+            .addTo(group);
+        } else {
+          const s = data as SpotModel;
+          const icon = L.divIcon({
+            className: 'leaflet-custom-marker',
+            html: createSpotPinHtml(
+              isSelected,
+              isSaved('spots', s.id),
+              showLabel ? s.name : undefined,
+              s.imageUrl,
+              s.category,
+              s.subcategory
+            ),
+            iconAnchor: [18, 44],
+          });
+
+          L.marker([s.gpsLat, s.gpsLng], { icon })
+            .on('click', (e) => {
+              if (e?.originalEvent) e.originalEvent.stopPropagation();
+              handleSelectItem('spot', s);
             })
             .addTo(group);
         }
+      });
+
+      // 2. Render clickable cartographic City & Municipality map names (zoom <= 12)
+      if (currentZoom <= 12 && (!filterType || filterType === 'all')) {
+        const candidateAreas = KNOWN_AREAS.filter((a) => {
+          if (a.id === 'philippines' || a.id === 'luzon' || a.id === 'ilocos') return false;
+          if (!isInViewport(a.center[0], a.center[1])) return false;
+
+          if (currentZoom <= 8) {
+            // Macro: province + 4 component cities
+            return a.type === 'province' || a.type === 'city';
+          }
+          if (currentZoom <= 10) {
+            // Regional: cities + prominent hub municipalities
+            const regionalHubs = new Set([
+              'pangasinan', 'dagupan', 'alaminos', 'san-carlos', 'urdaneta',
+              'bolinao', 'lingayen', 'manaoag', 'rosales', 'tayug', 'sual', 'bani'
+            ]);
+            return regionalHubs.has(a.id);
+          }
+          // Zoom 11-12: all municipalities in Pangasinan
+          return a.type === 'city' || a.type === 'municipality';
+        });
+
+        candidateAreas.forEach((area) => {
+          const pt = toScreenPoint(area.center[0], area.center[1]);
+          // Check collision with already placed destination pins or previous area labels
+          const collides = occupiedScreenPoints.some((occ) => {
+            return Math.abs(occ.x - pt.x) < 65 && Math.abs(occ.y - pt.y) < 35;
+          });
+          if (collides) return;
+
+          occupiedScreenPoints.push(pt);
+
+          const isMajor = area.type === 'city' || area.type === 'province';
+          const areaIcon = L.divIcon({
+            className: 'leaflet-custom-marker',
+            html: createAreaLabelHtml(area.name, isMajor),
+            iconAnchor: [0, 0],
+          });
+
+          L.marker(area.center, { icon: areaIcon })
+            .on('click', (e) => {
+              if (e?.originalEvent) e.originalEvent.stopPropagation();
+              handleSelectArea(area);
+            })
+            .addTo(group);
+        });
       }
 
       // Check URL parameters for explicit destination focus

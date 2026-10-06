@@ -25,20 +25,23 @@ export interface DeclutterThreshold {
  * Higher thresholds at lower zoom levels guarantee a calm, spacious view without overlap.
  */
 export function getDeclutterThreshold(zoom: number): DeclutterThreshold {
+  if (zoom <= 8) {
+    return { minDistanceX: 200, minDistanceY: 140, showLabelsByDefault: true, maxItemsPerScreen: 5 };
+  }
   if (zoom <= 9) {
-    return { minDistanceX: 180, minDistanceY: 130, showLabelsByDefault: false, maxItemsPerScreen: 6 };
+    return { minDistanceX: 175, minDistanceY: 120, showLabelsByDefault: true, maxItemsPerScreen: 8 };
   }
   if (zoom === 10) {
-    return { minDistanceX: 140, minDistanceY: 100, showLabelsByDefault: false, maxItemsPerScreen: 10 };
+    return { minDistanceX: 135, minDistanceY: 95, showLabelsByDefault: true, maxItemsPerScreen: 12 };
   }
   if (zoom === 11) {
-    return { minDistanceX: 105, minDistanceY: 80, showLabelsByDefault: true, maxItemsPerScreen: 16 };
+    return { minDistanceX: 100, minDistanceY: 75, showLabelsByDefault: true, maxItemsPerScreen: 18 };
   }
   if (zoom === 12) {
-    return { minDistanceX: 80, minDistanceY: 60, showLabelsByDefault: true, maxItemsPerScreen: 25 };
+    return { minDistanceX: 75, minDistanceY: 55, showLabelsByDefault: true, maxItemsPerScreen: 28 };
   }
   if (zoom === 13) {
-    return { minDistanceX: 55, minDistanceY: 45, showLabelsByDefault: true, maxItemsPerScreen: 40 };
+    return { minDistanceX: 50, minDistanceY: 40, showLabelsByDefault: true, maxItemsPerScreen: 45 };
   }
   // zoom >= 14: local street/district zoom with maximum space
   return { minDistanceX: 35, minDistanceY: 30, showLabelsByDefault: true, maxItemsPerScreen: 100 };
