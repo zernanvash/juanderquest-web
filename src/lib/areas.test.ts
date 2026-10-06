@@ -63,6 +63,17 @@ describe('Geographic Areas Catalog (areas.ts)', () => {
     it('finds area by keyword or partial match', () => {
       expect(findAreaByIdOrName('pilipinas')?.id).toBe('philippines');
       expect(findAreaByIdOrName('pang')?.id).toBe('pangasinan');
+      expect(findAreaByIdOrName('Calasiao')?.id).toBe('calasiao');
+      expect(findAreaByIdOrName('San Carlos')?.id).toBe('san-carlos');
+      expect(findAreaByIdOrName('Anda')?.id).toBe('anda');
+      expect(findAreaByIdOrName('Villasis')?.id).toBe('villasis');
+    });
+
+    it('covers all 4 cities and all 44 municipalities of Pangasinan', () => {
+      const cities = KNOWN_AREAS.filter((a) => a.type === 'city');
+      expect(cities).toHaveLength(4); // Alaminos, Dagupan, San Carlos, Urdaneta
+      const municipalities = KNOWN_AREAS.filter((a) => a.type === 'municipality');
+      expect(municipalities).toHaveLength(44); // 44 municipalities
     });
   });
 });
