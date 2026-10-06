@@ -49,6 +49,8 @@ export interface MapWorkspacePanelProps {
   peekContent?: React.ReactNode;
   // Slot for floating tools rendered on top-right of map
   floatingTools?: React.ReactNode;
+  // Optional search bar slot for Google Maps-style omnibox
+  searchBar?: React.ReactNode;
   // Tab panels content
   children: React.ReactNode;
 }
@@ -68,6 +70,7 @@ export function MapWorkspacePanel({
   onMobileSnapChange,
   peekContent,
   floatingTools,
+  searchBar,
   children,
 }: MapWorkspacePanelProps) {
   const touchStartY = useRef<number | null>(null);
@@ -136,12 +139,13 @@ export function MapWorkspacePanel({
       {/* 2. DESKTOP WORKSPACE PANEL (lg & up) */}
       <div className="hidden lg:block pointer-events-none">
         {isDesktopCollapsed ? (
-          /* Desktop Collapsed Floating Mini-Pill */
-          <div className="absolute top-4 left-4 z-20 pointer-events-auto animate-in fade-in slide-in-from-left-2 duration-200">
+          /* Desktop Collapsed Floating Controls (Search Bar + Mini-Pill) */
+          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 pointer-events-auto animate-in fade-in slide-in-from-left-2 duration-200">
+            {searchBar && <div className="w-72 sm:w-80 shrink-0">{searchBar}</div>}
             <button
               type="button"
               onClick={() => onDesktopCollapseChange(false)}
-              className="bg-white/95 backdrop-blur-md px-3.5 py-2.5 rounded-2xl border border-[#E3DFD5] shadow-lg flex items-center gap-2.5 text-xs font-bold text-[#582F0E] hover:bg-white hover:text-[#2D6A4F] transition active:scale-95 cursor-pointer group"
+              className="bg-white/95 backdrop-blur-md px-3.5 py-2.5 rounded-2xl border border-[#E3DFD5] shadow-lg flex items-center gap-2.5 text-xs font-bold text-[#582F0E] hover:bg-white hover:text-[#2D6A4F] transition active:scale-95 cursor-pointer group shrink-0"
               title={`Expand ${title}`}
               aria-label={`Expand ${title}`}
             >
@@ -153,7 +157,7 @@ export function MapWorkspacePanel({
                   {title}
                 </span>
                 {subtitle && (
-                  <span className="text-[10px] text-[#837560] font-semibold truncate max-w-[180px]">
+                  <span className="text-[10px] text-[#837560] font-semibold truncate max-w-[160px]">
                     {subtitle}
                   </span>
                 )}
@@ -265,6 +269,13 @@ export function MapWorkspacePanel({
                 )}
               </div>
 
+              {/* Optional Search Bar Docked in Sidebar */}
+              {searchBar && (
+                <div className="px-3.5 py-2 border-b border-[#E3DFD5]/60 bg-[#FAF9F5]/60 shrink-0">
+                  {searchBar}
+                </div>
+              )}
+
               {/* Scrollable Children Body */}
               <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 custom-scrollbar">
                 {children}
@@ -274,7 +285,14 @@ export function MapWorkspacePanel({
         )}
       </div>
 
-      {/* 3. MOBILE WORKSPACE PANEL (Bottom Sheet < lg) */}
+      {/* 3. MOBILE FLOATING TOP SEARCH BAR */}
+      {searchBar && (
+        <div className="lg:hidden absolute top-3 left-3 right-16 z-20 pointer-events-auto animate-in fade-in duration-200">
+          {searchBar}
+        </div>
+      )}
+
+      {/* 4. MOBILE WORKSPACE PANEL (Bottom Sheet < lg) */}
       <div
         className={`lg:hidden absolute bottom-[calc(3.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 sm:left-4 sm:right-4 z-30 pointer-events-auto bg-white/98 backdrop-blur-lg border border-[#E3DFD5] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-3xl flex flex-col overflow-hidden transition-[height] duration-250 ease-out ${
           mobileSnap === 'peek'

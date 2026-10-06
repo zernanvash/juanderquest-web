@@ -13,6 +13,8 @@ import { useSavedLibrary } from '@/lib/saved-library';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
 import { appRoutes } from '@/lib/routes';
 import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePanel';
+import { AreaDefinition, findAreaByIdOrName } from '@/lib/areas';
+import { MapOmnibox } from '@/components/MapOmnibox';
 
 import {
   MapPin,
@@ -49,9 +51,10 @@ export default function QuestMapPage() {
   const [currentZoom, setCurrentZoom] = useState<number>(INITIAL_MACRO_ZOOM);
   const isZoomedIn = currentZoom >= DESTINATIONS_MIN_ZOOM;
 
-  // Responsive Workspace Panel state
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  // Responsive Workspace Panel state (collapsed as default per user directive)
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
   const [mobileSnap, setMobileSnap] = useState<MobileSnapState>('peek');
+  const [activeArea, setActiveArea] = useState<AreaDefinition | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,12 +97,20 @@ export default function QuestMapPage() {
       // Check URL search parameters for initial focus
       if (typeof window !== 'undefined') {
         const searchParams = new URLSearchParams(window.location.search);
+        const urlArea = searchParams.get('area') || searchParams.get('q');
         const urlLat = parseFloat(searchParams.get('lat') || '');
         const urlLng = parseFloat(searchParams.get('lng') || '');
         const urlSpot = searchParams.get('spot');
         const urlQuest = searchParams.get('quest');
 
-        if (urlSpot) {
+        if (urlArea) {
+          const matchedArea = findAreaByIdOrName(urlArea);
+          if (matchedArea) {
+            setActiveArea(matchedArea);
+            setIsDesktopCollapsed(true);
+            setMobileSnap('peek');
+          }
+        } else if (urlSpot) {
           const matchedSpot = loadedSpots.find((s) => s.id === urlSpot || s.slug === urlSpot);
           if (matchedSpot) {
             setSelectedItem({ type: 'spot', data: matchedSpot });
@@ -357,10 +368,21 @@ export default function QuestMapPage() {
       // Check URL parameters for explicit destination focus
       if (typeof window !== 'undefined' && !fittedRef.current) {
         const searchParams = new URLSearchParams(window.location.search);
+        const urlArea = searchParams.get('area') || searchParams.get('q');
         const urlLat = parseFloat(searchParams.get('lat') || '');
         const urlLng = parseFloat(searchParams.get('lng') || '');
         const urlSpot = searchParams.get('spot');
         const urlQuest = searchParams.get('quest');
+
+        if (urlArea) {
+          const matchedArea = findAreaByIdOrName(urlArea);
+          if (matchedArea) {
+            setActiveArea(matchedArea);
+            map.setView(matchedArea.center, matchedArea.zoom, { animate: true });
+            fittedRef.current = true;
+            return;
+          }
+        }
 
         if (!isNaN(urlLat) && !isNaN(urlLng)) {
           map.setView([urlLat, urlLng], FOCUSED_ZOOM, { animate: true });
@@ -393,9 +415,31 @@ export default function QuestMapPage() {
     };
   }, [quests, spots, filterType, selectedItem?.data.id, savedLibrary, isSaved, isZoomedIn]);
 
+  // Center on a wide geographic area (e.g. Pangasinan province, Bolinao municipality)
+  const handleSelectArea = useCallback((area: AreaDefinition) => {
+    setActiveArea(area);
+    setSelectedItem(null);
+    setIsDesktopCollapsed(true);
+    setMobileSnap('peek');
+    const map = mapInstanceRef.current || retainedMap;
+    if (map) {
+      map.flyTo(area.center, area.zoom, { duration: 1.0 });
+    }
+  }, []);
+
+  // Clear area filter and return to full archipelago view
+  const handleClearActiveArea = useCallback(() => {
+    setActiveArea(null);
+    const map = mapInstanceRef.current || retainedMap;
+    if (map) {
+      map.flyTo(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM, { duration: 1.0 });
+    }
+  }, []);
+
   // Center on an item and open details
   const handleSelectItem = useCallback((type: 'quest' | 'spot', data: QuestModel | SpotModel) => {
     setSelectedItem({ type, data });
+    setActiveArea(null);
     setMobileSnap('half');
     setIsDesktopCollapsed(false);
     const map = mapInstanceRef.current || retainedMap;
@@ -416,22 +460,41 @@ export default function QuestMapPage() {
             title={
               selectedItem
                 ? ('title' in selectedItem.data ? selectedItem.data.title : selectedItem.data.name)
+                : activeArea
+                ? activeArea.name
                 : 'Destination Map'
             }
             subtitle={
               selectedItem
                 ? ('locationName' in selectedItem.data ? selectedItem.data.locationName : selectedItem.data.municipality)
+                : activeArea
+                ? activeArea.subtitle
                 : `${quests.length} Quests • ${spots.length} Spots`
             }
             badge={
               selectedItem
-                ? (selectedItem.type === 'quest' ? { label: 'Quest', variant: 'amber' } : { label: 'Spot', variant: 'emerald' })
+                ? selectedItem.type === 'quest'
+                  ? { label: 'Quest', variant: 'amber' }
+                  : { label: 'Spot', variant: 'emerald' }
+                : activeArea
+                ? { label: activeArea.type, variant: 'emerald' }
                 : { label: 'Interactive', variant: 'emerald' }
             }
             isDesktopCollapsed={isDesktopCollapsed}
             onDesktopCollapseChange={setIsDesktopCollapsed}
             mobileSnap={mobileSnap}
             onMobileSnapChange={setMobileSnap}
+            searchBar={
+              <MapOmnibox
+                onSelectArea={handleSelectArea}
+                onSelectDestination={handleSelectItem}
+                activeArea={activeArea}
+                onClearActiveArea={handleClearActiveArea}
+                spots={spots}
+                quests={quests}
+                className="w-full"
+              />
+            }
             // Floating tools (Top-right)
             floatingTools={
               <>
@@ -498,6 +561,32 @@ export default function QuestMapPage() {
                     <NavIcon className="w-3 h-3 text-[#FFB703]" />
                     <span>Go</span>
                   </Link>
+                </div>
+              ) : activeArea ? (
+                <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="w-7 h-7 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <Compass className="w-3.5 h-3.5 text-[#FFB703]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-xs font-black text-[#582F0E] truncate">{activeArea.name}</h2>
+                      <p className="text-[10px] text-[#837560] font-semibold truncate leading-tight">
+                        {activeArea.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearActiveArea();
+                    }}
+                    className="min-h-[30px] px-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-[#582F0E] text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                    title="Reset to whole map"
+                  >
+                    <span>Reset</span>
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -631,17 +720,53 @@ export default function QuestMapPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-center space-y-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto">
-                    <MapPin className="w-5 h-5 text-[#2D6A4F]" />
+                {activeArea ? (
+                  <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Compass className="w-4 h-4 text-[#2D6A4F]" />
+                        <span className="text-[10px] font-black text-[#2D6A4F] uppercase tracking-wider">
+                          Active Geographic Zone
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearActiveArea}
+                        className="text-stone-400 hover:text-stone-700 p-0.5 rounded-lg hover:bg-white transition cursor-pointer"
+                        title="Clear area filter"
+                        aria-label="Clear area filter"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm font-extrabold text-[#582F0E]">{activeArea.name}</h3>
+                      <p className="text-xs text-[#514532] leading-relaxed">{activeArea.subtitle}</p>
+                    </div>
+                    <div className="pt-1 flex items-center justify-between text-[11px] text-[#837560] border-t border-emerald-200/60">
+                      <span>Zoom Level {activeArea.zoom}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectArea(activeArea)}
+                        className="text-[#2D6A4F] font-bold hover:underline cursor-pointer"
+                      >
+                        Re-center area
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#582F0E]">Select a pin on the map</p>
-                    <p className="text-[11px] text-[#837560] mt-0.5 leading-relaxed">
-                      Tap any quest 🏆 or spot 📍 marker to view details, rewards, and sovereign navigation.
-                    </p>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-center space-y-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto">
+                      <MapPin className="w-5 h-5 text-[#2D6A4F]" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#582F0E]">Select a pin on the map</p>
+                      <p className="text-[11px] text-[#837560] mt-0.5 leading-relaxed">
+                        Tap any quest 🏆 or spot 📍 marker to view details, rewards, and sovereign navigation.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Map Pin Filter Chips */}
                 <div className="space-y-1.5">

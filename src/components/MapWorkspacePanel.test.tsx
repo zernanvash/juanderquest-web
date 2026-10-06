@@ -172,4 +172,42 @@ describe('MapWorkspacePanel', () => {
 
     expect(screen.getByTestId('test-floating-tool')).toBeDefined();
   });
+
+  it('renders searchBar slot when collapsed and expanded', () => {
+    const { rerender } = render(
+      <MapWorkspacePanel
+        title="Test Map Workspace"
+        tabs={mockTabs}
+        activeTab="explore"
+        onTabChange={vi.fn()}
+        isDesktopCollapsed={true}
+        onDesktopCollapseChange={vi.fn()}
+        mobileSnap="peek"
+        onMobileSnapChange={vi.fn()}
+        searchBar={<input data-testid="test-search-bar" placeholder="Search..." />}
+      >
+        <div>Content</div>
+      </MapWorkspacePanel>
+    );
+
+    expect(screen.getAllByTestId('test-search-bar').length).toBeGreaterThan(0);
+
+    rerender(
+      <MapWorkspacePanel
+        title="Test Map Workspace"
+        tabs={mockTabs}
+        activeTab="explore"
+        onTabChange={vi.fn()}
+        isDesktopCollapsed={false}
+        onDesktopCollapseChange={vi.fn()}
+        mobileSnap="half"
+        onMobileSnapChange={vi.fn()}
+        searchBar={<input data-testid="test-search-bar" placeholder="Search..." />}
+      >
+        <div>Content</div>
+      </MapWorkspacePanel>
+    );
+
+    expect(screen.getAllByTestId('test-search-bar').length).toBeGreaterThan(0);
+  });
 });

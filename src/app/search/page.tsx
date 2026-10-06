@@ -28,6 +28,7 @@ import {
   PersonResultItem,
   QuestResultItem,
 } from '@/lib/search';
+import { findAreaByIdOrName, findMatchingAreas } from '@/lib/areas';
 
 type SearchTab = 'all' | 'places' | 'people' | 'quests';
 
@@ -62,6 +63,9 @@ function SearchResultsContent() {
 
   const normalized = normalizeSearchQuery(rawQuery);
   const isProcessable = isProcessableQuery(normalized);
+  const matchedArea = isProcessable
+    ? findAreaByIdOrName(normalized) || findMatchingAreas(normalized)[0]
+    : undefined;
 
   // Fetch results when query or activeTab changes
   const loadResults = useCallback(
@@ -259,6 +263,33 @@ function SearchResultsContent() {
             <RotateCcw className="h-3.5 w-3.5" />
             <span>Try Again</span>
           </button>
+        </div>
+      )}
+
+      {/* Geographic Area Match Banner (e.g. Pangasinan province, Bolinao municipality) */}
+      {isProcessable && !loading && !error && matchedArea && (
+        <div className="rounded-3xl border-2 border-[#2D6A4F]/25 bg-linear-to-r from-[#D8F3DC]/40 via-white to-[#FAF9F5] p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-[#2D6A4F] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Compass className="w-6 h-6 text-[#FFB703]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-black text-[#582F0E] truncate">{matchedArea.name}</h3>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#2D6A4F] border border-emerald-200 shrink-0">
+                  {matchedArea.type}
+                </span>
+              </div>
+              <p className="text-xs text-[#837560] font-medium mt-0.5">{matchedArea.subtitle}</p>
+            </div>
+          </div>
+          <Link
+            href={`/map?area=${matchedArea.id}`}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition active:scale-95 shrink-0"
+          >
+            <MapPin className="w-4 h-4 text-[#FFB703]" />
+            <span>Explore Area on Map</span>
+          </Link>
         </div>
       )}
 
