@@ -9,7 +9,8 @@ import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib
 import { fetchWithCache } from '@/lib/cache';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { createQuestPinHtml, createSpotPinHtml } from '@/lib/map-icons';
+import { createQuestPinHtml, createSpotPinHtml, createRegionalBeaconHtml } from '@/lib/map-icons';
+import { declutterItems } from '@/lib/map-declutter';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
 import { appRoutes } from '@/lib/routes';
@@ -133,6 +134,7 @@ export default function QuestMapPage() {
   const [selectedItem, setSelectedItem] = useState<{ type: 'quest' | 'spot'; data: QuestModel | SpotModel } | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'quests' | 'spots' | 'saved'>('all');
   const [currentZoom, setCurrentZoom] = useState<number>(INITIAL_MACRO_ZOOM);
+  const [mapViewportNonce, setMapViewportNonce] = useState(0);
   const isZoomedIn = currentZoom >= DESTINATIONS_MIN_ZOOM;
 
   // Responsive Workspace Panel state (collapsed as default per user directive)
@@ -339,6 +341,13 @@ export default function QuestMapPage() {
             }
           };
 
+          const onViewportEnd = () => {
+            if (!isDisposed) {
+              setCurrentZoom(activeMap.getZoom());
+              setMapViewportNonce((v) => v + 1);
+            }
+          };
+
           const onMapClick = (e: any) => {
             const z = activeMap.getZoom();
             if (z < DESTINATIONS_MIN_ZOOM) {
@@ -350,12 +359,14 @@ export default function QuestMapPage() {
           };
 
           activeMap.on('zoom', onZoomUpdate);
-          activeMap.on('zoomend', onZoomUpdate);
+          activeMap.on('zoomend', onViewportEnd);
+          activeMap.on('moveend', onViewportEnd);
           activeMap.on('click', onMapClick);
 
           activeMapCleanup = () => {
             activeMap.off('zoom', onZoomUpdate);
-            activeMap.off('zoomend', onZoomUpdate);
+            activeMap.off('zoomend', onViewportEnd);
+            activeMap.off('moveend', onViewportEnd);
             activeMap.off('click', onMapClick);
           };
 
@@ -447,55 +458,99 @@ export default function QuestMapPage() {
       ];
       allCoordinatesRef.current = allCoordinates;
 
-      // Only render destination pins when zoomed in past threshold (like Google Maps)
+      // 1. Zoomed-In: Smart spatial decluttering and collision-free POI pins
       if (isZoomedIn) {
-        // Add Quests markers (Expedition Compass Icon + Visible Title Label)
+        const candidateItems: Array<{ type: 'spot' | 'quest'; data: SpotModel | QuestModel }> = [];
+
         if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
           quests
             .filter((q) => filterType !== 'saved' || isSaved('quests', q.id))
-            .forEach((q) => {
-              const isSelected = selectedItem?.type === 'quest' && selectedItem.data.id === q.id;
-              const icon = L.divIcon({
-                className: 'leaflet-custom-marker',
-                html: createQuestPinHtml(isSelected, isSaved('quests', q.id), q.title, q.category),
-                iconAnchor: [18, 44],
-              });
-
-              L.marker([q.gpsLat, q.gpsLng], { icon })
-                .on('click', (e) => {
-                  if (e?.originalEvent) e.originalEvent.stopPropagation();
-                  handleSelectItem('quest', q);
-                })
-                .addTo(group);
-            });
+            .forEach((q) => candidateItems.push({ type: 'quest', data: q }));
         }
 
-        // Add Destination Spots markers (Classic Teardrop Pin + Visible Place Name Label)
         if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
           spots
             .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
-            .forEach((s) => {
-              const isSelected = selectedItem?.type === 'spot' && selectedItem.data.id === s.id;
-              const icon = L.divIcon({
-                className: 'leaflet-custom-marker',
-                html: createSpotPinHtml(
-                  isSelected,
-                  isSaved('spots', s.id),
-                  s.name,
-                  s.imageUrl,
-                  s.category,
-                  s.subcategory
-                ),
-                iconAnchor: [18, 44],
-              });
+            .forEach((s) => candidateItems.push({ type: 'spot', data: s }));
+        }
 
-              L.marker([s.gpsLat, s.gpsLng], { icon })
-                .on('click', (e) => {
-                  if (e?.originalEvent) e.originalEvent.stopPropagation();
-                  handleSelectItem('spot', s);
-                })
-                .addTo(group);
+        const bounds = map.getBounds().pad(0.15);
+        const isInViewport = (lat: number, lng: number) => bounds.contains([lat, lng]);
+        const toScreenPoint = (lat: number, lng: number) => {
+          const pt = map.latLngToContainerPoint([lat, lng]);
+          return { x: pt.x, y: pt.y };
+        };
+
+        const selectedId = selectedItem?.data.id;
+        const decluttered = declutterItems(
+          candidateItems,
+          currentZoom,
+          toScreenPoint,
+          isInViewport,
+          selectedId,
+          isSaved
+        );
+
+        decluttered.forEach(({ type, data, showLabel }) => {
+          const isSelected = selectedId === data.id;
+          if (type === 'quest') {
+            const q = data as QuestModel;
+            const icon = L.divIcon({
+              className: 'leaflet-custom-marker',
+              html: createQuestPinHtml(
+                isSelected,
+                isSaved('quests', q.id),
+                showLabel ? q.title : undefined,
+                q.category
+              ),
+              iconAnchor: [18, 44],
             });
+
+            L.marker([q.gpsLat, q.gpsLng], { icon })
+              .on('click', (e) => {
+                if (e?.originalEvent) e.originalEvent.stopPropagation();
+                handleSelectItem('quest', q);
+              })
+              .addTo(group);
+          } else {
+            const s = data as SpotModel;
+            const icon = L.divIcon({
+              className: 'leaflet-custom-marker',
+              html: createSpotPinHtml(
+                isSelected,
+                isSaved('spots', s.id),
+                showLabel ? s.name : undefined,
+                s.imageUrl,
+                s.category,
+                s.subcategory
+              ),
+              iconAnchor: [18, 44],
+            });
+
+            L.marker([s.gpsLat, s.gpsLng], { icon })
+              .on('click', (e) => {
+                if (e?.originalEvent) e.originalEvent.stopPropagation();
+                handleSelectItem('spot', s);
+              })
+              .addTo(group);
+          }
+        });
+      } else {
+        // Macro zoom (< 9): spacious province beacon to guide travelers
+        const totalCount = quests.length + spots.length;
+        if (totalCount > 0) {
+          const beaconIcon = L.divIcon({
+            className: 'leaflet-custom-marker leaflet-beacon-marker',
+            html: createRegionalBeaconHtml(totalCount, 'Pangasinan'),
+            iconAnchor: [95, 76],
+          });
+
+          L.marker(PANGASINAN_CENTER, { icon: beaconIcon })
+            .on('click', (e) => {
+              if (e?.originalEvent) e.originalEvent.stopPropagation();
+              map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 0.8 });
+            })
+            .addTo(group);
         }
       }
 
@@ -563,7 +618,18 @@ export default function QuestMapPage() {
     return () => {
       isDisposed = true;
     };
-  }, [quests, spots, filterType, selectedItem?.data.id, savedLibrary, isSaved, isZoomedIn, handleSelectItem]);
+  }, [
+    quests,
+    spots,
+    filterType,
+    selectedItem?.data.id,
+    savedLibrary,
+    isSaved,
+    isZoomedIn,
+    currentZoom,
+    mapViewportNonce,
+    handleSelectItem,
+  ]);
 
   // Center on a wide geographic area (e.g. Pangasinan province, Bolinao municipality)
   const handleSelectArea = useCallback((area: AreaDefinition) => {
