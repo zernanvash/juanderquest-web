@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Trophy,
   Clock,
-  Heart,
   MessageSquare,
   Bookmark,
   Share2,
@@ -38,6 +37,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DestinationMedia } from '@/components/DestinationMedia';
 import { appRoutes } from '@/lib/routes';
 import { MiniMapPreview } from '@/components/MiniMapPreview';
+import { PixelHeart } from '@/components/PixelIcons';
 
 interface SpotDetailClientProps {
   slug: string;
@@ -525,7 +525,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                     }`}
                     aria-label={isLiked ? 'Liked destination' : 'Like destination'}
                   >
-                    <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-600 text-rose-600 animate-heart-pop' : 'text-gray-400'}`} />
+                    <PixelHeart isLiked={isLiked} size="md" />
                     <span className="text-xs font-bold">{isLiked ? 'Liked' : 'Like'}</span>
                   </button>
 

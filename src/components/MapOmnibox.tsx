@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Search, MapPin, Compass, Trophy, X, Sparkles, Navigation as NavIcon } from 'lucide-react';
+import { MapPin, Compass, Trophy, X, Sparkles, Navigation as NavIcon } from 'lucide-react';
+import { PixelSearchIcon } from '@/components/PixelIcons';
 import { AreaDefinition, findMatchingAreas, findAreaByIdOrName, KNOWN_AREAS } from '@/lib/areas';
 import { QuestModel, SpotModel } from '@/lib/api';
 
@@ -161,8 +162,8 @@ export function MapOmnibox({
         onSubmit={handleFormSubmit}
         className="relative flex items-center bg-white/95 backdrop-blur-md rounded-2xl border border-[#E3DFD5] shadow-lg hover:shadow-xl focus-within:shadow-xl focus-within:border-[#2D6A4F] transition-all overflow-hidden"
       >
-        <div className="pl-3.5 pr-2 py-2 flex items-center text-[#2D6A4F] pointer-events-none">
-          <Search className="w-4 h-4 text-[#2D6A4F]" />
+        <div className="pl-3.5 pr-2 py-2 flex items-center pointer-events-none">
+          <PixelSearchIcon className="w-4 h-4" size={18} />
         </div>
 
         <input

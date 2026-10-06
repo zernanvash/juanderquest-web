@@ -6,7 +6,6 @@ import {
   Image as ImageIcon, 
   Smile, 
   Send, 
-  Heart, 
   X, 
   Loader2, 
   Check, 
@@ -14,6 +13,7 @@ import {
   Sparkles,
   ExternalLink
 } from 'lucide-react';
+import { PixelHeart } from '@/components/PixelIcons';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -639,7 +639,7 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
                         : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
                     }`}
                   >
-                    <Heart className={`w-3 h-3 ${isLiked ? 'fill-rose-600 text-rose-600 animate-heart-pop' : ''}`} />
+                    <PixelHeart isLiked={isLiked} size="xs" />
                     <span>{comment.helpful_count > 0 ? comment.helpful_count : 'Like'}</span>
                   </button>
                 </div>

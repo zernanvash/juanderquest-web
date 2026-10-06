@@ -12,7 +12,6 @@ import {
   Trophy,
   PlusCircle,
   MessageSquare,
-  Heart,
   Bookmark,
   Award,
   AlertTriangle,
@@ -37,6 +36,7 @@ import { fetchPublicTravelers, type PublicTravelerSummary } from '@/lib/social';
 import { DestinationMedia } from '@/components/DestinationMedia';
 import { SpotCommentSection } from '@/components/SpotCommentSection';
 import { SpotReportModal } from '@/components/SpotReportModal';
+import { PixelHeart } from '@/components/PixelIcons';
 
 export default function ExplorePage() {
   const { user } = useAuth();
@@ -483,13 +483,7 @@ export default function ExplorePage() {
                             }`}
                             aria-label={likeState.isLiked ? `Liked ${spot.name}` : `Like ${spot.name}`}
                           >
-                            <Heart
-                              className={`w-4 h-4 transition ${
-                                likeState.isLiked
-                                  ? 'fill-rose-600 text-rose-600 scale-110 animate-heart-pop'
-                                  : 'text-[#837560]'
-                              }`}
-                            />
+                            <PixelHeart isLiked={likeState.isLiked} size="md" />
                             <span className="text-xs font-extrabold">
                               {likeState.isLiked ? 'Liked' : 'Like'}
                             </span>

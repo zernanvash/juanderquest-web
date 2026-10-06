@@ -89,14 +89,24 @@ export default function DownloadPage() {
           <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <a
               href={latestApk}
+              download="juanderquest-latest.apk"
+              rel="noopener noreferrer"
               className="inline-flex min-h-[48px] items-center justify-center gap-2.5 rounded-2xl bg-[#2D6A4F] hover:bg-[#1B4332] px-7 py-3.5 font-black text-sm text-white shadow-md transition active:scale-98 cursor-pointer"
             >
               <Download aria-hidden="true" className="h-5 w-5 text-[#FFB703]" />
               <span>Download Android APK (Latest)</span>
             </a>
+            <a
+              href="https://api.juanderquest.app/api/v1/app/download"
+              download="juanderquest-latest.apk"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-[#D5C4AC] bg-[#FAF9F5] hover:bg-white px-6 py-3.5 font-bold text-xs sm:text-sm text-[#582F0E] transition active:scale-98"
+            >
+              <span>Direct Mirror (API)</span>
+            </a>
             <Link
               href="/quests"
-              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-[#D5C4AC] bg-[#FAF9F5] hover:bg-white px-6 py-3.5 font-bold text-xs sm:text-sm text-[#582F0E] transition active:scale-98"
+              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-[#D5C4AC] bg-transparent hover:bg-stone-50 px-6 py-3.5 font-bold text-xs sm:text-sm text-[#582F0E] transition active:scale-98"
             >
               <span>Browse Active Quests</span>
               <ArrowRight className="w-4 h-4" />

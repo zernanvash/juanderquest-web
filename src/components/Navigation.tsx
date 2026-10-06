@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   History,
   X,
-  Search,
   Award,
   Bell,
   Settings,
@@ -31,6 +30,7 @@ import { normalizeSearchQuery, isProcessableQuery } from '@/lib/search';
 import { findAreaByIdOrName, areaToHref } from '@/lib/areas';
 import { CelebrationEffects, triggerCelebration } from '@/components/CelebrationEffects';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
+import { PixelSearchIcon } from '@/components/PixelIcons';
 
 export interface NavigationNotification {
   id: string;
@@ -472,10 +472,9 @@ export const Navigation: React.FC<{
                   : 'w-52 lg:w-64 xl:w-72'
               }`}
             >
-              <Search
-                className={`w-4 h-4 absolute left-3.5 pointer-events-none transition-colors ${
-                  isSearchOpen ? 'text-[#2D6A4F]' : 'text-[#837560]'
-                }`}
+              <PixelSearchIcon
+                className="w-4 h-4 absolute left-3.5 pointer-events-none select-none transition-transform duration-200"
+                size={18}
               />
               <input
                 ref={searchInputRef}
@@ -560,7 +559,7 @@ export const Navigation: React.FC<{
             className="lg:hidden p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center justify-center cursor-pointer transition active:scale-95 min-h-[40px] min-w-[40px]"
             aria-label="Open search (Ctrl+K)"
           >
-            <Search className="w-5 h-5 text-[var(--color-brand-primary)]" />
+            <PixelSearchIcon className="w-5 h-5" size={20} />
           </button>
 
           {/* Notification Button (Always immediately to the left of the profile button) */}
@@ -945,7 +944,7 @@ export const Navigation: React.FC<{
             ref={mobileSearchContainerRef}
             className="lg:hidden absolute inset-y-2 inset-x-2 sm:inset-x-4 flex items-center gap-2 bg-white rounded-2xl border-2 border-[#2D6A4F] px-3 shadow-md z-50 animate-in fade-in duration-200"
           >
-            <Search className="w-4 h-4 text-[#2D6A4F] shrink-0" />
+            <PixelSearchIcon className="w-5 h-5 shrink-0" size={20} />
             <input
               ref={mobileSearchInputRef}
               type="text"

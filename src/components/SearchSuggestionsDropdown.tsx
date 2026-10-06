@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import {
-  Search,
   MapPin,
   Users,
   Trophy,
@@ -23,6 +22,7 @@ import {
   isProcessableQuery,
 } from '@/lib/search';
 import { AreaDefinition, areaToHref } from '@/lib/areas';
+import { PixelSearchIcon } from '@/components/PixelIcons';
 
 export type FlatItem =
   | { groupType: 'areas'; item: AreaDefinition; href: string }
@@ -457,7 +457,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <Search className="h-3.5 w-3.5" />
+                  <PixelSearchIcon className="h-4 w-4 shrink-0" size={16} />
                   <span>See all results for &ldquo;{normalized}&rdquo;</span>
                 </div>
                 <kbd
