@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Maximize2,
   Minimize2,
+  MapPin,
 } from 'lucide-react';
 
 export type MobileSnapState = 'peek' | 'half' | 'full';
@@ -35,9 +36,9 @@ export interface MapWorkspacePanelProps {
     label?: string;
   };
   headerActions?: React.ReactNode;
-  tabs: MapWorkspaceTab[];
-  activeTab: string;
-  onTabChange: (tabId: string) => void;
+  tabs?: MapWorkspaceTab[];
+  activeTab?: string;
+  onTabChange?: (tabId: string) => void;
   // Desktop collapse state
   isDesktopCollapsed: boolean;
   onDesktopCollapseChange: (collapsed: boolean) => void;
@@ -58,7 +59,7 @@ export function MapWorkspacePanel({
   badge,
   backButton,
   headerActions,
-  tabs,
+  tabs = [],
   activeTab,
   onTabChange,
   isDesktopCollapsed,
@@ -101,7 +102,7 @@ export function MapWorkspacePanel({
   };
 
   const activeTabDef = tabs.find((t) => t.id === activeTab) || tabs[0];
-  const ActiveIcon = activeTabDef?.icon;
+  const ActiveIcon = activeTabDef?.icon || MapPin;
 
   const renderBadge = (b?: { label: string; variant?: string }, className = '') => {
     if (!b) return null;
@@ -239,7 +240,7 @@ export function MapWorkspacePanel({
                           type="button"
                           role="tab"
                           aria-selected={isActive}
-                          onClick={() => onTabChange(tab.id)}
+                          onClick={() => onTabChange?.(tab.id)}
                           className={`py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[34px] ${
                             isActive
                               ? 'bg-[#2D6A4F] text-white shadow-xs'
@@ -424,7 +425,7 @@ export function MapWorkspacePanel({
                         type="button"
                         role="tab"
                         aria-selected={isActive}
-                        onClick={() => onTabChange(tab.id)}
+                        onClick={() => onTabChange?.(tab.id)}
                         className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer min-h-[32px] ${
                           isActive
                             ? 'bg-[#2D6A4F] text-white shadow-xs'
