@@ -415,24 +415,24 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pixel-heart-anim-like {
-  background-image: url('/icons/heart-liked-animation.png');
+  background-image: url('/icons/heart-liked-animation-v2.png');
   background-position: 0px 0px;
   animation: sprite-heart-like 450ms steps(11) forwards;
 }
 
 .pixel-heart-anim-unlike {
-  background-image: url('/icons/heart-unliked-animation.png');
+  background-image: url('/icons/heart-unliked-animation-v2.png');
   background-position: 0px 0px;
   animation: sprite-heart-unlike 480ms steps(12) forwards;
 }
 
 .pixel-heart-static-liked {
-  background-image: url('/icons/heart-liked.png');
+  background-image: url('/icons/heart-liked-v2.png');
   background-position: 0px 0px;
 }
 
 .pixel-heart-static-unliked {
-  background-image: url('/icons/heart-unliked.png');
+  background-image: url('/icons/heart-unliked-v2.png');
   background-position: 0px 0px;
 }
 
