@@ -30,6 +30,9 @@ export const Footer: React.FC = () => {
           <Link href="/terms" className="hover:text-[var(--color-brand-primary)] transition font-medium">
             Terms
           </Link>
+          <Link href="/affiliate" className="hover:text-[var(--color-brand-primary)] transition font-medium">
+            Merchants
+          </Link>
           <a
             href="/download"
             className="hover:text-[var(--color-brand-primary)] transition font-semibold text-[var(--color-brand-primary)]"

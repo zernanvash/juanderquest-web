@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Sparkles,
   Smartphone,
+  Store,
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { SearchSuggestionsDropdown } from '@/components/SearchSuggestionsDropdown';
@@ -343,6 +344,7 @@ export const Navigation: React.FC<{
     { label: 'Governance DAO', href: '/vote', icon: Vote, badge: 'DAO' },
     { label: 'Leaderboard', href: '/leaderboard', icon: Award },
     { label: 'Download App', href: '/download', icon: Smartphone, flair: 'APK' },
+    { label: 'Merchant Hub', href: '/affiliate', icon: Store, flair: 'Soon' },
     { label: 'About Project', href: '/about', icon: ShieldCheck },
     { label: 'My Submissions', href: '/history', icon: History },
     { label: 'Traveler Profile', href: '/profile', icon: User },

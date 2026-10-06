@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { isPublicPage } from './public-routes';
 
 describe('wallet gate public pages', () => {
-  it('lets anyone view the informational Trail preview', () => {
+  it('lets anyone view the informational Trail and Affiliate previews', () => {
     expect(isPublicPage('/trail')).toBe(true);
+    expect(isPublicPage('/affiliate')).toBe(true);
   });
 
   it('continues to protect functional app routes', () => {
