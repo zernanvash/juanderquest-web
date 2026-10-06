@@ -61,11 +61,11 @@ export interface PixelHeartProps {
 }
 
 const SIZE_PRESETS: Record<string, { w: number; h: number; scale: number }> = {
-  xs: { w: 14, h: 16, scale: 16 / 36 },
-  sm: { w: 18, h: 20, scale: 20 / 36 },
-  md: { w: 22, h: 25, scale: 25 / 36 },
-  lg: { w: 28, h: 32, scale: 32 / 36 },
-  xl: { w: 32, h: 36, scale: 1 },
+  xs: { w: 16, h: 16, scale: 16 / 36 },
+  sm: { w: 20, h: 20, scale: 20 / 36 },
+  md: { w: 24, h: 24, scale: 24 / 36 },
+  lg: { w: 32, h: 32, scale: 32 / 36 },
+  xl: { w: 36, h: 36, scale: 1 },
 };
 
 /**
@@ -116,12 +116,12 @@ export const PixelHeart: React.FC<PixelHeartProps> = ({
     onAnimationComplete?.();
   };
 
-  // Determine scaling & container dimensions
+  // Determine scaling & container dimensions (1:1 square canvas)
   let config = SIZE_PRESETS.md;
   if (typeof size === 'number') {
     const scale = size / 36;
     config = {
-      w: Math.round(32 * scale),
+      w: size,
       h: size,
       scale,
     };

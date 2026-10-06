@@ -116,6 +116,28 @@ describe('PixelIcons', () => {
       expect(onComplete).toHaveBeenCalledTimes(1);
       vi.useRealTimers();
     });
+
+    it('renders with 1:1 square container dimensions for presets and numeric sizes', () => {
+      const { container: containerXs } = render(<PixelHeart isLiked={false} size="xs" />);
+      const wrapperXs = containerXs.firstChild as HTMLElement;
+      expect(wrapperXs.style.width).toBe('16px');
+      expect(wrapperXs.style.height).toBe('16px');
+
+      const { container: containerMd } = render(<PixelHeart isLiked={true} size="md" />);
+      const wrapperMd = containerMd.firstChild as HTMLElement;
+      expect(wrapperMd.style.width).toBe('24px');
+      expect(wrapperMd.style.height).toBe('24px');
+
+      const { container: containerXl } = render(<PixelHeart isLiked={true} size="xl" />);
+      const wrapperXl = containerXl.firstChild as HTMLElement;
+      expect(wrapperXl.style.width).toBe('36px');
+      expect(wrapperXl.style.height).toBe('36px');
+
+      const { container: containerNum } = render(<PixelHeart isLiked={true} size={28} />);
+      const wrapperNum = containerNum.firstChild as HTMLElement;
+      expect(wrapperNum.style.width).toBe('28px');
+      expect(wrapperNum.style.height).toBe('28px');
+    });
   });
 
   describe('PixelHeartButton', () => {
