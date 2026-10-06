@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
   basePath,
   ...(distDir ? { distDir } : {}),
   async redirects() {
-    return [{ source: "/download/juanderquest-latest.apk", destination: latestAndroidApk, permanent: false }];
+    return [{ source: "/download/juanderquest-latest.apk", destination: "/api/v1/app/download", permanent: false }];
   },
   async rewrites() {
     return [
