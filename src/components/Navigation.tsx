@@ -28,6 +28,7 @@ import { Footer } from '@/components/Footer';
 import { SearchSuggestionsDropdown } from '@/components/SearchSuggestionsDropdown';
 import { useSearchPreview } from '@/lib/use-search-preview';
 import { normalizeSearchQuery, isProcessableQuery } from '@/lib/search';
+import { findAreaByIdOrName } from '@/lib/areas';
 import { CelebrationEffects, triggerCelebration } from '@/components/CelebrationEffects';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 
@@ -166,7 +167,7 @@ export const Navigation: React.FC<{
     setIsNotificationsOpen(false);
   };
 
-  const { groups, loading, error, flatItems, executeSearch } = useSearchPreview(
+  const { groups, matchedAreas, loading, error, flatItems, executeSearch } = useSearchPreview(
     searchQuery,
     isSearchOpen
   );
@@ -237,10 +238,21 @@ export const Navigation: React.FC<{
         const target = flatItems[selectedIndex];
         handleCloseSearch();
         router.push(target.href);
-      } else {
-        handleCloseSearch();
-        router.push(`/search?q=${encodeURIComponent(normalized)}&type=all`);
+        return;
       }
+
+      // Smart geographic area detection (e.g. Pangasinan, Bolinao, Alaminos, Dagupan)
+      const areaMatch =
+        findAreaByIdOrName(normalized) ||
+        (matchedAreas && matchedAreas.length > 0 ? matchedAreas[0] : null);
+      if (areaMatch) {
+        handleCloseSearch();
+        router.push(`/map?area=${areaMatch.id}`);
+        return;
+      }
+
+      handleCloseSearch();
+      router.push(`/search?q=${encodeURIComponent(normalized)}&type=all`);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       if (searchQuery) {
@@ -451,78 +463,91 @@ export const Navigation: React.FC<{
             );
           })}
 
-          {/* Extending Search Bar placed after tabs */}
-          <div ref={desktopSearchContainerRef} className="relative flex items-center ml-1">
-            {!isSearchOpen ? (
-              <button
-                type="button"
-                onClick={handleOpenSearch}
-                className="flex items-center gap-2 h-10 px-3.5 rounded-full bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/60 text-xs text-[#6B5E4C] hover:text-[#2D6A4F] font-medium transition-all duration-300 ease-out cursor-pointer shadow-2xs hover:shadow-xs group select-none active:scale-95"
-                title="Search destinations (Ctrl+K)"
-                aria-label="Open search (Ctrl+K)"
-              >
-                <Search className="w-3.5 h-3.5 text-[#837560] group-hover:text-[#2D6A4F] group-hover:scale-110 transition-all" />
-                <span className="hidden lg:inline text-xs font-semibold">Search...</span>
-                <kbd className="hidden xl:inline text-[9px] font-mono px-1 py-0.5 rounded bg-stone-200/70 text-stone-600 font-bold">
-                  Ctrl+K
-                </kbd>
-              </button>
-            ) : (
-              <div className="relative flex items-center">
-                <div className="relative flex items-center w-72 lg:w-88 xl:w-96 transition-all duration-300 ease-out">
-                  <Search className="w-4 h-4 text-[#2D6A4F] absolute left-3.5 pointer-events-none" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => handleQueryChange(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    placeholder="Search places, food, tags, @users..."
-                    aria-label="Search destinations, users or quests"
-                    className="w-full h-10 bg-white border-2 border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/10 rounded-full pl-10 pr-14 text-xs text-[#2B2319] placeholder:text-[#837560]/70 font-medium outline-none shadow-sm transition-all"
-                  />
-                  <div className="absolute right-2.5 flex items-center gap-1">
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => handleQueryChange('')}
-                        className="w-5 h-5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center cursor-pointer transition"
-                        title="Clear query"
-                        aria-label="Clear search query"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleCloseSearch}
-                      className="w-5 h-5 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 flex items-center justify-center cursor-pointer transition"
-                      title="Close search (ESC)"
-                      aria-label="Close search"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
+          {/* Smart Global Search Bar (Desktop) */}
+          <div ref={desktopSearchContainerRef} className="relative flex items-center ml-2">
+            <div
+              className={`relative flex items-center transition-all duration-300 ease-out ${
+                isSearchOpen
+                  ? 'w-72 lg:w-88 xl:w-96'
+                  : 'w-52 lg:w-64 xl:w-72'
+              }`}
+            >
+              <Search
+                className={`w-4 h-4 absolute left-3.5 pointer-events-none transition-colors ${
+                  isSearchOpen ? 'text-[#2D6A4F]' : 'text-[#837560]'
+                }`}
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onFocus={() => {
+                  if (!isSearchOpen) handleOpenSearch();
+                }}
+                onChange={(e) => {
+                  if (!isSearchOpen) setIsSearchOpen(true);
+                  handleQueryChange(e.target.value);
+                }}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search Pangasinan, areas, spots..."
+                aria-label="Search destinations, areas, or scouts"
+                className={`w-full h-10 rounded-full pl-10 pr-14 text-xs font-medium outline-none transition-all duration-200 ${
+                  isSearchOpen
+                    ? 'bg-white border-2 border-[#2D6A4F] text-[#2B2319] shadow-sm ring-4 ring-[#2D6A4F]/10'
+                    : 'bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/50 text-[#6B5E4C] placeholder:text-[#837560]/70 shadow-2xs hover:shadow-xs'
+                }`}
+              />
 
-                {/* Suggestions Dropdown (Desktop - attached directly to the bottom of the search bar) */}
-                <SearchSuggestionsDropdown
-                  isOpen={isSearchOpen}
-                  onClose={handleCloseSearch}
-                  query={searchQuery}
-                  setQuery={setSearchQuery}
-                  selectedIndex={selectedIndex}
-                  setSelectedIndex={setSelectedIndex}
-                  flatItems={flatItems}
-                  groups={groups}
-                  loading={loading}
-                  error={error}
-                  onRetry={() => executeSearch(searchQuery)}
-                  onSelectChip={handleSelectChip}
-                  className="absolute top-full mt-2.5 right-0 w-[460px] lg:w-[480px] max-w-[calc(100vw-2rem)]"
-                />
+              {/* Action badges: Clear / Close / Ctrl+K badge */}
+              <div className="absolute right-2.5 flex items-center gap-1">
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleQueryChange('');
+                      searchInputRef.current?.focus();
+                    }}
+                    className="w-5 h-5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center cursor-pointer transition"
+                    title="Clear query"
+                    aria-label="Clear search query"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : !isSearchOpen ? (
+                  <kbd className="hidden xl:inline-block text-[9px] font-mono px-1.5 py-0.5 rounded bg-stone-200/70 text-stone-600 font-bold pointer-events-none">
+                    Ctrl+K
+                  </kbd>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCloseSearch}
+                    className="w-5 h-5 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 flex items-center justify-center cursor-pointer transition"
+                    title="Close search (ESC)"
+                    aria-label="Close search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Suggestions Dropdown (Desktop) */}
+            <SearchSuggestionsDropdown
+              isOpen={isSearchOpen}
+              onClose={handleCloseSearch}
+              query={searchQuery}
+              setQuery={setSearchQuery}
+              selectedIndex={selectedIndex}
+              setSelectedIndex={setSelectedIndex}
+              flatItems={flatItems}
+              matchedAreas={matchedAreas}
+              groups={groups}
+              loading={loading}
+              error={error}
+              onRetry={() => executeSearch(searchQuery)}
+              onSelectChip={handleSelectChip}
+              className="absolute top-full mt-2.5 right-0 w-[460px] lg:w-[480px] max-w-[calc(100vw-2rem)]"
+            />
           </div>
         </nav>
 
@@ -959,6 +984,7 @@ export const Navigation: React.FC<{
               selectedIndex={selectedIndex}
               setSelectedIndex={setSelectedIndex}
               flatItems={flatItems}
+              matchedAreas={matchedAreas}
               groups={groups}
               loading={loading}
               error={error}

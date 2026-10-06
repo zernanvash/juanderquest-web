@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer as LeafletTileLayer } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib/api';
@@ -14,7 +15,6 @@ import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map
 import { appRoutes } from '@/lib/routes';
 import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePanel';
 import { AreaDefinition, findAreaByIdOrName } from '@/lib/areas';
-import { MapOmnibox } from '@/components/MapOmnibox';
 
 import {
   MapPin,
@@ -41,6 +41,52 @@ const FOCUSED_ZOOM = 13;
 let retainedMap: LeafletMap | null = null;
 let retainedHost: HTMLDivElement | null = null;
 let retainedTileLayer: LeafletTileLayer | null = null;
+
+function MapUrlSync({
+  onSelectArea,
+  onSelectSpot,
+  onSelectQuest,
+  spots,
+  quests,
+}: {
+  onSelectArea: (area: AreaDefinition) => void;
+  onSelectSpot: (spot: SpotModel) => void;
+  onSelectQuest: (quest: QuestModel) => void;
+  spots: SpotModel[];
+  quests: QuestModel[];
+}) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const areaQuery = searchParams.get('area') || searchParams.get('q');
+    if (areaQuery) {
+      const matched = findAreaByIdOrName(areaQuery);
+      if (matched) {
+        onSelectArea(matched);
+        return;
+      }
+    }
+
+    const spotQuery = searchParams.get('spot');
+    if (spotQuery && spots.length > 0) {
+      const matched = spots.find((s) => s.id === spotQuery || s.slug === spotQuery);
+      if (matched) {
+        onSelectSpot(matched);
+        return;
+      }
+    }
+
+    const questQuery = searchParams.get('quest');
+    if (questQuery && quests.length > 0) {
+      const matched = quests.find((q) => q.id === questQuery);
+      if (matched) {
+        onSelectQuest(matched);
+      }
+    }
+  }, [searchParams, spots, quests, onSelectArea, onSelectSpot, onSelectQuest]);
+
+  return null;
+}
 
 export default function QuestMapPage() {
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
@@ -451,9 +497,45 @@ export default function QuestMapPage() {
   return (
     <Navigation fullBleed>
       <ErrorBoundary fallbackTitle="Unable to display destination map">
+        <Suspense fallback={null}>
+          <MapUrlSync
+            onSelectArea={handleSelectArea}
+            onSelectSpot={(spot) => handleSelectItem('spot', spot)}
+            onSelectQuest={(quest) => handleSelectItem('quest', quest)}
+            spots={spots}
+            quests={quests}
+          />
+        </Suspense>
+
         <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
           {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
+
+          {/* Floating Area Territory Badge on Map (when an area is active) */}
+          {activeArea && (
+            <div className="absolute top-4 left-4 z-20 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-emerald-300 shadow-md text-xs font-bold text-[#1B4332]">
+                <div className="w-5 h-5 rounded-lg bg-[#2D6A4F] text-white flex items-center justify-center shrink-0">
+                  <Compass className="w-3 h-3 text-[#FFB703]" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-black tracking-wider text-[#2D6A4F]">
+                    {activeArea.type}:
+                  </span>
+                  <span className="text-[#2C221E] font-black">{activeArea.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearActiveArea}
+                  className="p-1 rounded-full hover:bg-emerald-100 text-[#2D6A4F] transition cursor-pointer"
+                  title="Reset to whole country"
+                  aria-label="Reset area view"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* UNIFIED RESPONSIVE MAP WORKSPACE PANEL */}
           <MapWorkspacePanel
@@ -484,17 +566,6 @@ export default function QuestMapPage() {
             onDesktopCollapseChange={setIsDesktopCollapsed}
             mobileSnap={mobileSnap}
             onMobileSnapChange={setMobileSnap}
-            searchBar={
-              <MapOmnibox
-                onSelectArea={handleSelectArea}
-                onSelectDestination={handleSelectItem}
-                activeArea={activeArea}
-                onClearActiveArea={handleClearActiveArea}
-                spots={spots}
-                quests={quests}
-                className="w-full"
-              />
-            }
             // Floating tools (Top-right)
             floatingTools={
               <>

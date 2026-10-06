@@ -22,8 +22,10 @@ import {
   normalizeSearchQuery,
   isProcessableQuery,
 } from '@/lib/search';
+import { AreaDefinition } from '@/lib/areas';
 
 export type FlatItem =
+  | { groupType: 'areas'; item: AreaDefinition; href: string }
   | { groupType: 'places'; item: PlaceResultItem; href: string }
   | { groupType: 'people'; item: PersonResultItem; href: string }
   | { groupType: 'quests'; item: QuestResultItem; href: string };
@@ -36,6 +38,7 @@ export interface SearchSuggestionsDropdownProps {
   selectedIndex: number;
   setSelectedIndex: (idx: number | ((prev: number) => number)) => void;
   flatItems: FlatItem[];
+  matchedAreas?: AreaDefinition[];
   groups: SearchGroup[];
   loading: boolean;
   error: string | null;
@@ -62,6 +65,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
   selectedIndex,
   setSelectedIndex,
   flatItems,
+  matchedAreas = [],
   groups,
   loading,
   error,
@@ -93,9 +97,36 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
         {/* 1. Quiet Prompt & Popular Chips State (Empty input or < 2 processable characters) */}
         {!hasProcessableQuery && (
           <div className="py-2 space-y-4">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#837560] uppercase tracking-wider">
+            {/* Wide Geographic Areas to Explore on Map */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#2D6A4F] uppercase tracking-wider">
+                <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
+                <span>Explore Wide Geographic Areas on Map</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: 'pangasinan', label: 'Pangasinan Province' },
+                  { id: 'bolinao', label: 'Bolinao' },
+                  { id: 'alaminos', label: 'Alaminos City' },
+                  { id: 'dagupan', label: 'Dagupan City' },
+                  { id: 'lingayen', label: 'Lingayen' },
+                ].map((area) => (
+                  <Link
+                    key={area.id}
+                    href={`/map?area=${area.id}`}
+                    onClick={onClose}
+                    className="px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold text-[#2D6A4F] transition-all cursor-pointer shadow-2xs active:scale-95 flex items-center gap-1.5 select-none"
+                  >
+                    <Compass className="h-3 w-3 text-[#FFB703]" />
+                    <span>{area.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs font-bold text-[#837560] uppercase tracking-wider pt-1">
               <Sparkles className="h-3.5 w-3.5 text-[#FFB703]" />
-              <span>Popular Searches</span>
+              <span>Popular Destination Searches</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {POPULAR_SEARCH_CHIPS.map((chip) => (
@@ -124,7 +155,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
         )}
 
         {/* 2. Loading State */}
-        {hasProcessableQuery && loading && groups.length === 0 && (
+        {hasProcessableQuery && loading && groups.length === 0 && matchedAreas.length === 0 && (
           <div className="py-8 text-center space-y-2">
             <Loader2 className="h-6 w-6 animate-spin text-[#2D6A4F] mx-auto" />
             <p className="text-xs font-semibold text-[#837560]">
@@ -134,7 +165,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
         )}
 
         {/* 3. Error State */}
-        {hasProcessableQuery && error && (
+        {hasProcessableQuery && error && matchedAreas.length === 0 && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-3 sm:p-4 text-xs text-[#BC4749] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -152,7 +183,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
         )}
 
         {/* 4. No Results State */}
-        {hasProcessableQuery && !loading && !error && groups.length === 0 && (
+        {hasProcessableQuery && !loading && !error && groups.length === 0 && matchedAreas.length === 0 && (
           <div className="py-6 text-center space-y-2">
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-[#837560]">
               <Compass className="h-5 w-5" />
@@ -161,14 +192,68 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
               No matches found for &ldquo;{normalized}&rdquo;
             </p>
             <p className="text-[11px] text-[#837560] max-w-xs mx-auto">
-              Try searching a different municipality, landmark, activity keyword, or scout handle.
+              Try searching a province, municipality, landmark, activity keyword, or scout handle.
             </p>
           </div>
         )}
 
-        {/* 5. Results Grouping (Maximum 8 items total, capped at 4 per group) */}
-        {hasProcessableQuery && groups.length > 0 && (
+        {/* 5. Results Grouping (Geographic Areas + Database Results) */}
+        {hasProcessableQuery && (groups.length > 0 || matchedAreas.length > 0) && (
           <div className="space-y-4">
+            {/* Section A: Geographic Areas (Province, Municipalities) */}
+            {matchedAreas.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between px-1 text-[11px] font-black text-[#2D6A4F] uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
+                    <span>Geographic Areas (Explore on Map)</span>
+                  </div>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold">Interactive Map</span>
+                </div>
+                <div className="space-y-1">
+                  {matchedAreas.map((area) => {
+                    const itemIdx = flatItems.findIndex(
+                      (f) => f.groupType === 'areas' && f.item.id === area.id
+                    );
+                    const isSelected = itemIdx === selectedIndex;
+                    return (
+                      <Link
+                        key={area.id}
+                        href={`/map?area=${area.id}`}
+                        onClick={onClose}
+                        onMouseEnter={() => setSelectedIndex(itemIdx)}
+                        className={`flex items-center justify-between p-2.5 rounded-xl sm:rounded-2xl border transition-all duration-150 group ${
+                          isSelected
+                            ? 'bg-emerald-100/70 border-[#2D6A4F] shadow-2xs'
+                            : 'bg-emerald-50/50 hover:bg-emerald-50 border-emerald-200/60 hover:border-[#2D6A4F]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-9 w-9 shrink-0 rounded-xl bg-[#2D6A4F] text-white flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
+                            <Compass className="h-4 w-4 text-[#FFB703]" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs sm:text-sm font-extrabold text-[#582F0E] group-hover:text-[#2D6A4F] transition truncate">
+                                {area.name}
+                              </h4>
+                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white border border-emerald-200 text-[#2D6A4F] shrink-0">
+                                {area.type}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#837560] truncate">{area.subtitle}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] font-extrabold text-[#2D6A4F] shrink-0 pl-2">
+                          <span>View on Map</span>
+                          <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {groups.map((group) => {
               const groupTitle =
                 group.type === 'places'
@@ -333,7 +418,23 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
             })}
 
             {/* Full Results Action Link */}
-            <div className="pt-2 border-t border-[#E3DFD5]">
+            <div className="pt-2 border-t border-[#E3DFD5] space-y-1.5">
+              {matchedAreas.length > 0 && (
+                <Link
+                  href={`/map?area=${matchedAreas[0].id}`}
+                  onClick={onClose}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl sm:rounded-2xl text-xs font-bold transition-all bg-[#D8F3DC] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Compass className="h-3.5 w-3.5 text-[#2D6A4F] group-hover:text-[#FFB703]" />
+                    <span>Explore &ldquo;{matchedAreas[0].name}&rdquo; on Interactive Map</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider opacity-90 group-hover:opacity-100 flex items-center gap-1">
+                    Fly to Map <ArrowRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              )}
+
               <Link
                 href={`/search?q=${encodeURIComponent(normalized)}&type=all`}
                 onClick={onClose}

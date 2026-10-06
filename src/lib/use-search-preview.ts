@@ -13,6 +13,7 @@ import {
 import { appRoutes } from '@/lib/routes';
 import { travelerProfileHref } from '@/lib/preview';
 import { FlatItem } from '@/components/SearchSuggestionsDropdown';
+import { findMatchingAreas, AreaDefinition } from '@/lib/areas';
 
 export function useSearchPreview(query: string, isOpen: boolean) {
   const [groups, setGroups] = useState<SearchGroup[]>([]);
@@ -21,6 +22,13 @@ export function useSearchPreview(query: string, isOpen: boolean) {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const matchedAreas: AreaDefinition[] = useMemo(() => {
+    if (!isOpen) return [];
+    const normalized = normalizeSearchQuery(query);
+    if (!isProcessableQuery(normalized)) return [];
+    return findMatchingAreas(normalized).slice(0, 3);
+  }, [query, isOpen]);
 
   const executeSearch = useCallback(async (rawTerm: string) => {
     if (abortControllerRef.current) {
@@ -97,6 +105,9 @@ export function useSearchPreview(query: string, isOpen: boolean) {
 
   const flatItems: FlatItem[] = useMemo(() => {
     const list: FlatItem[] = [];
+    for (const area of matchedAreas) {
+      list.push({ groupType: 'areas', item: area, href: `/map?area=${area.id}` });
+    }
     for (const group of groups) {
       for (const item of group.items) {
         if (group.type === 'places') {
@@ -112,10 +123,11 @@ export function useSearchPreview(query: string, isOpen: boolean) {
       }
     }
     return list;
-  }, [groups]);
+  }, [matchedAreas, groups]);
 
   return {
     groups,
+    matchedAreas,
     loading,
     error,
     flatItems,
