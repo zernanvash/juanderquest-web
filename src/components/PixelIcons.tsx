@@ -60,12 +60,12 @@ export interface PixelHeartProps {
   title?: string;
 }
 
-const SIZE_PRESETS: Record<string, { w: number; h: number; scale: number }> = {
-  xs: { w: 16, h: 16, scale: 16 / 36 },
-  sm: { w: 20, h: 20, scale: 20 / 36 },
-  md: { w: 24, h: 24, scale: 24 / 36 },
-  lg: { w: 32, h: 32, scale: 32 / 36 },
-  xl: { w: 36, h: 36, scale: 1 },
+const SIZE_PRESETS: Record<string, { w: number; h: number }> = {
+  xs: { w: 16, h: 16 },
+  sm: { w: 20, h: 20 },
+  md: { w: 24, h: 24 },
+  lg: { w: 32, h: 32 },
+  xl: { w: 36, h: 36 },
 };
 
 /**
@@ -116,14 +116,12 @@ export const PixelHeart: React.FC<PixelHeartProps> = ({
     onAnimationComplete?.();
   };
 
-  // Determine scaling & container dimensions (1:1 square canvas)
+  // Determine container dimensions (1:1 square canvas)
   let config = SIZE_PRESETS.md;
   if (typeof size === 'number') {
-    const scale = size / 36;
     config = {
       w: size,
       h: size,
-      scale,
     };
   } else if (size in SIZE_PRESETS) {
     config = SIZE_PRESETS[size];
@@ -140,9 +138,11 @@ export const PixelHeart: React.FC<PixelHeartProps> = ({
     animClass = 'pixel-heart-static-unliked';
   }
 
+  const popClass = animState === 'liking' ? 'animate-heart-pop' : '';
+
   return (
     <span
-      className={`inline-flex items-center justify-center shrink-0 overflow-visible relative select-none pointer-events-none ${className}`}
+      className={`inline-flex items-center justify-center shrink-0 overflow-visible relative select-none pointer-events-none ${popClass} ${className}`}
       style={{ width: `${config.w}px`, height: `${config.h}px` }}
       aria-hidden={ariaHidden}
       title={title}
@@ -152,10 +152,6 @@ export const PixelHeart: React.FC<PixelHeartProps> = ({
         data-anim-state={animState}
         data-is-liked={isLiked ? 'true' : 'false'}
         className={`pixel-heart-sprite ${animClass}`}
-        style={{
-          transform: `scale(${config.scale})`,
-          transformOrigin: 'center center',
-        }}
         onAnimationEnd={handleAnimationEnd}
       />
     </span>

@@ -295,22 +295,22 @@ h1, h2, h3, h4, h5, h6 {
   100% { transform: scale(1) rotate(0deg); }
 }
 
-/* Pixel Art Spritesheet Animations (12 frames liked, 13 frames unliked at 36px stride) */
+/* Pixel Art Spritesheet Animations (12 frames liked, 13 frames unliked using percentage positions) */
 @keyframes sprite-heart-like {
-  0% {
-    background-position: 0px 0px;
+  from {
+    background-position: 0% 0%;
   }
-  100% {
-    background-position: -396px 0px;
+  to {
+    background-position: 100% 0%;
   }
 }
 
 @keyframes sprite-heart-unlike {
-  0% {
-    background-position: 0px 0px;
+  from {
+    background-position: 0% 0%;
   }
-  100% {
-    background-position: -432px 0px;
+  to {
+    background-position: 100% 0%;
   }
 }
 
@@ -403,9 +403,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pixel-heart-sprite {
-  display: inline-block;
-  width: 36px;
-  height: 36px;
+  display: block;
+  width: 100%;
+  height: 100%;
   flex-shrink: 0;
   background-repeat: no-repeat;
   image-rendering: -webkit-optimize-contrast;
@@ -415,25 +415,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pixel-heart-anim-like {
-  background-image: url('/icons/heart-liked-animation-v2.png');
-  background-position: 0px 0px;
+  background-image: url('/icons/heart-liked-animation-v3.png');
+  background-size: 1200% 100%;
   animation: sprite-heart-like 450ms steps(11) forwards;
 }
 
 .pixel-heart-anim-unlike {
-  background-image: url('/icons/heart-unliked-animation-v2.png');
-  background-position: 0px 0px;
+  background-image: url('/icons/heart-unliked-animation-v3.png');
+  background-size: 1300% 100%;
   animation: sprite-heart-unlike 480ms steps(12) forwards;
 }
 
 .pixel-heart-static-liked {
-  background-image: url('/icons/heart-liked-v2.png');
-  background-position: 0px 0px;
+  background-image: url('/icons/heart-liked-v3.png');
+  background-size: 100% 100%;
+  background-position: 0% 0%;
 }
 
 .pixel-heart-static-unliked {
-  background-image: url('/icons/heart-unliked-v2.png');
-  background-position: 0px 0px;
+  background-image: url('/icons/heart-unliked-v3.png');
+  background-size: 100% 100%;
+  background-position: 0% 0%;
 }
 
 /* Gamified interactive button micro-interactions */
