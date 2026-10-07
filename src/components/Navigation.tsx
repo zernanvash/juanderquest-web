@@ -849,6 +849,7 @@ export const Navigation: React.FC<{
                     <div className="space-y-0.5">
                       {[
                         { label: 'Merchant Voucher Shop', href: '/shop', icon: ShoppingBag, flair: 'Rewards' },
+                        { label: 'Merchant Hub', href: '/affiliate', icon: Store, flair: 'Soon' },
                         { label: 'Governance DAO', href: '/vote', icon: Vote, flair: 'mJDQ' },
                         { label: 'Hall of Scouts', href: '/leaderboard', icon: Award, flair: 'Rankings' },
                         { label: 'JuanChoice Voting', href: '/choice', icon: Award, flair: 'Free vote' },

@@ -342,22 +342,6 @@ export default function ExplorePage() {
               </Link>
             </div>
 
-            {/* Feed Status Header */}
-            <div className="flex items-center justify-between text-xs px-1">
-              <div className="space-y-0.5">
-                <span className="font-bold text-[var(--color-brand-brown)]">
-                  {loading && spots.length === 0 ? 'Refreshing feed...' : 'Community Feed'}
-                </span>
-                <p className="text-[10px] text-[var(--color-text-muted)]">
-                  Balanced across local communities
-                </p>
-              </div>
-
-              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--color-brand-primary)] border border-[var(--color-border-default)] shadow-2xs">
-                {spots.length} Destinations
-              </span>
-            </div>
-
             {/* Post Feed List */}
             {loading && spots.length === 0 ? (
               <div className="space-y-4" aria-busy="true" aria-label="Loading destinations">
