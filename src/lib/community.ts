@@ -31,7 +31,7 @@ export const publicTravelerProfiles: PublicTravelerProfile[] = [
     title: 'Coastal Trailblazer',
     badges: [
       { name: 'Coastal Explorer', description: 'Completed a verified coastal destination circuit.' },
-      { name: 'Community Voter', description: 'Participated in a Community Choice preview round.' },
+      { name: 'Community Voter', description: 'Participated in a JuanChoice preview round.' },
       { name: 'Hidden Gem Scout', description: 'Shared a destination approved by the community.' },
     ],
     recentActivity: [
@@ -86,7 +86,7 @@ export const publicTravelerProfiles: PublicTravelerProfile[] = [
 ];
 
 export const communityChoicePreview = {
-  round: 'September 2026 Community Choice Preview',
+  round: 'September 2026 JuanChoice Preview',
   closesLabel: 'UI preview — voting is not active',
   entries: [
     { rank: 1, slug: 'patar-white-beach', name: 'Patar White Beach', municipality: 'Bolinao', votes: 428, share: 34 },

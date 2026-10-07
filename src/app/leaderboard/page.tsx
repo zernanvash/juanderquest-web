@@ -178,7 +178,7 @@ export default function LeaderboardPage() {
             <div className="space-y-1.5 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-brand-accent)]/15 border border-[var(--color-brand-accent)]/30 text-[var(--color-brand-accent-dark)] text-xs font-semibold">
                 <Trophy className="w-3.5 h-3.5 text-[var(--color-brand-accent)]" />
-                <span>Pangasinan Scout Hall of Fame</span>
+                <span>Pangasinan Leaderboard</span>
               </div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-[var(--color-brand-brown)]">
                 Explorer Leaderboard

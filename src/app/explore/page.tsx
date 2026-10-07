@@ -276,7 +276,7 @@ export default function ExplorePage() {
               <span className="text-[9px] font-black uppercase tracking-wider text-[#B45309]">
                 Itinerary Planning
               </span>
-              <h4 className="text-xs font-black text-[#582F0E]">Saved on this device</h4>
+              <h4 className="text-xs font-black text-[#582F0E]">Saved</h4>
             </div>
             <Link href="/saved" className="text-[10px] font-bold text-[#2D6A4F] hover:underline">
               Library ({savedLibrary.spots.length}) →
@@ -664,7 +664,7 @@ export default function ExplorePage() {
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-200/70 text-[#7D5800]">
                       <Bookmark className="w-3.5 h-3.5 fill-current text-[#B45309]" />
                     </div>
-                    <span>Saved on Device</span>
+                    <span>Saved</span>
                   </div>
                   <span className="rounded-full bg-amber-200/90 px-2 py-0.5 text-[10px] font-black text-[#582F0E]">
                     {savedLibrary.spots.length + savedLibrary.quests.length}
@@ -679,7 +679,7 @@ export default function ExplorePage() {
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100/70 text-[#7D5800]">
                       <Trophy className="w-3.5 h-3.5 text-[#B45309]" />
                     </div>
-                    <span>Community Choice</span>
+                    <span>JuanChoice</span>
                   </div>
                   <span className="text-[10px] text-[#7D5800] font-bold group-hover:translate-x-0.5 transition-transform">
                     Free vote →
@@ -694,7 +694,7 @@ export default function ExplorePage() {
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-[#582F0E]">
                       <Award className="w-3.5 h-3.5 text-[#B45309]" />
                     </div>
-                    <span>Scout Hall of Fame</span>
+                    <span>Leaderboard</span>
                   </div>
                   <span className="text-[10px] text-[#582F0E] font-bold group-hover:translate-x-0.5 transition-transform">
                     Sample →
@@ -709,7 +709,7 @@ export default function ExplorePage() {
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-[#2D6A4F]">
                       <Tag className="w-3.5 h-3.5" />
                     </div>
-                    <span>MSME Partner Deals</span>
+                    <span>Vouchers</span>
                   </div>
                   <span className="text-[10px] text-[#2D6A4F] font-bold group-hover:translate-x-0.5 transition-transform">
                     Shop →
@@ -741,7 +741,7 @@ export default function ExplorePage() {
                     <span className="text-[9px] font-black uppercase tracking-wider text-[#B45309]">
                       Itinerary Planning
                     </span>
-                    <h4 className="text-xs font-black text-[#582F0E]">Saved on this device</h4>
+                    <h4 className="text-xs font-black text-[#582F0E]">Saved</h4>
                   </div>
                   <Link href="/saved" className="text-[10px] font-bold text-[#2D6A4F] hover:underline">
                     Library ({savedLibrary.spots.length}) →
