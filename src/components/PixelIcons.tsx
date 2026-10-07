@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // ==========================================
 // 1. Pixel Art Search Icon
@@ -85,36 +85,40 @@ export const PixelHeart: React.FC<PixelHeartProps> = ({
   const [animState, setAnimState] = useState<'idle' | 'liking' | 'unliking'>('idle');
   const [animKey, setAnimKey] = useState<number>(0);
   const prevLiked = useRef<boolean>(isLiked);
-  const isMounted = useRef<boolean>(false);
+  const completionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animationActive = useRef(false);
+  const onAnimationCompleteRef = useRef(onAnimationComplete);
 
   useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      prevLiked.current = isLiked;
-      return;
-    }
+    onAnimationCompleteRef.current = onAnimationComplete;
+  }, [onAnimationComplete]);
 
+  const finishAnimation = useCallback(() => {
+    if (!animationActive.current) return;
+    animationActive.current = false;
+    if (completionTimer.current) clearTimeout(completionTimer.current);
+    completionTimer.current = null;
+    setAnimState('idle');
+    onAnimationCompleteRef.current?.();
+  }, []);
+
+  useEffect(() => {
     if (prevLiked.current !== isLiked) {
       const nextState = isLiked ? 'liking' : 'unliking';
+      prevLiked.current = isLiked;
+      animationActive.current = true;
       setAnimState(nextState);
       setAnimKey((prev) => prev + 1);
-      prevLiked.current = isLiked;
 
-      // Settle back to idle state matching CSS animation durations (450ms like, 480ms unlike)
-      const duration = nextState === 'liking' ? 460 : 490;
-      const timer = setTimeout(() => {
-        setAnimState('idle');
-        onAnimationComplete?.();
-      }, duration);
-
-      return () => clearTimeout(timer);
+      // A single timer completes each transition, including hidden-tab and reduced-motion cases.
+      const duration = nextState === 'liking' ? 500 : 530;
+      completionTimer.current = setTimeout(finishAnimation, duration);
     }
-  }, [isLiked, onAnimationComplete]);
-
-  const handleAnimationEnd = () => {
-    setAnimState('idle');
-    onAnimationComplete?.();
-  };
+    return () => {
+      if (completionTimer.current) clearTimeout(completionTimer.current);
+      completionTimer.current = null;
+    };
+  }, [isLiked, finishAnimation]);
 
   // Determine container dimensions (1:1 square canvas)
   let config = SIZE_PRESETS.md;
@@ -152,7 +156,6 @@ export const PixelHeart: React.FC<PixelHeartProps> = ({
         data-anim-state={animState}
         data-is-liked={isLiked ? 'true' : 'false'}
         className={`pixel-heart-sprite ${animClass}`}
-        onAnimationEnd={handleAnimationEnd}
       />
     </span>
   );
@@ -193,6 +196,7 @@ export const PixelHeartButton: React.FC<PixelHeartButtonProps> = ({
       type="button"
       onClick={onToggle}
       disabled={disabled}
+      aria-pressed={isLiked}
       title={title || (isLiked ? 'Unlike' : 'Like')}
       aria-label={ariaLabel || (isLiked ? 'Unlike destination' : 'Like destination')}
       className={`btn-tactile inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl transition duration-150 cursor-pointer min-h-[38px] ${

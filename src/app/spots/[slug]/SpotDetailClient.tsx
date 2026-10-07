@@ -39,6 +39,7 @@ import { appRoutes } from '@/lib/routes';
 import { MiniMapPreview } from '@/components/MiniMapPreview';
 import { PixelHeart } from '@/components/PixelIcons';
 import { SpotCommentSection } from '@/components/SpotCommentSection';
+import { useSavedLibrary } from '@/lib/saved-library';
 
 interface SpotDetailClientProps {
   slug: string;
@@ -50,7 +51,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const [alternatives, setAlternatives] = useState<SpotModel[]>([]);
   const [error, setError] = useState('');
   const [isLiked, setIsLiked] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const { toggle: toggleSaved, isSaved: isSpotSaved } = useSavedLibrary();
+  const isSaved = spot ? isSpotSaved('spots', spot.id) : false;
   const [activeSlide, setActiveSlide] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
@@ -121,7 +123,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
       .then(({ data }) => {
         setSpot(data.spot);
         setAlternatives(data.alternatives);
-        setIsSaved(Boolean(data.spot.saved));
         setIsLiked(Boolean(data.spot.liked) || Boolean(getLocalLikedSpots()[data.spot.id]));
         if (slug !== data.spot.id) router.replace(appRoutes.spot(data.spot.id));
         api.post(`/spots/${data.spot.id}/interactions`, { type: 'view' }).catch(() => {});
@@ -197,14 +198,15 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     await toggleSpotLike(spot.id, nextState);
   };
 
-  const handleToggleSave = async () => {
+  const handleToggleSave = () => {
     if (!spot) return;
-    const nextSaved = !isSaved;
-    setIsSaved(nextSaved);
-    try {
-      await api.post(`/spots/${spot.id}/interactions`, { type: 'save' });
-    } catch {
-      setIsSaved(!nextSaved);
+    const nextSaved = toggleSaved('spots', spot.id);
+    // The saved library is browser-local. Keep the optional server signal in sync
+    // for signed-in travelers, without making a network outage erase their bookmark.
+    if (user?.id) {
+      void (nextSaved
+        ? api.put(`/spots/${spot.id}/save`)
+        : api.delete(`/spots/${spot.id}/save`)).catch(() => {});
     }
   };
 
@@ -506,6 +508,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-rose-300'
                     }`}
                     aria-label={isLiked ? 'Liked destination' : 'Like destination'}
+                    aria-pressed={isLiked}
                     title={isLiked ? 'Liked' : 'Like'}
                   >
                     <PixelHeart isLiked={isLiked} size="md" />
@@ -520,6 +523,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-amber-300'
                     }`}
                     aria-label={isSaved ? 'Saved' : 'Save'}
+                    aria-pressed={isSaved}
                     title={isSaved ? 'Saved' : 'Save'}
                   >
                     <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />

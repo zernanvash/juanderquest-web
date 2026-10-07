@@ -101,7 +101,7 @@ describe('PixelIcons', () => {
       const { container } = render(<TestWrapper />);
       fireEvent.click(screen.getByText('Like'));
 
-      let sprite = container.querySelector('.pixel-heart-sprite');
+      const sprite = container.querySelector('.pixel-heart-sprite');
       expect(sprite?.className).toContain('pixel-heart-anim-like');
       expect(sprite?.getAttribute('data-anim-state')).toBe('liking');
 
@@ -113,6 +113,34 @@ describe('PixelIcons', () => {
       const updatedSprite = container.querySelector('.pixel-heart-sprite');
       expect(updatedSprite?.className).toContain('pixel-heart-static-liked');
       expect(updatedSprite?.getAttribute('data-anim-state')).toBe('idle');
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      vi.useRealTimers();
+    });
+
+    it('completes once even if the completion callback changes mid-animation', () => {
+      vi.useFakeTimers();
+      const firstCallback = vi.fn();
+      const latestCallback = vi.fn();
+      const { container, rerender } = render(<PixelHeart isLiked={false} onAnimationComplete={firstCallback} />);
+      rerender(<PixelHeart isLiked onAnimationComplete={firstCallback} />);
+      rerender(<PixelHeart isLiked onAnimationComplete={latestCallback} />);
+      act(() => vi.advanceTimersByTime(600));
+      expect(container.querySelector('.pixel-heart-sprite')?.getAttribute('data-anim-state')).toBe('idle');
+      expect(firstCallback).not.toHaveBeenCalled();
+      expect(latestCallback).toHaveBeenCalledTimes(1);
+      vi.useRealTimers();
+    });
+
+    it('restarts in the opposite direction on a rapid second tap', () => {
+      vi.useFakeTimers();
+      const onComplete = vi.fn();
+      const { container, rerender } = render(<PixelHeart isLiked={false} onAnimationComplete={onComplete} />);
+      rerender(<PixelHeart isLiked onAnimationComplete={onComplete} />);
+      expect(container.querySelector('.pixel-heart-sprite')?.className).toContain('pixel-heart-anim-like');
+      rerender(<PixelHeart isLiked={false} onAnimationComplete={onComplete} />);
+      expect(container.querySelector('.pixel-heart-sprite')?.className).toContain('pixel-heart-anim-unlike');
+      act(() => vi.advanceTimersByTime(530));
+      expect(container.querySelector('.pixel-heart-sprite')?.className).toContain('pixel-heart-static-unliked');
       expect(onComplete).toHaveBeenCalledTimes(1);
       vi.useRealTimers();
     });
