@@ -90,6 +90,20 @@ export interface UserModel {
 
 export interface QuestModel {
   id: string;
+  authorId?: string | null;
+  status?: 'draft' | 'published' | 'paused' | 'archived';
+  version?: number;
+  steps?: Array<{
+    step_order: number;
+    title: string;
+    description: string;
+    checkpoint_type: 'location' | 'qr' | 'photo' | 'action';
+    required: boolean;
+    gps_lat?: number;
+    gps_lng?: number;
+    radius_meters?: number;
+    hint?: string;
+  }>;
   title: string;
   description: string;
   category: 'eco' | 'cultural' | 'food_trade';
@@ -101,9 +115,31 @@ export interface QuestModel {
   difficultyFactor?: number;
   geoMultiplier?: number;
   rewardPoints: number;
-  markerCode?: string; // present on detail only; list does not expose markers
+  markerCode?: string; // author/admin/test-only diagnostic field; travelers must use a challenge token
   markerImageUrl?: string;
   isTest?: boolean;
+  stats?: {
+    total_attempts: number;
+    active_attempts: number;
+    completed_attempts: number;
+  };
+}
+
+export interface QuestAttemptModel {
+  id: string;
+  questId: string;
+  userId: string;
+  version: number;
+  currentStep: number;
+  totalSteps: number;
+  status: 'in_progress' | 'submitted' | 'completed' | 'abandoned';
+  createdAt: string;
+}
+
+export interface QuestProgressModel {
+  quest_id: string;
+  has_completed: boolean;
+  active_attempt: QuestAttemptModel | null;
 }
 
 export interface PayoutRecipient {
@@ -346,11 +382,24 @@ type BackendQuest = {
   marker_code?: string;
   marker_image_url?: string;
   is_test?: boolean;
+  author_id?: string | null;
+  status?: 'draft' | 'published' | 'paused' | 'archived';
+  version?: number;
+  steps?: any[];
+  stats?: {
+    total_attempts: number;
+    active_attempts: number;
+    completed_attempts: number;
+  };
 };
 
 export function normalizeQuest(raw: BackendQuest): QuestModel {
   return {
     id: raw.id,
+    authorId: raw.author_id ?? null,
+    status: raw.status ?? 'published',
+    version: raw.version ?? 1,
+    steps: Array.isArray(raw.steps) ? raw.steps : [],
     title: raw.title,
     description: raw.description,
     category: raw.category,
@@ -365,6 +414,7 @@ export function normalizeQuest(raw: BackendQuest): QuestModel {
     markerCode: raw.marker_code,
     markerImageUrl: raw.marker_image_url || '',
     isTest: Boolean(raw.is_test),
+    stats: raw.stats,
   };
 }
 
@@ -374,12 +424,58 @@ export interface CreateAuthorQuestInput {
   category: 'eco' | 'cultural' | 'food_trade';
   radius_meters?: number;
   reward_points?: number;
+  status?: 'draft' | 'published';
+  steps?: Array<{
+    step_order: number;
+    title: string;
+    description: string;
+    checkpoint_type: 'location' | 'qr' | 'photo' | 'action';
+    required?: boolean;
+    gps_lat?: number;
+    gps_lng?: number;
+    radius_meters?: number;
+    hint?: string;
+  }>;
 }
 
 export async function createAuthorQuest(spotId: string, input: CreateAuthorQuestInput): Promise<QuestModel> {
   const res = await api.post(`/spots/${spotId}/quests`, input);
   if (!res.data?.success) {
     throw new Error(res.data?.error?.message || 'Failed to create quest for destination');
+  }
+  return normalizeQuest(res.data.data);
+}
+
+export async function startQuestAttempt(questId: string): Promise<QuestAttemptModel> {
+  const res = await api.post(`/quests/${questId}/attempts`);
+  if (!res.data?.success) {
+    throw new Error(res.data?.error?.message || 'Failed to start quest attempt');
+  }
+  const raw = res.data.data;
+  return {
+    id: raw.id,
+    questId: raw.quest_id,
+    userId: raw.user_id,
+    version: raw.version,
+    currentStep: raw.current_step,
+    totalSteps: raw.total_steps,
+    status: raw.status,
+    createdAt: raw.created_at,
+  };
+}
+
+export async function fetchQuestProgress(questId: string): Promise<QuestProgressModel> {
+  const res = await api.get(`/quests/${questId}/progress`);
+  if (!res.data?.success) {
+    throw new Error(res.data?.error?.message || 'Failed to fetch quest progress');
+  }
+  return res.data.data;
+}
+
+export async function updateQuestStatus(questId: string, status: 'draft' | 'published' | 'paused' | 'archived'): Promise<QuestModel> {
+  const res = await api.patch(`/quests/${questId}/status`, { status });
+  if (!res.data?.success) {
+    throw new Error(res.data?.error?.message || 'Failed to update quest status');
   }
   return normalizeQuest(res.data.data);
 }
@@ -543,12 +639,19 @@ export function computeVoteFeeSplit(config: Pick<GovernanceConfigModel, 'proposa
   return { fee, burn, escrow: fee - burn, feeJdq: fee / 1000 };
 }
 
-// Submission payload exactly as the backend schema expects (Phase C repair).
-export function buildSubmissionPayload(quest: Pick<QuestModel, 'id' | 'markerCode'>, position: { lat: number; lng: number; accuracy: number }) {
+export function buildSubmissionPayload(
+  quest: Pick<QuestModel, 'id'> & { challengeToken?: string },
+  position: { lat: number; lng: number; accuracy: number }
+) {
+  if (!quest.challengeToken) {
+    throw new Error(
+      'A server challenge token is required before submitting quest proof. Call POST /quests/:id/challenge first.'
+    );
+  }
   return {
     idempotency_key: uuid(),
     quest_id: quest.id,
-    scanned_marker_code: quest.markerCode || '',
+    challenge_token: quest.challengeToken,
     captured_lat: position.lat,
     captured_lng: position.lng,
     captured_accuracy: position.accuracy,
@@ -798,3 +901,166 @@ export async function toggleSpotLike(spotId: string, shouldLike: boolean): Promi
     return { liked: shouldLike, spot_id: spotId };
   }
 }
+
+export type AffiliateStatus = 'received' | 'in_review' | 'approved' | 'rejected';
+
+export interface AffiliateApplicationPayload {
+  business_name: string;
+  category: string;
+  municipality: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  sponsorship_goals: string[];
+  proposal_details?: string;
+}
+
+export interface AffiliateApplicationModel {
+  id: string;
+  user_id: string;
+  business_name: string;
+  category: string;
+  municipality: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  sponsorship_goals: string[];
+  proposal_details: string;
+  status: AffiliateStatus;
+  reviewer_id?: string | null;
+  reviewer_notes?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function submitAffiliateApplication(payload: AffiliateApplicationPayload): Promise<AffiliateApplicationModel> {
+  const res = await api.post('/affiliate/applications', payload);
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to submit affiliate application');
+  return res.data.data;
+}
+
+export async function fetchMyAffiliateApplication(): Promise<AffiliateApplicationModel | null> {
+  const res = await api.get('/affiliate/applications/me');
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to fetch application');
+  return res.data.data;
+}
+
+export interface TrailCandidateStop {
+  spot_id: string;
+  name: string;
+  category: string;
+  municipality?: string;
+  gps_lat: number;
+  gps_lng: number;
+  detour_km: number;
+  distance_from_start_km: number;
+  crowd_status: 'quiet' | 'moderate' | 'estimated_busy' | 'unknown';
+  score: number;
+  reason_codes: string[];
+  recommendation_label: 'Curated' | 'Suggested';
+}
+
+export interface TrailPlanPayload {
+  start: { lat: number; lng: number; name?: string };
+  end: { lat: number; lng: number; name?: string };
+  costing?: 'auto' | 'pedestrian' | 'bicycle' | 'motorcycle';
+  max_stops?: number;
+  max_detour_km?: number;
+  preferred_categories?: string[];
+  avoid_congested?: boolean;
+}
+
+export interface TrailServiceArea {
+  id: string;
+  name: string;
+  bbox: {
+    min_lat: number;
+    max_lat: number;
+    min_lng: number;
+    max_lng: number;
+  };
+  supported_modes: string[];
+  road_graph_engine: 'valhalla' | 'fallback_straight_line';
+  license: string;
+  data_sources: string[];
+}
+
+export interface TrailPlanModel {
+  service_area: TrailServiceArea;
+  is_within_primary_service_area: boolean;
+  baseline_route: {
+    degraded: boolean;
+    navigationMode: string;
+    warning?: { code: string; message: string };
+    summary: {
+      distanceKm: number;
+      durationSeconds: number;
+      durationFormatted: string;
+      costing: string;
+      hasCrowdDiversion: boolean;
+      engine: string;
+    };
+    coordinates: [number, number][];
+    maneuvers: any[];
+  };
+  suggested_stops: TrailCandidateStop[];
+  total_candidates_evaluated: number;
+  disclaimer: string;
+}
+
+export async function fetchTrailServiceArea(): Promise<TrailServiceArea> {
+  const res = await api.get('/trail/service-area');
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to fetch trail service area');
+  return res.data.data;
+}
+
+export async function planTrailRoute(payload: TrailPlanPayload): Promise<TrailPlanModel> {
+  const res = await api.post('/trail/plan', payload);
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to plan trail corridor route');
+  return res.data.data;
+}
+
+export interface LeaderboardRankModel {
+  rank: number;
+  user_id: string;
+  display_name: string;
+  handle: string | null;
+  avatar_url: string;
+  scout_reputation: number;
+  approved_quests: number;
+  points_earned: number;
+  badge: string;
+  primary_town: string;
+  is_self?: boolean;
+}
+
+export interface MunicipalityAggregateModel {
+  name: string;
+  quests_completed: number;
+  active_scouts: number;
+  share_percentage: number;
+}
+
+export interface LeaderboardModel {
+  timeframe: 'weekly' | 'all_time';
+  metric: 'scout_reputation' | 'quests_completed' | 'points';
+  total_active_scouts: number;
+  is_sparse_pilot: boolean;
+  provenance_note: string;
+  top_scouts: LeaderboardRankModel[];
+  top_municipalities: MunicipalityAggregateModel[];
+  my_rank?: LeaderboardRankModel | null;
+}
+
+export async function fetchLeaderboard(params?: {
+  timeframe?: 'weekly' | 'all_time';
+  metric?: 'scout_reputation' | 'quests_completed' | 'points';
+  limit?: number;
+}): Promise<LeaderboardModel> {
+  const res = await api.get('/leaderboard', { params });
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to fetch leaderboard');
+  return res.data.data;
+}
+
+

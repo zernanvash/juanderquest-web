@@ -19,10 +19,13 @@ import {
   ChevronDown,
   RotateCcw,
   Zap,
+  AlertCircle,
+  XCircle,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { useAuth } from '@/lib/auth';
 import { triggerCelebration } from '@/components/CelebrationEffects';
+import { submitAffiliateApplication, fetchMyAffiliateApplication } from '@/lib/api';
 
 const STORAGE_KEY = 'jdq_merchant_application_v1';
 
@@ -79,7 +82,9 @@ interface ApplicationData {
   proposalDetails: string;
   submittedAt: string;
   referenceId: string;
-  status: 'pending' | 'approved' | 'in_review';
+  status: 'received' | 'in_review' | 'approved' | 'rejected' | 'draft' | 'pending';
+  isServerRecord?: boolean;
+  reviewerNotes?: string | null;
 }
 
 export function AffiliateClient() {
@@ -103,18 +108,54 @@ export function AffiliateClient() {
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load existing application from localStorage
+  // Load existing application from API if authenticated, falling back to localStorage draft
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as ApplicationData;
-        setExistingApp(parsed);
+    let isMounted = true;
+    async function loadApp() {
+      if (user) {
+        try {
+          const serverApp = await fetchMyAffiliateApplication();
+          if (serverApp && isMounted) {
+            setExistingApp({
+              businessName: serverApp.business_name,
+              category: serverApp.category,
+              municipality: serverApp.municipality,
+              contactName: serverApp.contact_name,
+              contactEmail: serverApp.contact_email,
+              contactPhone: serverApp.contact_phone,
+              sponsorshipGoals: serverApp.sponsorship_goals,
+              proposalDetails: serverApp.proposal_details,
+              submittedAt: serverApp.created_at,
+              referenceId: serverApp.id,
+              status: serverApp.status,
+              isServerRecord: true,
+              reviewerNotes: serverApp.reviewer_notes,
+            });
+            return;
+          }
+        } catch {
+          // Network or auth error; proceed to check local draft
+        }
       }
-    } catch {
-      // Storage unavailable
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved && isMounted) {
+          const parsed = JSON.parse(saved) as ApplicationData;
+          setExistingApp({
+            ...parsed,
+            status: parsed.status || 'draft',
+            isServerRecord: false,
+          });
+        }
+      } catch {
+        // Storage unavailable
+      }
     }
-  }, []);
+    loadApp();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // Pre-fill user details if available and form is blank
   useEffect(() => {
@@ -171,9 +212,7 @@ export function AffiliateClient() {
       return;
     }
 
-    setIsSubmitting(true);
-
-    const refId = `JDQ-MERCH-${Date.now().toString(36).toUpperCase()}`;
+    const refId = existingApp?.referenceId || `JDQ-MERCH-${Date.now().toString(36).toUpperCase()}`;
     const payload: ApplicationData = {
       businessName: businessName.trim(),
       category,
@@ -184,19 +223,60 @@ export function AffiliateClient() {
       sponsorshipGoals,
       proposalDetails: proposalDetails.trim(),
       submittedAt: new Date().toISOString(),
-      referenceId: existingApp ? existingApp.referenceId : refId,
-      status: 'pending',
+      referenceId: refId,
+      status: 'received',
+      isServerRecord: false,
     };
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      setExistingApp(payload);
-      setIsFormOpen(false);
-      triggerCelebration({ type: 'poppers', playAudio: true });
     } catch {
-      // ignore storage write errors
-    } finally {
-      setIsSubmitting(false);
+      // storage unavailable
+    }
+
+    setExistingApp(payload);
+    setIsFormOpen(false);
+    triggerCelebration({ type: 'poppers', playAudio: true });
+
+    if (user) {
+      setIsSubmitting(true);
+      submitAffiliateApplication({
+        business_name: payload.businessName,
+        category: payload.category,
+        municipality: payload.municipality,
+        contact_name: payload.contactName,
+        contact_email: payload.contactEmail,
+        contact_phone: payload.contactPhone,
+        sponsorship_goals: payload.sponsorshipGoals,
+        proposal_details: payload.proposalDetails,
+      })
+        .then((serverResult) => {
+          const syncedApp: ApplicationData = {
+            businessName: serverResult.business_name,
+            category: serverResult.category,
+            municipality: serverResult.municipality,
+            contactName: serverResult.contact_name,
+            contactEmail: serverResult.contact_email,
+            contactPhone: serverResult.contact_phone,
+            sponsorshipGoals: serverResult.sponsorship_goals,
+            proposalDetails: serverResult.proposal_details,
+            submittedAt: serverResult.created_at,
+            referenceId: serverResult.id,
+            status: serverResult.status,
+            isServerRecord: true,
+            reviewerNotes: serverResult.reviewer_notes,
+          };
+          setExistingApp(syncedApp);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(syncedApp));
+          } catch {}
+        })
+        .catch((err) => {
+          console.warn('[Affiliate] Background server sync:', err?.message || err);
+        })
+        .finally(() => {
+          setIsSubmitting(false);
+        });
     }
   };
 
@@ -275,21 +355,65 @@ export function AffiliateClient() {
           </div>
         </section>
 
-        {/* Existing Application Status Banner (if user already submitted) */}
+        {/* Existing Application Status Banner (if user already submitted or saved draft) */}
         {existingApp && !isFormOpen && (
           <section
             aria-label="Your Application Status"
-            className="rounded-3xl border border-emerald-300 bg-gradient-to-br from-emerald-50/80 to-white p-6 sm:p-8 shadow-xs space-y-4"
+            className={`rounded-3xl border p-6 sm:p-8 shadow-xs space-y-4 ${
+              !existingApp.isServerRecord
+                ? 'border-stone-300 bg-stone-50/90'
+                : existingApp.status === 'approved'
+                ? 'border-emerald-300 bg-gradient-to-br from-emerald-50/80 to-white'
+                : existingApp.status === 'rejected'
+                ? 'border-rose-300 bg-gradient-to-br from-rose-50/80 to-white'
+                : 'border-amber-300 bg-gradient-to-br from-amber-50/80 to-white'
+            }`}
           >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-emerald-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-black/10">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-xs shrink-0">
-                  <CheckCircle2 className="h-6 w-6" />
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-xs shrink-0 ${
+                    !existingApp.isServerRecord
+                      ? 'bg-stone-500'
+                      : existingApp.status === 'approved'
+                      ? 'bg-emerald-600'
+                      : existingApp.status === 'rejected'
+                      ? 'bg-rose-600'
+                      : 'bg-amber-600'
+                  }`}
+                >
+                  {!existingApp.isServerRecord ? (
+                    <Clock3 className="h-6 w-6" />
+                  ) : existingApp.status === 'approved' ? (
+                    <CheckCircle2 className="h-6 w-6" />
+                  ) : existingApp.status === 'rejected' ? (
+                    <XCircle className="h-6 w-6" />
+                  ) : (
+                    <Clock3 className="h-6 w-6" />
+                  )}
                 </div>
                 <div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase tracking-wider mb-1">
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1 ${
+                      !existingApp.isServerRecord
+                        ? 'bg-stone-200 text-stone-800'
+                        : existingApp.status === 'approved'
+                        ? 'bg-emerald-100 text-emerald-900'
+                        : existingApp.status === 'rejected'
+                        ? 'bg-rose-100 text-rose-900'
+                        : 'bg-amber-100 text-amber-900'
+                    }`}
+                  >
                     <Clock3 className="w-3 h-3" />
-                    <span>Application Under Review</span>
+                    <span>
+                      {existingApp.status === 'approved'
+                        ? 'Accredited Partner Candidate'
+                        : existingApp.status === 'rejected'
+                        ? 'Application Not Approved'
+                        : existingApp.status === 'draft'
+                        ? 'Unsent Local Draft'
+                        : 'Application Under Review'}
+                    </span>
                   </div>
                   <h2 className="text-xl font-black text-[#582F0E]">
                     {existingApp.businessName}
@@ -300,23 +424,23 @@ export function AffiliateClient() {
                 <span className="text-[10px] uppercase font-bold text-gray-400 block">
                   Reference Tracking Code
                 </span>
-                <code className="text-xs font-mono font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
+                <code className="text-xs font-mono font-bold text-[#582F0E] bg-white px-2.5 py-1 rounded-lg border border-black/10">
                   {existingApp.referenceId}
                 </code>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[#514532]">
-              <div className="p-3 bg-white rounded-xl border border-emerald-100">
+              <div className="p-3 bg-white rounded-xl border border-black/5">
                 <span className="text-gray-400 block text-[10px] font-bold">Municipality</span>
                 <span className="font-bold text-[#582F0E]">{existingApp.municipality}</span>
               </div>
-              <div className="p-3 bg-white rounded-xl border border-emerald-100">
+              <div className="p-3 bg-white rounded-xl border border-black/5">
                 <span className="text-gray-400 block text-[10px] font-bold">Contact Person</span>
                 <span className="font-bold text-[#582F0E]">{existingApp.contactName}</span>
               </div>
-              <div className="p-3 bg-white rounded-xl border border-emerald-100">
-                <span className="text-gray-400 block text-[10px] font-bold">Submitted Date</span>
+              <div className="p-3 bg-white rounded-xl border border-black/5">
+                <span className="text-gray-400 block text-[10px] font-bold">Date</span>
                 <span className="font-bold text-[#582F0E]">
                   {new Date(existingApp.submittedAt).toLocaleDateString(undefined, {
                     year: 'numeric',
@@ -327,13 +451,41 @@ export function AffiliateClient() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-emerald-100/50 border border-emerald-200 text-xs text-[#2D6A4F] leading-relaxed flex items-start gap-2.5">
-              <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 text-emerald-700" />
-              <p>
-                <strong>What happens next:</strong> Our Pangasinan tourism partner desk will review your
-                establishment credentials within 24 to 48 business hours. Once accredited, you will receive an
-                onboarding pack to configure quest bounties and live merchant shop vouchers.
-              </p>
+            <div
+              className={`p-4 rounded-2xl border text-xs leading-relaxed flex items-start gap-2.5 ${
+                !existingApp.isServerRecord
+                  ? 'bg-stone-100/70 border-stone-200 text-stone-700'
+                  : existingApp.status === 'approved'
+                  ? 'bg-emerald-100/50 border-emerald-200 text-[#2D6A4F]'
+                  : existingApp.status === 'rejected'
+                  ? 'bg-rose-100/50 border-rose-200 text-rose-800'
+                  : 'bg-amber-100/50 border-amber-200 text-amber-900'
+              }`}
+            >
+              <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                {!existingApp.isServerRecord ? (
+                  <p>
+                    <strong>Unsent draft:</strong> This application is saved in your local browser cache. Sign in to your JuanDerQuest account to submit it for official moderation.
+                  </p>
+                ) : existingApp.status === 'approved' ? (
+                  <p>
+                    <strong>Accredited partner status:</strong> Your establishment credentials have been verified by provincial administrators.
+                    <em> Policy Notice: In accordance with quarantine requirements, live voucher offers and merchant budget spending remain draft-only until Phase 7 financial verification.</em>
+                  </p>
+                ) : existingApp.status === 'rejected' ? (
+                  <p>
+                    <strong>Application not approved:</strong>{' '}
+                    {existingApp.reviewerNotes
+                      ? `Reviewer feedback: "${existingApp.reviewerNotes}"`
+                      : 'Please check your establishment details and resubmit.'}
+                  </p>
+                ) : (
+                  <p>
+                    <strong>What happens next:</strong> Our Pangasinan tourism partner desk will review your establishment credentials within 24 to 48 business hours. Once accredited, you will receive an onboarding pack.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="pt-1 flex justify-end">
@@ -342,7 +494,7 @@ export function AffiliateClient() {
                 onClick={handleStartEditing}
                 className="text-xs font-bold text-[#2D6A4F] hover:underline cursor-pointer flex items-center gap-1"
               >
-                <span>Edit submitted application details</span>
+                <span>Edit application details</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

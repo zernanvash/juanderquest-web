@@ -18,6 +18,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { triggerCelebration } from './CelebrationEffects';
+import { UserBadgeChip, UserBadgesRow } from '@/components/Badges';
+import { getActiveNametagBadges, SAMPLE_USER_BADGES } from '@/lib/badges';
 
 export interface LocationPin {
   name: string;
@@ -608,11 +610,11 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
                         <span className="truncate text-xs font-bold text-[#2C221E]">
                           {comment.author_name}
                         </span>
-                        {comment.author_badge && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-stone-100 text-stone-600 border border-stone-200">
-                            {comment.author_badge}
-                          </span>
-                        )}
+                        <UserBadgesRow
+                          userIdOrName={comment.user_id || comment.author_name}
+                          isCurrentUser={comment.user_id === user?.id}
+                          size="xs"
+                        />
                         {comment.is_verified_visit && (
                           <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[#2D6A4F] bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                             <Check className="w-2.5 h-2.5" />

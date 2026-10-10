@@ -23,6 +23,7 @@ import {
 } from '@/lib/search';
 import { AreaDefinition, areaToHref } from '@/lib/areas';
 import { PixelSearchIcon } from '@/components/PixelIcons';
+import { UserBadgesRow } from '@/components/Badges';
 
 export type FlatItem =
   | { groupType: 'areas'; item: AreaDefinition; href: string }
@@ -363,12 +364,13 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <h4 className="text-xs sm:text-sm font-bold text-[#2C221E] truncate">
                                   {person.display_name}
                                 </h4>
+                                <UserBadgesRow userIdOrName={person.id || person.handle || person.display_name} size="xs" />
                                 {person.handle && (
-                                  <span className="text-[11px] font-medium text-[#2D6A4F]">
+                                  <span className="text-[11px] font-medium text-[#2D6A4F] shrink-0">
                                     @{person.handle}
                                   </span>
                                 )}

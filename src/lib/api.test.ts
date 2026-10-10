@@ -20,10 +20,15 @@ describe('API helpers', () => {
     expect(normalizeSubmission({ id: 's1', quest_id: 'q1', status: 'pending', captured_lat: 16.1, captured_lng: 120.3, created_at: '2026-08-03' })).toMatchObject({ questId: 'q1', questTitle: 'Unknown Quest', rewardPoints: 0 });
   });
 
-  it('builds the backend submission payload', () => {
-    const payload = buildSubmissionPayload({ id: 'q1', markerCode: 'MARKER' }, { lat: 16.1, lng: 120.3, accuracy: 8 });
-    expect(payload).toMatchObject({ quest_id: 'q1', scanned_marker_code: 'MARKER', captured_lat: 16.1, captured_lng: 120.3, captured_accuracy: 8 });
+  it('builds the backend submission payload from a server challenge token only', () => {
+    expect(() =>
+      buildSubmissionPayload({ id: 'q1' }, { lat: 16.1, lng: 120.3, accuracy: 8 })
+    ).toThrow(/challenge token is required/i);
+
+    const payload = buildSubmissionPayload({ id: 'q1', challengeToken: 'CHAL_TOKEN' }, { lat: 16.1, lng: 120.3, accuracy: 8 });
+    expect(payload).toMatchObject({ quest_id: 'q1', challenge_token: 'CHAL_TOKEN', captured_lat: 16.1, captured_lng: 120.3, captured_accuracy: 8 });
     expect(payload.idempotency_key).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(payload).not.toHaveProperty('scanned_marker_code');
   });
 
   it('splits the configured fee without creating fractional mJDQ', () => {

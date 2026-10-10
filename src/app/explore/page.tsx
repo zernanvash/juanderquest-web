@@ -38,6 +38,25 @@ import { SpotCommentSection } from '@/components/SpotCommentSection';
 import { SpotReportModal } from '@/components/SpotReportModal';
 import { PixelHeart } from '@/components/PixelIcons';
 import { getLocalLikedSpots, toggleSpotLike } from '@/lib/api';
+import { DestinationBadgeList, UserNametag, UserBadgesRow } from '@/components/Badges';
+import {
+  getSampleDestinationBadges,
+  SAMPLE_USER_BADGES,
+  getActiveNametagBadges,
+} from '@/lib/badges';
+
+function getAuthorBadges(spotId: string, authorName: string, currentUser?: { displayName?: string }) {
+  if (currentUser?.displayName && authorName.toLowerCase() === currentUser.displayName.toLowerCase()) {
+    return getActiveNametagBadges();
+  }
+  let hash = 0;
+  for (let i = 0; i < authorName.length; i++) {
+    hash = (hash << 5) - hash + authorName.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % SAMPLE_USER_BADGES.length;
+  return [SAMPLE_USER_BADGES[idx]];
+}
 
 export default function ExplorePage() {
   const { user } = useAuth();
@@ -246,10 +265,11 @@ export default function ExplorePage() {
                       )}
                     </span>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
                           {profile.display_name}
                         </span>
+                        <UserBadgesRow userIdOrName={profile.id || profile.display_name} size="xs" />
                         {profile.is_test && <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-900">Fictional</span>}
                       </div>
                       <span className="block truncate text-[10px] text-[#837560]">
@@ -406,8 +426,13 @@ export default function ExplorePage() {
                             {spot.municipality}
                           </span>
                           <span>•</span>
-                          <span>
-                            Shared by <strong className="text-[var(--color-brand-brown)]">{spot.sourceName}</strong>
+                          <span className="inline-flex items-center gap-1 flex-wrap">
+                            <span>Shared by</span>
+                            <UserNametag
+                              displayName={spot.sourceName}
+                              badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
+                              size="sm"
+                            />
                           </span>
 
                           {/* Provenance Badge, Server Recommendation Reason, Quest & Report */}
@@ -447,19 +472,29 @@ export default function ExplorePage() {
                           </div>
                         </div>
 
-                        {/* Title */}
-                        <Link href={appRoutes.spot(spot.id)} className="block group">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-base sm:text-lg font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition leading-snug">
-                              {spot.name}
-                            </h2>
-                            {spot.isTest && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                Fictional alpha post
-                              </span>
-                            )}
+                        {/* Title & Micro Destination Badges Row */}
+                        <div className="flex items-start justify-between gap-2.5">
+                          <Link href={appRoutes.spot(spot.id)} className="min-w-0 flex-1 group">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h2 className="text-base sm:text-lg font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition leading-snug">
+                                {spot.name}
+                              </h2>
+                              {spot.isTest && (
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                  Alpha
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                          <div className="shrink-0 flex items-center gap-1 pt-0.5">
+                            <DestinationBadgeList
+                              badges={getSampleDestinationBadges(spot.id, spot.category)}
+                              maxDisplay={3}
+                              size="xs"
+                              iconOnly={true}
+                            />
                           </div>
-                        </Link>
+                        </div>
 
                         {/* Crowd Status Banner */}
                         {spot.crowdStatus === 'estimated_busy' ? (
@@ -822,10 +857,11 @@ export default function ExplorePage() {
                             )}
                           </span>
                           <div className="min-w-0">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
                                 {profile.display_name}
                               </span>
+                              <UserBadgesRow userIdOrName={profile.id || profile.display_name} size="xs" />
                               {profile.is_test && <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-900">Fictional</span>}
                             </div>
                             <span className="block truncate text-[10px] text-[#837560]">

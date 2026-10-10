@@ -10,6 +10,7 @@ import {
   type FollowPageResult,
 } from '@/lib/social';
 import { FollowButton } from './FollowButton';
+import { UserBadgesRow } from '@/components/Badges';
 import { X, Users, UserCheck, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface FollowListModalProps {
@@ -220,8 +221,11 @@ export function FollowListModal({
                         </div>
 
                         <div className="min-w-0">
-                          <div className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
-                            {traveler.display_name}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
+                              {traveler.display_name}
+                            </span>
+                            <UserBadgesRow userIdOrName={traveler.id || traveler.display_name} size="xs" />
                           </div>
                           <div className="flex items-center gap-1.5 text-[10px] text-[#837560]">
                             {traveler.handle && <span>@{traveler.handle}</span>}

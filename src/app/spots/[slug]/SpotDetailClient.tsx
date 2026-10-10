@@ -40,6 +40,21 @@ import { MiniMapPreview } from '@/components/MiniMapPreview';
 import { PixelHeart } from '@/components/PixelIcons';
 import { SpotCommentSection } from '@/components/SpotCommentSection';
 import { useSavedLibrary } from '@/lib/saved-library';
+import { DestinationBadgeList, UserNametag } from '@/components/Badges';
+import { getSampleDestinationBadges, SAMPLE_USER_BADGES, getActiveNametagBadges } from '@/lib/badges';
+
+function getAuthorBadges(spotId: string, authorName: string, currentUser?: { displayName?: string }) {
+  if (currentUser?.displayName && authorName.toLowerCase() === currentUser.displayName.toLowerCase()) {
+    return getActiveNametagBadges();
+  }
+  let hash = 0;
+  for (let i = 0; i < authorName.length; i++) {
+    hash = (hash << 5) - hash + authorName.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % SAMPLE_USER_BADGES.length;
+  return [SAMPLE_USER_BADGES[idx]];
+}
 
 interface SpotDetailClientProps {
   slug: string;
@@ -456,13 +471,28 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   {spot.name}
                 </h1>
 
+                {/* Destination Badges Showcase */}
+                <DestinationBadgeList
+                  badges={getSampleDestinationBadges(spot.id, spot.category)}
+                  maxDisplay={5}
+                  size="sm"
+                  className="pt-1 pb-1"
+                />
+
                 <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#837560]">
                   <span className="flex items-center gap-1 font-semibold text-[#2D6A4F]">
                     <MapPin className="w-4 h-4" />
                     <span>{spot.address || spot.municipality}</span>
                   </span>
                   <span>•</span>
-                  <span>Shared by <strong className="text-[#582F0E]">{spot.sourceName}</strong></span>
+                  <span className="inline-flex items-center gap-1 flex-wrap">
+                    <span>Shared by</span>
+                    <UserNametag
+                      displayName={spot.sourceName}
+                      badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
+                      size="sm"
+                    />
+                  </span>
                 </div>
               </div>
 

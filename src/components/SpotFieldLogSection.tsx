@@ -16,7 +16,9 @@ import {
   ShieldCheck, 
   Sparkles,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  CloudOff,
+  RefreshCw
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -43,6 +45,8 @@ export interface SpotFieldLogItem {
   helpful_user_ids: string[];
   created_at: string;
   is_verified_visit?: boolean;
+  /** True when this dispatch is stored on this device only and has not reached the server yet. */
+  pending_sync?: boolean;
 }
 
 interface TagConfig {
@@ -136,13 +140,17 @@ export function SpotFieldLogSection({
   const [submitting, setSubmitting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [helpfulVoted, setHelpfulVoted] = useState<Record<string, boolean>>({});
+  // Dispatches composed while the backend was unreachable. They are kept on this
+  // device only and are never presented as published until they sync.
+  const [pendingLogs, setPendingLogs] = useState<SpotFieldLogItem[]>([]);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const fetchLogs = useCallback(async () => {
     try {
       const res = await api.get(`/spots/${spotId}/comments`);
       if (res.data?.success && Array.isArray(res.data.data)) {
         setLogs(res.data.data);
-        if (onLogsCountChange) onLogsCountChange(res.data.data.length);
         return;
       }
     } catch {
@@ -152,7 +160,6 @@ export function SpotFieldLogSection({
         if (stored) {
           const parsed = JSON.parse(stored);
           setLogs(parsed);
-          if (onLogsCountChange) onLogsCountChange(parsed.length);
           return;
         }
       } catch {
@@ -166,6 +173,19 @@ export function SpotFieldLogSection({
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`jdq_pending_logs_${spotId}`);
+      if (stored) setPendingLogs(JSON.parse(stored));
+    } catch {
+      // Ignore parse error
+    }
+  }, [spotId]);
+
+  useEffect(() => {
+    if (onLogsCountChange) onLogsCountChange(logs.length + pendingLogs.length);
+  }, [logs.length, pendingLogs.length, onLogsCountChange]);
 
   const handleToggleHelpful = async (logId: string) => {
     // Optimistic toggle
@@ -209,7 +229,6 @@ export function SpotFieldLogSection({
         const newLog = res.data.data;
         const updated = [newLog, ...logs];
         setLogs(updated);
-        if (onLogsCountChange) onLogsCountChange(updated.length);
 
         // Save to local storage cache
         try {
@@ -218,12 +237,14 @@ export function SpotFieldLogSection({
 
         setContent('');
         setComposerOpen(false);
+        setSyncError(null);
         triggerCelebration({ type: 'poppers', playAudio: true });
       }
     } catch {
-      // Optimistic local storage creation if offline
-      const mockLog: SpotFieldLogItem = {
-        id: `local-${Date.now()}`,
+      // Truthful degraded mode: keep the draft on this device only, flag it as
+      // pending sync, and never present it as a published dispatch.
+      const pendingLog: SpotFieldLogItem = {
+        id: `local-pending-${Date.now()}`,
         spot_id: spotId,
         user_id: user?.id || 'guest',
         author_name: authorName,
@@ -234,30 +255,66 @@ export function SpotFieldLogSection({
         helpful_user_ids: [],
         created_at: new Date().toISOString(),
         is_verified_visit: false,
+        pending_sync: true,
       };
 
-      const updated = [mockLog, ...logs];
-      setLogs(updated);
-      if (onLogsCountChange) onLogsCountChange(updated.length);
+      const updatedPending = [pendingLog, ...pendingLogs];
+      setPendingLogs(updatedPending);
       try {
-        localStorage.setItem(`jdq_field_logs_${spotId}`, JSON.stringify(updated));
+        localStorage.setItem(`jdq_pending_logs_${spotId}`, JSON.stringify(updatedPending));
       } catch {}
 
+      setSyncError(
+        'Backend unreachable — your dispatch is saved on this device only and is not visible to other scouts yet.'
+      );
       setContent('');
       setComposerOpen(false);
-      triggerCelebration({ type: 'poppers', playAudio: true });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const filteredLogs = logs.filter((l) => {
+  const handleRetrySync = async (log: SpotFieldLogItem) => {
+    if (syncingId) return;
+    setSyncingId(log.id);
+    try {
+      const res = await api.post(`/spots/${spotId}/comments`, {
+        content: log.content,
+        tag: log.tag,
+        author_name: log.author_name,
+      });
+      if (res.data?.success && res.data.data) {
+        const published = res.data.data as SpotFieldLogItem;
+        const remaining = pendingLogs.filter((item) => item.id !== log.id);
+        setPendingLogs(remaining);
+        try {
+          localStorage.setItem(`jdq_pending_logs_${spotId}`, JSON.stringify(remaining));
+        } catch {}
+
+        const merged = [published, ...logs];
+        setLogs(merged);
+        try {
+          localStorage.setItem(`jdq_field_logs_${spotId}`, JSON.stringify(merged));
+        } catch {}
+        setSyncError(null);
+        triggerCelebration({ type: 'poppers', playAudio: true });
+      }
+    } catch {
+      setSyncError('Still offline — the dispatch remains stored on this device.');
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
+  const displayedLogs = [...pendingLogs, ...logs];
+
+  const filteredLogs = displayedLogs.filter((l) => {
     if (activeFilter === 'all') return true;
     return l.tag === activeFilter;
   });
 
   const filterOptions = [
-    { id: 'all', label: `All (${logs.length})` },
+    { id: 'all', label: `All (${displayedLogs.length})` },
     { id: 'local_tip', label: '💡 Tips' },
     { id: 'gear_alert', label: '🎒 Gear' },
     { id: 'tide_condition', label: '🌊 Tide & Trail' },
@@ -277,7 +334,7 @@ export function SpotFieldLogSection({
             <h4 className="text-xs sm:text-sm font-black text-[#582F0E] flex items-center gap-1.5">
               <span>Scout Field Logbook</span>
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#2D6A4F] text-white">
-                {logs.length}
+                {displayedLogs.length}
               </span>
             </h4>
             <p className="text-[11px] text-[#837560]">
@@ -394,8 +451,15 @@ export function SpotFieldLogSection({
         </form>
       )}
 
+      {syncError && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-[#92400E]">
+          <CloudOff className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>{syncError}</span>
+        </div>
+      )}
+
       {/* Filter Tabs */}
-      {logs.length > 0 && (
+      {displayedLogs.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {filterOptions.map((f) => (
             <button
@@ -473,6 +537,28 @@ export function SpotFieldLogSection({
                   </span>
                 </div>
 
+                {log.pending_sync && (
+                  <div className="flex items-center gap-2 flex-wrap pl-9">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-[#B45309] border border-amber-300 text-[10px] font-black">
+                      <CloudOff className="w-3 h-3" />
+                      <span>Not synced — this device only</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRetrySync(log)}
+                      disabled={syncingId === log.id}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-300 bg-white text-[10px] font-bold text-stone-600 hover:bg-stone-50 cursor-pointer disabled:opacity-50"
+                    >
+                      {syncingId === log.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3 h-3" />
+                      )}
+                      <span>{syncingId === log.id ? 'Retrying…' : 'Retry sync'}</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Content */}
                 <p className="text-xs text-[#514532] leading-relaxed pl-9">
                   {log.content}
@@ -489,19 +575,23 @@ export function SpotFieldLogSection({
                     <span className="text-[10px] text-stone-400">Community Scout</span>
                   )}
 
-                  {/* Helpful Endorsement Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleHelpful(log.id)}
-                    className={`btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                      isHelpful
-                        ? 'bg-amber-100 text-[#B45309] border border-amber-300 scale-105'
-                        : 'bg-stone-50 text-stone-600 border border-stone-200 hover:bg-stone-100'
-                    }`}
-                  >
-                    <ThumbsUp className={`w-3 h-3 ${isHelpful ? 'fill-current' : ''}`} />
-                    <span>Helpful ({log.helpful_count})</span>
-                  </button>
+                  {/* Helpful Endorsement Button (unsynced drafts cannot be endorsed yet) */}
+                  {log.pending_sync ? (
+                    <span className="text-[10px] text-amber-700 font-bold">Awaiting sync</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleHelpful(log.id)}
+                      className={`btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                        isHelpful
+                          ? 'bg-amber-100 text-[#B45309] border border-amber-300 scale-105'
+                          : 'bg-stone-50 text-stone-600 border border-stone-200 hover:bg-stone-100'
+                      }`}
+                    >
+                      <ThumbsUp className={`w-3 h-3 ${isHelpful ? 'fill-current' : ''}`} />
+                      <span>Helpful ({log.helpful_count})</span>
+                    </button>
+                  )}
                 </div>
               </article>
             );
