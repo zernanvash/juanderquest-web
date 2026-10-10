@@ -272,7 +272,6 @@ export const UserBadgeChip: React.FC<UserBadgeChipProps> = ({
         className={`inline-flex items-center font-bold rounded-lg border transition-all select-none cursor-pointer hover:shadow-xs active:scale-95 focus:outline-hidden focus:ring-1 focus:ring-amber-500/50 ${badge.themeColor.bg} ${badge.themeColor.text} ${badge.themeColor.border} ${sizeClasses} ${
           badge.isNft ? 'relative overflow-hidden shadow-xs ring-1 ring-amber-400/30' : ''
         } ${className}`}
-        title={`${badge.name}: ${badge.description}${badge.isNft ? ` (NFT Token ${badge.tokenId})` : ''}`}
       >
         {/* Glint effect for NFTs */}
         {badge.isNft && (
@@ -388,10 +387,6 @@ export const UserBadgeIcon: React.FC<UserBadgeIconProps> = ({
     ? 'w-5.5 h-5.5 text-[12px] rounded-md'
     : 'w-6.5 h-6.5 text-[14px] rounded-md';
 
-  const tooltipText = `${badge.name} • ${
-    badge.isNft ? `Base L2 Soulbound NFT (${badge.tokenId || 'Verified'})` : badge.rarity.toUpperCase()
-  } — ${badge.description}`;
-
   return (
     <>
       <span
@@ -399,7 +394,6 @@ export const UserBadgeIcon: React.FC<UserBadgeIconProps> = ({
         role="button"
         tabIndex={0}
         aria-label={badge.name}
-        title={tooltipText}
         onClick={handleClick}
         onMouseEnter={openPreview}
         onMouseLeave={scheduleClose}
@@ -488,14 +482,14 @@ export const UserBadgesRow: React.FC<UserBadgesRowProps> = ({
   const remaining = resolvedBadges.length - maxDisplay;
 
   return (
-    <span className={`inline-flex items-center gap-0.5 shrink-0 ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 shrink-0 ${className}`}>
       {visible.map((b) => (
         <UserBadgeIcon key={b.id} badge={b} size={size} />
       ))}
       {remaining > 0 && (
         <span
-          className="inline-flex items-center justify-center text-[9px] font-black px-1 py-0.5 rounded bg-stone-100 text-stone-600 border border-stone-200 select-none cursor-default"
-          title={`${remaining} more badges`}
+          className="inline-flex items-center justify-center text-[9px] font-black px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 border border-stone-200 select-none cursor-default"
+          aria-label={`${remaining} more badges`}
         >
           +{remaining}
         </span>
@@ -577,7 +571,7 @@ export const UserNametag: React.FC<UserNametagProps> = ({
         iconOnly ? (
           <UserBadgesRow badges={displayBadges} size={effectiveBadgeSize} />
         ) : (
-          <div className="inline-flex items-center flex-wrap gap-1">
+          <div className="inline-flex items-center flex-wrap gap-1.5">
             {displayBadges.map((badge) => (
               <UserBadgeChip key={badge.id} badge={badge} size={size === 'sm' ? 'xs' : 'sm'} />
             ))}
@@ -602,7 +596,7 @@ export interface DestinationBadgeChipProps {
 
 export const DestinationBadgeChip: React.FC<DestinationBadgeChipProps> = ({
   badge,
-  size = 'sm',
+  size = 'xs',
   iconOnly = false,
   enablePreviewModal = true,
   className = '',
@@ -660,7 +654,6 @@ export const DestinationBadgeChip: React.FC<DestinationBadgeChipProps> = ({
           role="button"
           tabIndex={0}
           aria-label={badge.name}
-          title={`${badge.name}: ${badge.description}`}
           onClick={handleClick}
           onMouseEnter={openPreview}
           onMouseLeave={scheduleClose}
@@ -703,7 +696,6 @@ export const DestinationBadgeChip: React.FC<DestinationBadgeChipProps> = ({
         } ${badge.themeColor.text} ${badge.themeColor.border} ${
           isXs ? 'text-[9px] px-2 py-0.5 gap-1' : 'text-[10px] px-2.5 py-0.5 gap-1.5'
         } ${className}`}
-        title={`${badge.name}: ${badge.description}`}
       >
         <span className="shrink-0 text-[11px] leading-none" role="img" aria-label={badge.name}>
           {badge.icon}
@@ -751,7 +743,7 @@ export const DestinationBadgeList: React.FC<DestinationBadgeListProps> = ({
   const remainingCount = badges.length - maxDisplay;
 
   return (
-    <div className={`flex flex-wrap items-center ${iconOnly ? 'gap-0.5' : 'gap-1.5'} ${className}`}>
+    <div className={`flex flex-wrap items-center ${iconOnly ? 'gap-1.5' : 'gap-1.5'} ${className}`}>
       {visible.map((b) => (
         <DestinationBadgeChip key={b.id} badge={b} size={size} iconOnly={iconOnly} />
       ))}
@@ -762,7 +754,7 @@ export const DestinationBadgeList: React.FC<DestinationBadgeListProps> = ({
               ? 'inline-flex items-center justify-center text-[9px] px-1 py-0.5 rounded bg-stone-100 text-stone-600 border border-stone-200'
               : 'text-[9px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200'
           }`}
-          title={`${remainingCount} more badges`}
+          aria-label={`${remainingCount} more badges`}
         >
           +{remainingCount}
         </span>

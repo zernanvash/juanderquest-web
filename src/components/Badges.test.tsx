@@ -98,13 +98,14 @@ describe('Badges System & Components', () => {
       expect(screen.getByText('#0042')).toBeDefined();
     });
 
-    it('renders Discord/Reddit-style UserBadgeIcon with accessible tooltip', () => {
+    it('renders Discord/Reddit-style UserBadgeIcon with accessible label and modal trigger', () => {
       const badge = SAMPLE_USER_BADGES[0];
       render(<UserBadgeIcon badge={badge} size="xs" />);
 
       const iconEl = screen.getByRole('button', { name: badge.name });
       expect(iconEl).toBeDefined();
-      expect(iconEl.getAttribute('title')).toContain(badge.name);
+      expect(iconEl.getAttribute('aria-label')).toBe(badge.name);
+      expect(iconEl.getAttribute('title')).toBeNull();
     });
 
     it('renders UserBadgesRow containing multiple badge icons', () => {
@@ -167,13 +168,14 @@ describe('Badges System & Components', () => {
       expect(screen.getByText('+2')).toBeDefined();
     });
 
-    it('renders compressed icon-only destination badges with rich tooltips', () => {
+    it('renders compressed icon-only destination badges without title tooltip', () => {
       const badge = SAMPLE_DESTINATION_BADGES[0];
-      const { container } = render(<DestinationBadgeChip badge={badge} iconOnly={true} />);
+      render(<DestinationBadgeChip badge={badge} iconOnly={true} />);
 
       const btn = screen.getByRole('button', { name: badge.name });
       expect(btn).toBeDefined();
-      expect(btn.getAttribute('title')).toBe(`${badge.name}: ${badge.description}`);
+      expect(btn.getAttribute('aria-label')).toBe(badge.name);
+      expect(btn.getAttribute('title')).toBeNull();
       expect(screen.getByText(badge.icon)).toBeDefined();
       // Full text label should not be rendered as a separate span in iconOnly mode
       expect(screen.queryByText(badge.name)).toBeNull();
