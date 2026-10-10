@@ -500,6 +500,7 @@ export interface UserBadgesRowProps {
   isCurrentUser?: boolean;
   size?: 'xs' | 'sm' | 'md';
   maxDisplay?: number;
+  enablePreviewModal?: boolean;
   className?: string;
 }
 
@@ -509,6 +510,7 @@ export const UserBadgesRow: React.FC<UserBadgesRowProps> = ({
   isCurrentUser = false,
   size = 'xs',
   maxDisplay = 3,
+  enablePreviewModal = true,
   className = '',
 }) => {
   const [resolvedBadges, setResolvedBadges] = useState<UserBadge[]>(() => {
@@ -543,7 +545,12 @@ export const UserBadgesRow: React.FC<UserBadgesRowProps> = ({
   return (
     <span className={`inline-flex items-center gap-1.5 shrink-0 ${className}`}>
       {visible.map((b) => (
-        <UserBadgeIcon key={b.id} badge={b} size={size} />
+        <UserBadgeIcon
+          key={b.id}
+          badge={b}
+          size={size}
+          enablePreviewModal={enablePreviewModal}
+        />
       ))}
       {remaining > 0 && (
         <span
@@ -571,6 +578,7 @@ export interface UserNametagProps {
   showHandle?: boolean;
   iconOnly?: boolean;
   badgeSize?: 'xs' | 'sm' | 'md';
+  enablePreviewModal?: boolean;
   className?: string;
 }
 
@@ -583,6 +591,7 @@ export const UserNametag: React.FC<UserNametagProps> = ({
   showHandle = false,
   iconOnly = true,
   badgeSize,
+  enablePreviewModal = true,
   className = '',
 }) => {
   const [activeBadges, setActiveBadges] = useState<UserBadge[]>(() => {
@@ -628,11 +637,20 @@ export const UserNametag: React.FC<UserNametagProps> = ({
       {/* Badges beside username (Discord/Reddit style icon row or full chips) */}
       {displayBadges && displayBadges.length > 0 && (
         iconOnly ? (
-          <UserBadgesRow badges={displayBadges} size={effectiveBadgeSize} />
+          <UserBadgesRow
+            badges={displayBadges}
+            size={effectiveBadgeSize}
+            enablePreviewModal={enablePreviewModal}
+          />
         ) : (
           <div className="inline-flex items-center flex-wrap gap-1.5">
             {displayBadges.map((badge) => (
-              <UserBadgeChip key={badge.id} badge={badge} size={size === 'sm' ? 'xs' : 'sm'} />
+              <UserBadgeChip
+                key={badge.id}
+                badge={badge}
+                size={size === 'sm' ? 'xs' : 'sm'}
+                enablePreviewModal={enablePreviewModal}
+              />
             ))}
           </div>
         )

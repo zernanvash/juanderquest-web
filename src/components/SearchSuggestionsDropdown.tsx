@@ -368,7 +368,11 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                                 <h4 className="text-xs sm:text-sm font-bold text-[#2C221E] truncate">
                                   {person.display_name}
                                 </h4>
-                                <UserBadgesRow userIdOrName={person.id || person.handle || person.display_name} size="xs" />
+                                <UserBadgesRow
+                                  userIdOrName={person.id || person.handle || person.display_name}
+                                  size="xs"
+                                  enablePreviewModal={false}
+                                />
                                 {person.handle && (
                                   <span className="text-[11px] font-medium text-[#2D6A4F] shrink-0">
                                     @{person.handle}

@@ -225,7 +225,11 @@ export function FollowListModal({
                             <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
                               {traveler.display_name}
                             </span>
-                            <UserBadgesRow userIdOrName={traveler.id || traveler.display_name} size="xs" />
+                            <UserBadgesRow
+                              userIdOrName={traveler.id || traveler.display_name}
+                              size="xs"
+                              enablePreviewModal={false}
+                            />
                           </div>
                           <div className="flex items-center gap-1.5 text-[10px] text-[#837560]">
                             {traveler.handle && <span>@{traveler.handle}</span>}

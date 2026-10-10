@@ -33,8 +33,6 @@ import { findAreaByIdOrName, areaToHref } from '@/lib/areas';
 import { CelebrationEffects, triggerCelebration } from '@/components/CelebrationEffects';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { PixelSearchIcon } from '@/components/PixelIcons';
-import { UserBadgeChip } from '@/components/Badges';
-import { getActiveNametagBadges, onBadgesUpdated, UserBadge } from '@/lib/badges';
 
 export interface NavigationNotification {
   id: string;
@@ -104,15 +102,6 @@ export const Navigation: React.FC<{
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [logoutError, setLogoutError] = useState('');
   const [rewardToast, setRewardToast] = useState<{ diff: number; total: number } | null>(null);
-  const [nametagBadges, setNametagBadges] = useState<UserBadge[]>([]);
-
-  useEffect(() => {
-    setNametagBadges(getActiveNametagBadges());
-    const unsubscribe = onBadgesUpdated(() => {
-      setNametagBadges(getActiveNametagBadges());
-    });
-    return unsubscribe;
-  }, []);
 
   useEffect(() => {
     const handleReward = (e: Event) => {
@@ -780,9 +769,6 @@ export const Navigation: React.FC<{
                               Admin
                             </span>
                           )}
-                          {nametagBadges.length > 0 && (
-                            <UserBadgeChip badge={nametagBadges[0]} size="xs" />
-                          )}
                         </div>
                         <div className="text-[10px] text-[var(--color-text-muted)] truncate font-mono">
                           {user.seedId || 'demo-traveler'}
@@ -1155,9 +1141,6 @@ export const Navigation: React.FC<{
                           <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-700 border border-amber-500/30 shrink-0">
                             Admin
                           </span>
-                        )}
-                        {nametagBadges.length > 0 && (
-                          <UserBadgeChip badge={nametagBadges[0]} size="xs" />
                         )}
                       </div>
                       <div className="text-[10px] text-[var(--color-text-muted)] truncate font-mono">

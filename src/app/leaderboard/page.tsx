@@ -244,7 +244,7 @@ export default function LeaderboardPage() {
                   <span className="text-xs sm:text-sm font-bold text-[var(--color-text-primary)] block">
                     {user ? (user.displayName || user.email) : 'Guest Explorer'}
                   </span>
-                  {user && <UserBadgesRow isCurrentUser size="xs" />}
+                  {user && <UserBadgesRow isCurrentUser size="xs" enablePreviewModal={false} />}
                 </div>
                 <span className="text-[11px] text-[var(--color-text-muted)]">
                   {leaderboardData?.my_rank
@@ -295,7 +295,12 @@ export default function LeaderboardPage() {
                           {topPodium.second.display_name}
                         </span>
                       )}
-                      <UserBadgesRow userIdOrName={topPodium.second.user_id || topPodium.second.handle || topPodium.second.display_name} isCurrentUser={topPodium.second.is_self} size="xs" />
+                      <UserBadgesRow
+                        userIdOrName={topPodium.second.user_id || topPodium.second.handle || topPodium.second.display_name}
+                        isCurrentUser={topPodium.second.is_self}
+                        size="xs"
+                        enablePreviewModal={false}
+                      />
                     </div>
                     <p className="text-[11px] text-[var(--color-text-muted)] flex items-center justify-center gap-1">
                       <MapPin className="w-3 h-3 text-slate-500" />
@@ -341,7 +346,12 @@ export default function LeaderboardPage() {
                         {topPodium.first.display_name}
                       </span>
                     )}
-                    <UserBadgesRow userIdOrName={topPodium.first.user_id || topPodium.first.handle || topPodium.first.display_name} isCurrentUser={topPodium.first.is_self} size="xs" />
+                    <UserBadgesRow
+                      userIdOrName={topPodium.first.user_id || topPodium.first.handle || topPodium.first.display_name}
+                      isCurrentUser={topPodium.first.is_self}
+                      size="xs"
+                      enablePreviewModal={false}
+                    />
                   </div>
                   <p className="text-xs text-[var(--color-brand-primary)] font-bold flex items-center justify-center gap-1">
                     <MapPin className="w-3.5 h-3.5" />
@@ -384,7 +394,12 @@ export default function LeaderboardPage() {
                           {topPodium.third.display_name}
                         </span>
                       )}
-                      <UserBadgesRow userIdOrName={topPodium.third.user_id || topPodium.third.handle || topPodium.third.display_name} isCurrentUser={topPodium.third.is_self} size="xs" />
+                      <UserBadgesRow
+                        userIdOrName={topPodium.third.user_id || topPodium.third.handle || topPodium.third.display_name}
+                        isCurrentUser={topPodium.third.is_self}
+                        size="xs"
+                        enablePreviewModal={false}
+                      />
                     </div>
                     <p className="text-[11px] text-[var(--color-text-muted)] flex items-center justify-center gap-1">
                       <MapPin className="w-3 h-3 text-orange-600" />
@@ -515,7 +530,12 @@ export default function LeaderboardPage() {
                                 {scout.display_name}
                               </span>
                             )}
-                            <UserBadgesRow userIdOrName={scout.user_id || scout.handle || scout.display_name} isCurrentUser={scout.is_self} size="xs" />
+                            <UserBadgesRow
+                          userIdOrName={scout.user_id || scout.handle || scout.display_name}
+                          isCurrentUser={scout.is_self}
+                          size="xs"
+                          enablePreviewModal={false}
+                        />
                             {scout.is_self && (
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
                                 You

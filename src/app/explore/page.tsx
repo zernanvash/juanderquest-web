@@ -269,7 +269,11 @@ export default function ExplorePage() {
                         <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
                           {profile.display_name}
                         </span>
-                        <UserBadgesRow userIdOrName={profile.id || profile.display_name} size="xs" />
+                        <UserBadgesRow
+                          userIdOrName={profile.id || profile.display_name}
+                          size="xs"
+                          enablePreviewModal={false}
+                        />
                         {profile.is_test && <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-900">Fictional</span>}
                       </div>
                       <span className="block truncate text-[10px] text-[#837560]">
@@ -861,7 +865,11 @@ export default function ExplorePage() {
                               <span className="truncate text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] transition">
                                 {profile.display_name}
                               </span>
-                              <UserBadgesRow userIdOrName={profile.id || profile.display_name} size="xs" />
+                              <UserBadgesRow
+                                userIdOrName={profile.id || profile.display_name}
+                                size="xs"
+                                enablePreviewModal={false}
+                              />
                               {profile.is_test && <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-900">Fictional</span>}
                             </div>
                             <span className="block truncate text-[10px] text-[#837560]">
