@@ -9,7 +9,7 @@ import {
   getUserBadges,
   onBadgesUpdated,
 } from '@/lib/badges';
-import { Sparkles, Shield, Award, HelpCircle, CheckCircle2, X, ExternalLink } from 'lucide-react';
+import { Sparkles, Shield, Award, HelpCircle, CheckCircle2, ExternalLink } from 'lucide-react';
 
 // ========================================================================
 // 0. Badge Preview Modal / Overlay
@@ -57,12 +57,12 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
   const userBadge = isUser ? (badge as UserBadge) : null;
   const destBadge = !isUser ? (badge as DestinationBadge) : null;
 
-  // Floating placement relative to anchor without blurring or blocking the background
+  // Static & responsive floating placement relative to anchor without blurring or bouncing
   let style: React.CSSProperties = {};
   if (anchorRect && typeof window !== 'undefined') {
+    const modalWidth = Math.min(300, window.innerWidth - 24);
+    const estimatedHeight = 250;
     const spaceBelow = window.innerHeight - anchorRect.bottom;
-    const modalWidth = 300;
-    const estimatedHeight = 260;
 
     let left = anchorRect.left + anchorRect.width / 2 - modalWidth / 2;
     if (left < 12) left = 12;
@@ -80,6 +80,7 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
       top: `${Math.max(10, top)}px`,
       left: `${left}px`,
       width: `${modalWidth}px`,
+      maxWidth: 'calc(100vw - 24px)',
       zIndex: 9999,
     };
   } else {
@@ -88,7 +89,8 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
       top: '50%',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: '320px',
+      width: '300px',
+      maxWidth: 'calc(100vw - 24px)',
       zIndex: 9999,
     };
   }
@@ -103,60 +105,49 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave || onClose}
       onClick={(e) => e.stopPropagation()}
-      className="bg-white/98 rounded-2xl border border-[#D5C4AC] shadow-xl p-4 text-left text-[#2C221E] space-y-3 animate-in fade-in zoom-in-95 duration-100 pointer-events-auto select-none"
+      className="bg-white rounded-2xl border border-[#D5C4AC] shadow-xl p-3.5 text-left text-[#2C221E] space-y-2.5 transition-opacity duration-100 opacity-100 pointer-events-auto select-none"
     >
-      {/* Header with Icon, Title, and Close Button */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 border shadow-2xs relative overflow-hidden select-none ${
-              badge.themeColor.bg
-            } ${badge.themeColor.border} ${badge.themeColor.text}`}
-          >
-            {userBadge?.isNft && (
-              <span
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[badge-glint_2.5s_ease-in-out_infinite] pointer-events-none"
-                aria-hidden="true"
-              />
-            )}
-            <span role="img" aria-label={badge.name} className="leading-none">
-              {badge.icon}
-            </span>
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1 flex-wrap">
-              <h3 className="text-xs font-black text-[#2C221E] leading-snug truncate">
-                {badge.name}
-              </h3>
-              {userBadge?.isNft && (
-                <span className="px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-500/30">
-                  Soulbound
-                </span>
-              )}
-            </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800 mt-0.5">
-              {userBadge ? (
-                <>
-                  {userBadge.rarity} Rarity {userBadge.network ? `• ${userBadge.network}` : `• ${userBadge.type}`}
-                </>
-              ) : (
-                <>
-                  {destBadge?.category.toUpperCase()} • Destination Badge
-                </>
-              )}
-            </p>
-          </div>
+      {/* Header with Icon and Title */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div
+          className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 border shadow-2xs relative overflow-hidden select-none ${
+            badge.themeColor.bg
+          } ${badge.themeColor.border} ${badge.themeColor.text}`}
+        >
+          {userBadge?.isNft && (
+            <span
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[badge-glint_2.5s_ease-in-out_infinite] pointer-events-none"
+              aria-hidden="true"
+            />
+          )}
+          <span role="img" aria-label={badge.name} className="leading-none">
+            {badge.icon}
+          </span>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition shrink-0 cursor-pointer"
-          aria-label="Close badge preview"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h3 className="text-xs font-black text-[#2C221E] leading-snug truncate">
+              {badge.name}
+            </h3>
+            {userBadge?.isNft && (
+              <span className="px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-500/30">
+                Soulbound
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800 mt-0.5">
+            {userBadge ? (
+              <>
+                {userBadge.rarity} Rarity {userBadge.network ? `• ${userBadge.network}` : `• ${userBadge.type}`}
+              </>
+            ) : (
+              <>
+                {destBadge?.category.toUpperCase()} • Destination Badge
+              </>
+            )}
+          </p>
+        </div>
       </div>
 
       {/* Description */}
