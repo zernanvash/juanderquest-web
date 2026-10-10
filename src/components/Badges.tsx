@@ -12,6 +12,61 @@ import {
 import { Sparkles, Shield, Award, HelpCircle, CheckCircle2, ExternalLink } from 'lucide-react';
 
 // ========================================================================
+// Global Badge Preview Coordinator (Prevents overlapping modals when hovering across adjacent badges)
+// ========================================================================
+
+type ActiveModalInfo = {
+  id: string;
+  badge: UserBadge | DestinationBadge;
+  kind?: 'user' | 'destination';
+  anchorRect: DOMRect | null;
+} | null;
+
+let currentActiveModal: ActiveModalInfo = null;
+const modalListeners = new Set<(active: ActiveModalInfo) => void>();
+let globalCloseTimer: NodeJS.Timeout | null = null;
+
+export const openBadgeModal = (
+  id: string,
+  badge: UserBadge | DestinationBadge,
+  anchorRect: DOMRect | null,
+  kind?: 'user' | 'destination'
+) => {
+  if (globalCloseTimer) {
+    clearTimeout(globalCloseTimer);
+    globalCloseTimer = null;
+  }
+  currentActiveModal = { id, badge, anchorRect, kind };
+  modalListeners.forEach((listener) => listener(currentActiveModal));
+};
+
+export const scheduleCloseBadgeModal = (id?: string, delay = 120) => {
+  if (globalCloseTimer) clearTimeout(globalCloseTimer);
+  globalCloseTimer = setTimeout(() => {
+    if (!id || currentActiveModal?.id === id) {
+      currentActiveModal = null;
+      modalListeners.forEach((listener) => listener(null));
+    }
+  }, delay);
+};
+
+export const cancelCloseBadgeModal = () => {
+  if (globalCloseTimer) {
+    clearTimeout(globalCloseTimer);
+    globalCloseTimer = null;
+  }
+};
+
+export const closeBadgeModalImmediately = () => {
+  if (globalCloseTimer) {
+    clearTimeout(globalCloseTimer);
+    globalCloseTimer = null;
+  }
+  currentActiveModal = null;
+  modalListeners.forEach((listener) => listener(null));
+};
+
+// ========================================================================
 // 0. Badge Preview Modal / Overlay
 // ========================================================================
 
@@ -213,32 +268,34 @@ export const UserBadgeChip: React.FC<UserBadgeChipProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
-  const closeTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleModalChange = (active: ActiveModalInfo) => {
+      if (active?.id === badge.id) {
+        setAnchorRect(active.anchorRect);
+        setIsModalOpen(true);
+      } else {
+        setIsModalOpen(false);
+      }
+    };
+    modalListeners.add(handleModalChange);
+    return () => {
+      modalListeners.delete(handleModalChange);
+    };
+  }, [badge.id]);
 
   const openPreview = () => {
     if (!enablePreviewModal) return;
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    if (triggerRef.current) {
-      setAnchorRect(triggerRef.current.getBoundingClientRect());
-    }
-    setIsModalOpen(true);
+    const rect = triggerRef.current ? triggerRef.current.getBoundingClientRect() : null;
+    openBadgeModal(badge.id, badge, rect, 'user');
   };
 
   const scheduleClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => {
-      setIsModalOpen(false);
-    }, 120);
+    scheduleCloseBadgeModal(badge.id, 120);
   };
 
   const cancelClose = () => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
+    cancelCloseBadgeModal();
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -306,7 +363,7 @@ export const UserBadgeChip: React.FC<UserBadgeChipProps> = ({
           badge={badge}
           kind="user"
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={closeBadgeModalImmediately}
           anchorRect={anchorRect}
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
@@ -338,32 +395,34 @@ export const UserBadgeIcon: React.FC<UserBadgeIconProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
-  const closeTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleModalChange = (active: ActiveModalInfo) => {
+      if (active?.id === badge.id) {
+        setAnchorRect(active.anchorRect);
+        setIsModalOpen(true);
+      } else {
+        setIsModalOpen(false);
+      }
+    };
+    modalListeners.add(handleModalChange);
+    return () => {
+      modalListeners.delete(handleModalChange);
+    };
+  }, [badge.id]);
 
   const openPreview = () => {
     if (!enablePreviewModal) return;
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    if (triggerRef.current) {
-      setAnchorRect(triggerRef.current.getBoundingClientRect());
-    }
-    setIsModalOpen(true);
+    const rect = triggerRef.current ? triggerRef.current.getBoundingClientRect() : null;
+    openBadgeModal(badge.id, badge, rect, 'user');
   };
 
   const scheduleClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => {
-      setIsModalOpen(false);
-    }, 120);
+    scheduleCloseBadgeModal(badge.id, 120);
   };
 
   const cancelClose = () => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
+    cancelCloseBadgeModal();
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -421,7 +480,7 @@ export const UserBadgeIcon: React.FC<UserBadgeIconProps> = ({
           badge={badge}
           kind="user"
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={closeBadgeModalImmediately}
           anchorRect={anchorRect}
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
@@ -604,32 +663,34 @@ export const DestinationBadgeChip: React.FC<DestinationBadgeChipProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
-  const closeTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleModalChange = (active: ActiveModalInfo) => {
+      if (active?.id === badge.id) {
+        setAnchorRect(active.anchorRect);
+        setIsModalOpen(true);
+      } else {
+        setIsModalOpen(false);
+      }
+    };
+    modalListeners.add(handleModalChange);
+    return () => {
+      modalListeners.delete(handleModalChange);
+    };
+  }, [badge.id]);
 
   const openPreview = () => {
     if (!enablePreviewModal) return;
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    if (triggerRef.current) {
-      setAnchorRect(triggerRef.current.getBoundingClientRect());
-    }
-    setIsModalOpen(true);
+    const rect = triggerRef.current ? triggerRef.current.getBoundingClientRect() : null;
+    openBadgeModal(badge.id, badge, rect, 'destination');
   };
 
   const scheduleClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => {
-      setIsModalOpen(false);
-    }, 120);
+    scheduleCloseBadgeModal(badge.id, 120);
   };
 
   const cancelClose = () => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
+    cancelCloseBadgeModal();
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -671,7 +732,7 @@ export const DestinationBadgeChip: React.FC<DestinationBadgeChipProps> = ({
             badge={badge}
             kind="destination"
             isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
+            onClose={closeBadgeModalImmediately}
             anchorRect={anchorRect}
             onMouseEnter={cancelClose}
             onMouseLeave={scheduleClose}
@@ -708,7 +769,7 @@ export const DestinationBadgeChip: React.FC<DestinationBadgeChipProps> = ({
           badge={badge}
           kind="destination"
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={closeBadgeModalImmediately}
           anchorRect={anchorRect}
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}

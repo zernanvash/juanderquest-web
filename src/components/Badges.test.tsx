@@ -289,5 +289,30 @@ describe('Badges System & Components', () => {
       expect(screen.getByRole('dialog', { name: `${badge.name} details` })).toBeDefined();
       expect(screen.getByText(badge.name)).toBeDefined();
     });
+
+    it('immediately replaces previous modal when hovering across adjacent badges without overlap', () => {
+      const badge1 = SAMPLE_USER_BADGES[0];
+      const badge2 = SAMPLE_USER_BADGES[1];
+
+      render(
+        <div>
+          <UserBadgeIcon badge={badge1} size="xs" />
+          <UserBadgeIcon badge={badge2} size="xs" />
+        </div>
+      );
+
+      const icon1 = screen.getByRole('button', { name: badge1.name });
+      const icon2 = screen.getByRole('button', { name: badge2.name });
+
+      // Hover over badge 1
+      fireEvent.mouseEnter(icon1);
+      expect(screen.getByRole('dialog', { name: `${badge1.name} details` })).toBeDefined();
+      expect(screen.queryByRole('dialog', { name: `${badge2.name} details` })).toBeNull();
+
+      // Hover over badge 2 immediately
+      fireEvent.mouseEnter(icon2);
+      expect(screen.getByRole('dialog', { name: `${badge2.name} details` })).toBeDefined();
+      expect(screen.queryByRole('dialog', { name: `${badge1.name} details` })).toBeNull();
+    });
   });
 });
