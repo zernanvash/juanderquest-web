@@ -503,7 +503,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               id="spot-info"
               className="relative z-10 scroll-mt-16 lg:scroll-mt-4"
             >
-              <div className="bg-[var(--color-bg-canvas)] rounded-t-[2rem] lg:rounded-t-[2.5rem] border-t border-white/70 shadow-[0_-10px_30px_rgba(43,35,25,0.18)] pt-5 sm:pt-7">
+              <div className="bg-[var(--color-bg-canvas)] rounded-t-[2rem] lg:rounded-t-[2.5rem] border-t border-white/70 shadow-[0_-10px_30px_rgba(43,35,25,0.18)] pt-5 sm:pt-7 pb-6 sm:pb-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <header className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
                     {/* Status & category chips */}
@@ -600,7 +600,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                     </div>
 
                     {/* Practical actions */}
-                    <div className="pt-4 border-t border-[#E8E5DE] flex flex-wrap items-center gap-2.5">
+                    <div className="pt-4 border-t border-[#E8E5DE]/40 flex flex-wrap items-center gap-2.5">
                       {spot.questId && (
                         <Link
                           href={appRoutes.quest(spot.questId)}
