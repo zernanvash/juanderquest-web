@@ -20,7 +20,6 @@ import {
   Award,
   Bell,
   Settings,
-  ChevronDown,
   Sparkles,
   Smartphone,
   Store,
@@ -30,7 +29,6 @@ import {
   ChevronRight,
   ChevronUp,
 } from 'lucide-react';
-import { fetchMyEngagement, EngagementSummary } from '@/lib/engagement';
 import { Footer } from '@/components/Footer';
 import { SearchSuggestionsDropdown } from '@/components/SearchSuggestionsDropdown';
 import { useSearchPreview } from '@/lib/use-search-preview';
@@ -68,7 +66,7 @@ export const Navigation: React.FC<{
 }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, wallet, token, logout } = useAuth();
+  const { user, logout } = useAuth();
   const adminDashboardUrl = user?.role === 'admin' ? adminHandoffUrl() : null;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -81,19 +79,11 @@ export const Navigation: React.FC<{
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [logoutError, setLogoutError] = useState('');
   const [rewardToast, setRewardToast] = useState<{ diff: number; total: number } | null>(null);
-  const [isWelcomeCardExpanded, setIsWelcomeCardExpanded] = useState(false);
-  const [drawerEngagement, setDrawerEngagement] = useState<EngagementSummary | null>(null);
   const [hasMerchantOwnership, setHasMerchantOwnership] = useState<boolean>(false);
 
   useEffect(() => {
     let active = true;
     if (user) {
-      fetchMyEngagement()
-        .then((data) => {
-          if (active) setDrawerEngagement(data);
-        })
-        .catch(() => {});
-
       fetchMerchantMe()
         .then((me) => {
           if (active && me.has_merchant) {
@@ -349,24 +339,44 @@ export const Navigation: React.FC<{
     href: string;
     icon: React.ElementType;
     flair?: string;
-    badge?: string;
   }
 
-  const navItems: NavItem[] = [
-    { label: 'Home', href: '/dashboard', icon: LayoutDashboard, flair: 'Hub' },
-    { label: 'Explore Feed', href: '/explore', icon: Compass, flair: 'Feed' },
-    { label: 'Interactive Map', href: '/map', icon: MapPin },
-    { label: 'The Trail', href: '/trail', icon: Route, flair: 'Soon' },
-    { label: 'Quests', href: '/quests', icon: Zap, flair: 'Bounties' },
-    { label: 'JuanChoice', href: '/choice', icon: Award, flair: 'Free vote' },
-    { label: 'Shop', href: '/shop', icon: ShoppingBag },
-    { label: 'Leaderboard', href: '/leaderboard', icon: Award },
-    hasMerchantOwnership
-      ? { label: 'Merchant Dashboard', href: '/merchant', icon: Store, flair: 'Owner' }
-      : { label: 'Merchant Hub', href: '/affiliate', icon: Store, flair: 'Partner' },
-    { label: 'About Project', href: '/about', icon: ShieldCheck },
-    { label: 'My Submissions', href: '/history', icon: History },
-    { label: 'Explorer Settings', href: '/settings', icon: Settings },
+  interface NavGroup {
+    label?: string;
+    items: NavItem[];
+  }
+
+  // Primary destinations stay unlabeled at the top; secondary areas are grouped
+  // so the rail stays scannable. Only availability flair (Soon) survives.
+  const navGroups: NavGroup[] = [
+    {
+      items: [
+        { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
+        { label: 'Explore Feed', href: '/explore', icon: Compass },
+        { label: 'Interactive Map', href: '/map', icon: MapPin },
+        { label: 'The Trail', href: '/trail', icon: Route, flair: 'Soon' },
+        { label: 'Quests', href: '/quests', icon: Zap },
+        { label: 'JuanChoice', href: '/choice', icon: Award },
+      ],
+    },
+    {
+      label: 'Community',
+      items: [
+        { label: 'Shop', href: '/shop', icon: ShoppingBag },
+        { label: 'Leaderboard', href: '/leaderboard', icon: Award },
+        hasMerchantOwnership
+          ? { label: 'Merchant Dashboard', href: '/merchant', icon: Store }
+          : { label: 'Merchant Hub', href: '/affiliate', icon: Store },
+        { label: 'About Project', href: '/about', icon: ShieldCheck },
+      ],
+    },
+    {
+      label: 'Account',
+      items: [
+        { label: 'My Submissions', href: '/history', icon: History },
+        { label: 'Explorer Settings', href: '/settings', icon: Settings },
+      ],
+    },
   ];
 
   // Compute Gamified Level & XP (Level = points / 50 + 1)
@@ -381,19 +391,6 @@ export const Navigation: React.FC<{
 
   const isExplore = pathname === '/explore' || pathname.startsWith('/explore/');
   const isAppWorkstation = fullBleed;
-
-  const isPrimaryBottomTab =
-    pathname === '/dashboard' ||
-    pathname.startsWith('/dashboard/') ||
-    pathname === '/explore' ||
-    pathname.startsWith('/explore/') ||
-    pathname === '/map' ||
-    pathname.startsWith('/map/') ||
-    pathname === '/quests' ||
-    pathname.startsWith('/quests/') ||
-    pathname === '/profile' ||
-    pathname.startsWith('/profile/');
-  const isMenuTabActive = !isPrimaryBottomTab || drawerOpen;
 
   return (
     <div
@@ -577,23 +574,22 @@ export const Navigation: React.FC<{
             )}
           </div>
 
-          {/* Mobile Page Side-Panel Trigger */}
-          {sidePanel && (
-            <button
-              type="button"
-              onClick={() => {
-                setSidePanelOpen(true);
-                setIsNotificationsOpen(false);
-                setIsSearchOpen(false);
-              }}
-              className="relative p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center transition active:scale-95 group"
-              aria-label={`Open ${sidePanelTitle}`}
-              title={`Open ${sidePanelTitle}`}
-            >
-              <Menu className="w-4 h-4 text-[var(--color-brand-primary)]" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#FFB703] border-2 border-white shadow-xs animate-pulse" />
-            </button>
-          )}
+          {/* Mobile Navigation Drawer Trigger (all compact routes) */}
+          <button
+            type="button"
+            onClick={() => {
+              setDrawerOpen(true);
+              setIsNotificationsOpen(false);
+              setIsSearchOpen(false);
+              setSidePanelOpen(false);
+            }}
+            className="p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center transition active:scale-95 group"
+            aria-label="Open navigation menu"
+            aria-expanded={drawerOpen}
+            aria-controls="mobile-nav-drawer"
+          >
+            <Menu className="w-4 h-4 text-[var(--color-brand-primary)]" />
+          </button>
         </div>
 
         {/* Mobile Header Bar Extended Search Mode */}
@@ -941,168 +937,129 @@ export const Navigation: React.FC<{
             )}
           </div>
 
-          {/* Explorer welcome card */}
-          {!isDesktopDrawerCollapsed ? (
-            <div className="mx-2 mt-1 mb-2 rounded-2xl bg-gradient-to-br from-[#173F31] via-[var(--color-brand-primary)] to-[#245541] text-white border border-white/10 shadow-md relative overflow-hidden">
-              <div className="absolute -top-10 -right-8 w-36 h-36 rounded-full border border-white/10 pointer-events-none" aria-hidden="true" />
-              <div className="absolute -top-3 -right-12 w-36 h-36 rounded-full border border-white/10 pointer-events-none" aria-hidden="true" />
-              <button
-                type="button"
-                onClick={() => setIsWelcomeCardExpanded((prev) => !prev)}
-                className="w-full text-left p-4 relative z-10 block cursor-pointer group select-none hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-amber-300 transition-colors"
-                aria-expanded={isWelcomeCardExpanded}
-                aria-controls="explorer-welcome-details"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200">
-                      <Sparkles className="w-3.5 h-3.5" aria-hidden="true" /> Your explorer space
-                    </span>
-                    <h3 className="mt-2 text-base font-extrabold leading-tight break-words">
-                      {user?.displayName ? `Mabuhay, ${user.displayName}!` : 'Mabuhay, Explorer!'}
-                    </h3>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 shrink-0 text-amber-200 transition-transform duration-200 ${isWelcomeCardExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
-                </div>
-                <p className="mt-1.5 text-xs leading-relaxed text-emerald-50/85">Your next discovery starts here.</p>
-                <div className="mt-4 flex items-center justify-between gap-2 text-xs font-semibold">
-                  <span className="rounded-full bg-white/15 border border-white/15 px-2.5 py-1">Level {currentLevel}</span>
-                  <span className="text-amber-200">{currentPoints.toLocaleString()} points</span>
-                </div>
-                <div className="mt-2 h-1.5 rounded-full bg-black/25 overflow-hidden" role="progressbar" aria-label={`Progress to level ${currentLevel + 1}`} aria-valuemin={0} aria-valuemax={50} aria-valuenow={currentPoints % 50}>
-                  <div className="h-full rounded-full bg-amber-300 transition-[width] duration-500" style={{ width: `${((currentPoints % 50) / 50) * 100}%` }} />
-                </div>
-                <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-50/80">
-                  <span>{50 - (currentPoints % 50)} points to next level</span>
-                  <span className="text-amber-200">{isWelcomeCardExpanded ? 'Hide details' : 'See details'}</span>
-                </div>
-              </button>
+          {/* Navigation Links Scrollable Area */}
+          <div className="flex-1 overflow-y-auto px-2 py-2 scrollbar-thin">
+            {navGroups.map((group, groupIndex) => (
               <div
-                id="explorer-welcome-details"
-                aria-hidden={!isWelcomeCardExpanded}
-                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
-                  isWelcomeCardExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                }`}
+                key={group.label ?? `primary-${groupIndex}`}
+                className={groupIndex > 0 ? 'mt-3 border-t border-[var(--color-border-default)]/50 pt-2' : ''}
               >
-                <div className="overflow-hidden">
-                  <div className="relative z-10 border-t border-white/15 px-4 py-3 text-xs">
-                    <div className="flex items-center justify-between gap-2 py-1">
-                      <span className="text-emerald-50/80">Verified visits</span>
-                      <span className="font-bold">{drawerEngagement?.impact?.verified_visits ?? 'Unavailable'}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 py-1">
-                      <span className="text-emerald-50/80">Voting streak</span>
-                      <span className="font-bold">{drawerEngagement?.streak?.current != null ? `${drawerEngagement.streak.current} rounds` : 'Unavailable'}</span>
-                    </div>
-                    <Link href="/profile" tabIndex={isWelcomeCardExpanded ? 0 : -1} className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-white px-3 py-2 font-bold text-[var(--color-brand-primary)] hover:bg-amber-50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300">View your passport <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" /></Link>
-                  </div>
+                {group.label && !isDesktopDrawerCollapsed && (
+                  <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+                    {group.label}
+                  </p>
+                )}
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      item.href === '/dashboard'
+                        ? pathname === '/dashboard' || pathname === '/'
+                        : pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={isDesktopDrawerCollapsed ? item.label : undefined}
+                        aria-label={item.label}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`group relative flex items-center rounded-xl transition-all duration-150 cursor-pointer ${
+                          isDesktopDrawerCollapsed
+                            ? 'justify-center h-11 w-full'
+                            : 'px-3 py-2.5 gap-3'
+                        } ${
+                          isActive
+                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs font-bold'
+                            : 'text-[var(--color-text-secondary)] hover:text-[var(--color-brand-primary)] hover:bg-[var(--color-bg-subtle)] font-medium'
+                        }`}
+                      >
+                        <Icon
+                          className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                            isDesktopDrawerCollapsed ? 'w-5 h-5' : 'w-4 h-4'
+                          } ${
+                            isActive ? 'text-[var(--color-brand-accent)]' : 'text-stone-500 group-hover:text-[var(--color-brand-primary)]'
+                          }`}
+                        />
+
+                        {!isDesktopDrawerCollapsed && (
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-1.5">
+                            <span className="text-xs truncate">{item.label}</span>
+                            {item.flair && (
+                              <span
+                                className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md shrink-0 ${
+                                  isActive
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-[var(--color-bg-subtle)] text-[var(--color-brand-brown)] border border-[var(--color-border-default)]'
+                                }`}
+                              >
+                                {item.flair}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Active Indicator Strip when collapsed */}
+                        {isDesktopDrawerCollapsed && isActive && (
+                          <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-[var(--color-brand-accent)]" />
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="mx-2 mt-2 mb-1 flex justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDesktopDrawerCollapsed(false);
-                  setIsWelcomeCardExpanded(true);
-                }}
-                title={user?.displayName ? `Mabuhay, ${user.displayName}!` : 'Mabuhay, Explorer!'}
-                aria-label="Expand sidebar for overview"
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] text-amber-300 flex items-center justify-center border border-emerald-500/30 shadow-2xs cursor-pointer hover:scale-105 transition active:scale-95"
-              >
-                <Sparkles className="w-4 h-4 text-[#FFB703]" />
-              </button>
-            </div>
-          )}
-
-          {/* Navigation Links Scrollable Area */}
-          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1 scrollbar-thin">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                item.href === '/dashboard'
-                  ? pathname === '/dashboard' || pathname === '/'
-                  : pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={isDesktopDrawerCollapsed ? item.label : undefined}
-                  aria-label={item.label}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`group relative flex items-center rounded-xl transition-all duration-150 cursor-pointer ${
-                    isDesktopDrawerCollapsed
-                      ? 'justify-center h-11 w-full'
-                      : 'px-3 py-2.5 gap-3'
-                  } ${
-                    isActive
-                      ? 'bg-[var(--color-brand-primary)] text-white shadow-xs font-bold'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-brand-primary)] hover:bg-[var(--color-bg-subtle)] font-medium'
-                  }`}
-                >
-                  <Icon
-                    className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                      isDesktopDrawerCollapsed ? 'w-5 h-5' : 'w-4 h-4'
-                    } ${
-                      isActive ? 'text-[var(--color-brand-accent)]' : 'text-stone-500 group-hover:text-[var(--color-brand-primary)]'
-                    }`}
-                  />
-
-                  {!isDesktopDrawerCollapsed && (
-                    <div className="flex-1 min-w-0 flex items-center justify-between gap-1.5">
-                      <span className="text-xs truncate">{item.label}</span>
-                      {item.flair && (
-                        <span
-                          className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md shrink-0 ${
-                            isActive
-                              ? 'bg-white/20 text-white'
-                              : 'bg-[var(--color-bg-subtle)] text-[var(--color-brand-brown)] border border-[var(--color-border-default)]'
-                          }`}
-                        >
-                          {item.flair}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Active Indicator Strip when collapsed */}
-                  {isDesktopDrawerCollapsed && isActive && (
-                    <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-[var(--color-brand-accent)]" />
-                  )}
-                </Link>
-              );
-            })}
+            ))}
           </div>
 
-          {/* Drawer Footer / Quick Profile Snippet */}
+          {/* Drawer Footer / Single compact identity + progress block */}
           <div className="p-2 border-t border-[var(--color-border-default)]/60 bg-[var(--color-bg-subtle)]/40 shrink-0">
             {user ? (
               <Link
                 href={userProfileHref}
-                className={`flex items-center rounded-xl hover:bg-white p-1.5 transition group ${
-                  isDesktopDrawerCollapsed ? 'justify-center' : 'gap-2.5'
+                className={`rounded-xl border border-[var(--color-border-default)] bg-white/80 hover:border-[var(--color-brand-primary)]/40 transition group ${
+                  isDesktopDrawerCollapsed ? 'flex justify-center p-1.5' : 'block px-2.5 py-2'
                 }`}
-                title={isDesktopDrawerCollapsed ? user.displayName : undefined}
+                title={isDesktopDrawerCollapsed ? `${user.displayName} · Level ${currentLevel}` : undefined}
                 aria-label="View your traveler passport"
               >
-                <div className="relative w-8 h-8 rounded-full bg-[var(--color-brand-primary)] text-white flex items-center justify-center text-xs font-black overflow-hidden shrink-0 shadow-xs">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
-                  ) : (
-                    <span>{user.displayName.charAt(0).toUpperCase()}</span>
+                <div className={`flex items-center ${isDesktopDrawerCollapsed ? '' : 'gap-2.5'}`}>
+                  <div className="relative w-8 h-8 rounded-full bg-[var(--color-brand-primary)] text-white flex items-center justify-center text-xs font-black overflow-hidden shrink-0 shadow-xs">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{user.displayName.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  {!isDesktopDrawerCollapsed && (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] truncate">
+                        {user.displayName}
+                      </p>
+                      <p className="text-[10px] text-[var(--color-brand-primary)] font-semibold truncate">
+                        Level {currentLevel} · {currentPoints.toLocaleString()} XP
+                      </p>
+                    </div>
+                  )}
+                  {!isDesktopDrawerCollapsed && (
+                    <ChevronRight className="w-4 h-4 shrink-0 text-[var(--color-text-muted)] group-hover:text-[var(--color-brand-primary)] transition" aria-hidden="true" />
                   )}
                 </div>
                 {!isDesktopDrawerCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] truncate">
-                      {user.displayName}
+                  <>
+                    <div
+                      className="mt-2 h-1.5 rounded-full bg-[var(--color-bg-subtle)] overflow-hidden"
+                      role="progressbar"
+                      aria-label={`Progress to level ${currentLevel + 1}`}
+                      aria-valuemin={0}
+                      aria-valuemax={50}
+                      aria-valuenow={currentPoints % 50}
+                    >
+                      <div className="h-full rounded-full bg-[var(--color-brand-accent)] transition-[width] duration-500" style={{ width: `${((currentPoints % 50) / 50) * 100}%` }} />
+                    </div>
+                    <p className="mt-1.5 text-[10px] text-[var(--color-text-muted)]">
+                      {50 - (currentPoints % 50)} XP to Level {currentLevel + 1}
                     </p>
-                    <p className="text-[10px] text-[var(--color-brand-primary)] font-semibold truncate">
-                      Lvl {currentLevel} • {wallet ? `${wallet.balanceMjdq} mJDQ` : 'Demo Explorer'}
-                    </p>
-                  </div>
+                  </>
                 )}
               </Link>
             ) : (
@@ -1193,6 +1150,7 @@ export const Navigation: React.FC<{
           onClick={() => setDrawerOpen(false)}
         >
           <aside
+            id="mobile-nav-drawer"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation drawer"
@@ -1242,7 +1200,7 @@ export const Navigation: React.FC<{
                         )}
                       </div>
                       <div className="text-[10px] text-[var(--color-text-muted)] truncate font-mono">
-                        {user.seedId || 'demo-traveler'}
+                        {user.handle ? `@${user.handle.replace(/^@/, '')}` : 'Traveler'}
                       </div>
                     </div>
                   </Link>
@@ -1251,7 +1209,7 @@ export const Navigation: React.FC<{
                       Level {currentLevel}
                     </span>
                     <span className="font-extrabold text-[var(--color-brand-brown)]">
-                      {wallet ? `${wallet.balanceMjdq.toLocaleString()} mJDQ` : 'mJDQ unavailable'}
+                      {currentPoints.toLocaleString()} XP
                     </span>
                   </div>
                   <div className="mt-2 pt-2 border-t border-[var(--color-border-default)]/40 flex items-center justify-between text-[11px]">
@@ -1306,42 +1264,73 @@ export const Navigation: React.FC<{
                 </div>
               )}
 
+              {sidePanel && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    setSidePanelOpen(true);
+                  }}
+                  className="mb-4 flex w-full items-center justify-between rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-subtle)] px-3 py-2.5 text-xs font-bold text-[var(--color-brand-brown)] hover:border-[var(--color-brand-primary)]/40 transition min-h-[44px]"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
+                    <span>{sidePanelTitle}</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" aria-hidden="true" />
+                </button>
+              )}
+
               <nav aria-label="Drawer Links" className="space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    item.href === '/explore'
-                      ? pathname === '/explore'
-                      : pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  const targetHref = item.href === '/profile' ? userProfileHref : item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={targetHref}
-                      onClick={() => setDrawerOpen(false)}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition min-h-[44px] ${
-                        isActive
-                          ? 'bg-[var(--color-brand-primary)] text-white'
-                          : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.flair && (
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-[var(--color-bg-subtle)] text-[var(--color-brand-accent-dark)]'
-                          }`}
-                        >
-                          {item.flair}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
+                {navGroups.map((group, groupIndex) => (
+                  <div
+                    key={group.label ?? `drawer-group-${groupIndex}`}
+                    className={groupIndex > 0 ? 'mt-3 border-t border-[var(--color-border-default)]/50 pt-2' : ''}
+                  >
+                    {group.label && (
+                      <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+                        {group.label}
+                      </p>
+                    )}
+                    <div className="space-y-1">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive =
+                          item.href === '/explore'
+                            ? pathname === '/explore'
+                            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                        const targetHref = item.href === '/profile' ? userProfileHref : item.href;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={targetHref}
+                            onClick={() => setDrawerOpen(false)}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition min-h-[44px] ${
+                              isActive
+                                ? 'bg-[var(--color-brand-primary)] text-white'
+                                : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Icon className="w-4 h-4" />
+                              <span>{item.label}</span>
+                            </div>
+                            {item.flair && (
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                  isActive ? 'bg-white/20 text-white' : 'bg-[var(--color-bg-subtle)] text-[var(--color-brand-accent-dark)]'
+                                }`}
+                              >
+                                {item.flair}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </nav>
             </div>
 
