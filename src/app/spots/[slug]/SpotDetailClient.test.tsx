@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SpotDetailClient } from './SpotDetailClient';
 
 const apiMock = vi.hoisted(() => ({
@@ -17,7 +17,7 @@ vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: authState.user }) }));
 vi.mock('@/lib/api', () => ({
   api: apiMock,
   normalizeSpot: (spot: unknown) => spot,
-  isVideoMedia: () => false,
+  isVideoMedia: (url: unknown) => typeof url === 'string' && /\.(mp4|webm)$/i.test(url),
   createAuthorQuest: vi.fn(),
   toggleSpotLike: vi.fn().mockResolvedValue({ liked: true }),
   getLocalLikedSpots: () => ({}),
@@ -100,4 +100,82 @@ describe('SpotDetailClient saved-place action', () => {
     expect(screen.getByText('Hours not confirmed')).toBeTruthy();
     expect(screen.getByText('Open-data source; not LGU-verified')).toBeTruthy();
   });
+
+  it('keeps a single hero h1, truthful location and the branded fallback when no photo exists', async () => {
+    render(<SpotDetailClient slug="spot-1" />);
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Test Beach' });
+    expect(heading).toBeTruthy();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.queryByText('Bolinao, Pangasinan')).toBeNull();
+
+    const stage = screen.getByRole('region', { name: /cinematic showcase for test beach/i });
+    const backdrop = stage.querySelector('img');
+    expect(backdrop?.getAttribute('src')).toContain('bg_landscape.png');
+    expect(backdrop?.getAttribute('loading')).toBe('eager');
+
+    expect(screen.getByRole('button', { name: /scroll to explore the destination story/i })).toBeTruthy();
+    expect(document.getElementById('spot-info')).toBeTruthy();
+
+    const continueReading = screen.getByRole('link', { name: /continue reading/i });
+    expect(continueReading.getAttribute('href')).toBe('#spot-about');
+    expect(document.getElementById('spot-about')).toBeTruthy();
+  });
+
+  it('shows a poster still and an explicit play action for a video lead instead of autoplaying', async () => {
+    apiMock.get.mockImplementation((url: string) => Promise.resolve({ data: { data: url.endsWith('/alternatives') ? [] : {
+      ...spot,
+      imageUrl: 'https://cdn.example/clip.mp4',
+      photos: ['https://cdn.example/clip.mp4'],
+    } } }));
+
+    render(<SpotDetailClient slug="spot-1" />);
+
+    const play = await screen.findByRole('button', { name: /play destination video in gallery/i });
+    expect(document.querySelector('video')).toBeNull();
+
+    const stage = screen.getByRole('region', { name: /cinematic showcase for test beach/i });
+    const backdrop = stage.querySelector('img');
+    expect(backdrop?.getAttribute('src')).toContain('bg_landscape.png');
+
+    fireEvent.click(play);
+    await waitFor(() => expect(document.querySelector('video')).not.toBeNull());
+    expect(screen.getByRole('button', { name: /close fullscreen view/i })).toBeTruthy();
+  });
+
+  it('makes the bottom gradient reactive to mouse detection and pointer movement', async () => {
+    render(<SpotDetailClient slug="spot-1" />);
+
+    const stage = await screen.findByRole('region', { name: /cinematic showcase for test beach/i });
+    const reactiveGradient = screen.getByTestId('spot-reactive-bottom-gradient');
+
+    // Initially hidden
+    expect(reactiveGradient.className).toContain('opacity-0');
+    expect(reactiveGradient.className).toContain('translate-y-3');
+
+    // Mouse enters stage
+    act(() => {
+      fireEvent.pointerEnter(stage, { pointerType: 'mouse' });
+    });
+    expect(reactiveGradient.className).toContain('opacity-100');
+    expect(reactiveGradient.className).toContain('translate-y-0');
+
+    // Mouse moves across stage
+    act(() => {
+      fireEvent.pointerMove(stage, {
+        pointerType: 'mouse',
+        clientX: 200,
+        clientY: 300,
+      });
+    });
+    expect(reactiveGradient.className).toContain('opacity-100');
+
+    // Mouse leaves stage
+    act(() => {
+      fireEvent.pointerLeave(stage);
+    });
+    expect(reactiveGradient.className).toContain('opacity-0');
+    expect(reactiveGradient.className).toContain('translate-y-3');
+  });
 });
+

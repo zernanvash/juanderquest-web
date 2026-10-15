@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,7 +20,6 @@ import {
   ChevronDown,
   Compass,
   Film,
-  Maximize2,
   X,
   ExternalLink,
   Check,
@@ -119,6 +118,9 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
+  // Reactive bottom gradient state (activates when mouse/touch is detected)
+  const [isMouseActive, setIsMouseActive] = useState(false);
+
   useEffect(() => {
     if (!slug) return;
     fetchWithCache(
@@ -163,9 +165,26 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
   const currentSlideUrl = slides[activeSlide] || slides[0] || '';
 
+  // Cinematic backdrop: a still image always holds the stage. Video leads stay
+  // explicit playable items in the gallery instead of autoplaying behind text.
+  const stillSlides = useMemo(() => slides.filter((url) => !isVideoMedia(url)), [slides]);
+  const activeMediaUrl = slides[activeSlide] || '';
+  const activeIsVideo = Boolean(activeMediaUrl) && isVideoMedia(activeMediaUrl);
+  const heroStillUrl = activeIsVideo
+    ? stillSlides[0] || '/bg_landscape.png'
+    : activeMediaUrl || '/bg_landscape.png';
+  const teaser = spot?.description?.trim() || '';
+
   // Keyboard navigation for carousel & lightbox
   useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      const element = target as HTMLElement | null;
+      if (!element) return false;
+      const tag = element.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || element.isContentEditable;
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
       if (slides.length > 1) {
         if (e.key === 'ArrowRight') {
           setActiveSlide((prev) => (prev + 1) % slides.length);
@@ -185,6 +204,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEndX(null);
     setTouchStartX(e.targetTouches[0].clientX);
+    setIsMouseActive(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -246,6 +266,68 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     }
   };
 
+  // Native document scroll to the story surface; respects reduced motion.
+  const scrollToSpotInfo = useCallback(() => {
+    const target = document.getElementById('spot-info');
+    if (!target) return;
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }, []);
+
+  // Subtle reactive parallax on the still photo (fine pointers only, rAF-throttled,
+  // never React state per frame, disabled for reduced motion).
+  const stageRef = useRef<HTMLElement | null>(null);
+  const parallaxFrame = useRef<number | null>(null);
+
+  const handleStagePointerEnter = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'mouse') {
+      setIsMouseActive(true);
+    }
+  }, []);
+
+  const handleStagePointerMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType !== 'mouse') return;
+    setIsMouseActive(true);
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const { clientX, clientY } = event;
+    const rect = stage.getBoundingClientRect();
+    if (rect.width > 0) {
+      const mousePercentX = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+      stage.style.setProperty('--mouse-x', `${mousePercentX.toFixed(1)}%`);
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+    if (parallaxFrame.current !== null) return;
+    parallaxFrame.current = requestAnimationFrame(() => {
+      parallaxFrame.current = null;
+      if (!rect.width || !rect.height) return;
+      const relativeX = (clientX - rect.left) / rect.width - 0.5;
+      const relativeY = (clientY - rect.top) / rect.height - 0.5;
+      stage.style.setProperty('--parallax-x', `${(relativeX * -12).toFixed(2)}px`);
+      stage.style.setProperty('--parallax-y', `${(relativeY * -8).toFixed(2)}px`);
+    });
+  }, []);
+
+  const handleStagePointerLeave = useCallback(() => {
+    setIsMouseActive(false);
+    const stage = stageRef.current;
+    if (!stage) return;
+    stage.style.setProperty('--parallax-x', '0px');
+    stage.style.setProperty('--parallax-y', '0px');
+    stage.style.setProperty('--mouse-x', '50%');
+  }, []);
+
   if (error) {
     return (
       <Navigation>
@@ -275,39 +357,96 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     <Navigation theater>
       <ErrorBoundary fallbackTitle="Unable to load Destination Spot">
         <div className="w-full flex flex-col">
-          {/* 1. FULL-SCREEN HERO PHOTO VIEWPORT (Cropped with object-cover, Scroll Indicator) */}
+          {/* 1. BOUNDED CINEMATIC STAGE — still photo holds while the story rises over it */}
           <section
-            aria-label={`Full-screen showcase for ${spot.name}`}
-            className="w-full h-[calc(100vh-64px)] sm:h-[calc(100dvh-64px)] relative select-none overflow-hidden bg-black"
+            ref={stageRef}
+            aria-label={`Cinematic showcase for ${spot.name}`}
+            className="cinematic-stage relative w-full"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onPointerEnter={handleStagePointerEnter}
+            onPointerMove={handleStagePointerMove}
+            onPointerLeave={handleStagePointerLeave}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setIsLightboxOpen(true);
+              }
+            }}
             tabIndex={0}
           >
-            {/* Main Full-Screen Cropped Photo / Video */}
+            {/* Pinned media stage (sticky within this bounded section on desktop only) */}
+            <div className="relative w-full h-[calc(100dvh-3.5rem)] min-h-[420px] lg:sticky lg:top-0 lg:h-dvh lg:min-h-[560px] overflow-hidden bg-black select-none">
+            {/* Still backdrop (video leads fall back to a poster still, never autoplay) */}
             <div
-              className="absolute inset-0 w-full h-full cursor-pointer"
+              className="cinematic-parallax absolute -inset-3 w-auto h-auto cursor-pointer"
               onClick={() => setIsLightboxOpen(true)}
-              title="Click for fullscreen lightbox"
+              title="Open fullscreen gallery"
             >
-              {isVideoMedia(currentSlideUrl) ? (
-                <video
-                  src={currentSlideUrl}
-                  controls
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img
-                  src={currentSlideUrl}
-                  alt={`${spot.name} - View ${activeSlide + 1}`}
-                  className="w-full h-full object-cover transition-opacity duration-300"
-                />
-              )}
+              <img
+                key={heroStillUrl}
+                src={heroStillUrl}
+                alt={`${spot.name}${spot.municipality ? ` — ${spot.municipality}` : ''}`}
+                loading="eager"
+                fetchPriority="high"
+                className="cinematic-backdrop w-full h-full object-cover"
+                onError={(event) => {
+                  const image = event.currentTarget;
+                  if (image.dataset.fallbackApplied !== 'true' && !image.src.endsWith('/bg_landscape.png')) {
+                    image.dataset.fallbackApplied = 'true';
+                    image.src = '/bg_landscape.png';
+                  }
+                }}
+              />
 
-              {/* Cinematic Vignette & Bottom/Top Gradient Overlays */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/40 pointer-events-none" />
+              {/* Light lateral scrim keeps the title legible without hiding the photo */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent pointer-events-none" />
+
+              {/* Top gradient for floating navigation controls */}
+              <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 via-black/20 to-transparent pointer-events-none" />
+
+              {/* Faint static bottom scrim preserving title contrast at all times */}
+              <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
+
+              {/* Reactive glowing bottom gradient — activates when mouse is detected */}
+              <div
+                aria-hidden="true"
+                data-testid="spot-reactive-bottom-gradient"
+                className={`spot-bottom-reactive-scrim absolute inset-x-0 bottom-0 pointer-events-none select-none transition-all duration-700 ease-out ${
+                  isMouseActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+                }`}
+              >
+                {/* Deep dark gradient rising from bottom */}
+                <div className="absolute inset-x-0 bottom-0 h-72 sm:h-80 lg:h-96 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none" />
+                {/* Luminous emerald/gold glowing aura */}
+                <div className="spot-bottom-glow-container absolute inset-x-0 bottom-0 h-56 sm:h-64 lg:h-80 pointer-events-none overflow-hidden">
+                  <div className="spot-bottom-glow-aura w-full h-full pointer-events-none" />
+                </div>
+                {/* Radiant bottom horizon beam */}
+                <div className="spot-bottom-edge-beam absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-[#FFB703]/80 via-emerald-400/60 to-transparent pointer-events-none blur-[0.5px]" />
+              </div>
+
+              {/* Subtle join: appears with the story surface and blends the photo into the canvas */}
+              <div className="cinematic-join-fade absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[var(--color-bg-canvas)] pointer-events-none" />
             </div>
+
+            {/* Video lead: explicit play affordance instead of a silent frame behind text */}
+            {activeIsVideo && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsLightboxOpen(true);
+                }}
+                className="absolute inset-0 m-auto z-20 w-16 h-16 rounded-full bg-black/65 hover:bg-black/85 backdrop-blur-md border border-white/30 text-white flex items-center justify-center transition cursor-pointer active:scale-95"
+                aria-label="Play destination video in gallery"
+                title="Play video"
+              >
+                <Film className="w-7 h-7 text-[#FFB703]" />
+              </button>
+            )}
 
             {/* Top Floating Control Bar */}
             <div className="absolute top-4 sm:top-6 left-4 sm:left-8 right-4 sm:right-8 z-20 flex items-center justify-between pointer-events-none">
@@ -329,26 +468,15 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 <span className="capitalize">{spot.subcategory.replace('_', ' ')}</span>
               </div>
 
-              {/* Top Right Controls (Counter & Fullscreen Lightbox) */}
-              <div className="flex items-center gap-2 pointer-events-auto">
-                {slides.length > 1 && (
+              {/* Top Right Controls (photo counter) */}
+              {slides.length > 1 && (
+                <div className="flex items-center gap-2 pointer-events-auto">
                   <div className="px-3 py-1.5 rounded-xl sm:rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg">
                     <Camera className="w-3.5 h-3.5 text-[#FFB703]" />
                     <span>{activeSlide + 1} / {slides.length}</span>
                   </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setIsLightboxOpen(true)}
-                  className="p-2 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-full bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-lg active:scale-95"
-                  title="Open fullscreen lightbox"
-                  aria-label="Open fullscreen photo view"
-                >
-                  <Maximize2 className="w-4 h-4 text-[#FFB703]" />
-                  <span className="hidden sm:inline">Fullscreen</span>
-                </button>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Large Prev / Next Navigation Arrows (when multiple photos exist) */}
@@ -377,8 +505,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
                 </button>
 
-                {/* Jump Dots Floating above Scroll Indicator */}
-                <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 z-20">
+                {/* Jump dots (desktop only, bottom-right, clear of the reading block) */}
+                <div className="hidden lg:flex absolute bottom-[calc(12vh+1rem)] right-10 items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 z-30">
                   {slides.map((_, idx) => (
                     <button
                       key={idx}
@@ -397,197 +525,207 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               </>
             )}
 
-            {/* Bottom-left Quick Destination Pill */}
-            <div className="absolute bottom-5 sm:bottom-7 left-4 sm:left-8 z-20 text-white pointer-events-none max-w-xs sm:max-w-md drop-shadow-md">
-              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#2D6A4F]/90 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider mb-1">
-                {spot.category.replace('_', ' ')}
-              </span>
-              <h2 className="text-lg sm:text-2xl font-black line-clamp-1">
+            {/* Minimal reading block — the photo is the hero */}
+            <div className="absolute left-4 sm:left-8 lg:left-10 right-4 sm:right-10 bottom-32 lg:bottom-24 z-30 max-w-xl text-white pointer-events-none">
+              <h1 className="text-2xl sm:text-3xl lg:text-5xl font-black leading-[1.05] tracking-tight drop-shadow-md">
                 {spot.name}
-              </h2>
-              <p className="text-xs text-white/90 flex items-center gap-1 font-medium">
+              </h1>
+              <p className="mt-1.5 text-xs sm:text-sm text-white/85 flex items-center gap-1.5 font-medium drop-shadow-sm">
                 <MapPin className="w-3.5 h-3.5 text-[#FFB703]" />
-                <span>{spot.municipality}, Pangasinan</span>
+                <span>{spot.municipality}</span>
               </p>
             </div>
 
-            {/* Subtle Scroll Down Indicator */}
+            {/* Subtle floating scroll caret */}
             <button
               type="button"
-              onClick={() => {
-                const el = document.getElementById('spot-info');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="absolute bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1 px-4 sm:px-5 py-2 rounded-full bg-black/45 hover:bg-black/75 backdrop-blur-md border border-white/20 text-white/90 hover:text-white transition duration-200 cursor-pointer shadow-xl active:scale-95 group"
-              aria-label="Scroll down to view details"
+              onClick={scrollToSpotInfo}
+              className="cinematic-cue absolute bottom-20 lg:bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer group"
+              aria-label="Scroll to explore the destination story"
             >
-              <span className="text-[10px] sm:text-xs font-bold tracking-widest uppercase">Scroll for details</span>
-              <ChevronDown className="w-4 h-4 text-[#FFB703] group-hover:translate-y-0.5 transition-transform animate-bounce" />
+              <ChevronDown className="hero-cue-icon w-5 h-5 text-white/70 group-hover:text-white transition-colors drop-shadow-md" aria-hidden="true" />
             </button>
+            </div>
+
+            {/* 2. RISING STORY SURFACE — the reading card crosses the photo, then the stage scrolls away */}
+            <div
+              id="spot-info"
+              className="relative z-10 scroll-mt-16 lg:scroll-mt-4"
+            >
+              <div className="bg-[var(--color-bg-canvas)] rounded-t-[2rem] lg:rounded-t-[2.5rem] border-t border-white/70 shadow-[0_-10px_30px_rgba(43,35,25,0.18)] pt-5 sm:pt-7">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <header className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
+                    {/* Status & category chips */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#D8F3DC] text-[#2D6A4F] text-xs font-black uppercase tracking-wider">
+                        <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
+                        <span>{spot.category.replace('_', ' ')}</span>
+                      </span>
+
+                      {spot.trustLevel === 'lgu_verified' && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
+                          <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                          <span>LGU Verified Landmark</span>
+                        </span>
+                      )}
+
+                      {spot.questId && (
+                        <Link
+                          href={appRoutes.quest(spot.questId)}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-[#B45309] text-xs font-black border border-amber-200 hover:bg-amber-100 transition"
+                        >
+                          <Trophy className="w-3.5 h-3.5 text-[#FFB703]" />
+                          <span>Linked Quest Trail</span>
+                        </Link>
+                      )}
+
+                      {spot.isTest && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300">
+                          Fictional alpha post
+                        </span>
+                      )}
+
+                      {spot.crowdStatus === 'estimated_busy' ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#FFF3E8] border border-[#FFD8B8] text-xs font-bold text-[#D95D00]">
+                          <AlertTriangle className="w-3.5 h-3.5 text-[#D95D00]" />
+                          <span>Peak Hours</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#2D6A4F]">
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                          <span>Low Crowd</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Short teaser derived from the real description; the full story lives below */}
+                    {teaser ? (
+                      <div className="space-y-2">
+                        <p className="text-sm sm:text-base text-[#514532] leading-relaxed line-clamp-2">
+                          {teaser}
+                        </p>
+                        <a
+                          href="#spot-about"
+                          className="inline-flex items-center gap-1 text-xs font-black text-[#2D6A4F] hover:underline underline-offset-2"
+                        >
+                          <span>Continue reading</span>
+                          <span aria-hidden="true">↓</span>
+                        </a>
+                      </div>
+                    ) : null}
+
+                    <DestinationBadgeList
+                      badges={getSampleDestinationBadges(spot.id, spot.category)}
+                      maxDisplay={5}
+                      size="sm"
+                    />
+
+                    {/* Truthful place context and real attribution */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#837560]">
+                      <span className="flex items-center gap-1 font-semibold text-[#2D6A4F]">
+                        <MapPin className="w-4 h-4" />
+                        <span>{spot.address || spot.municipality}</span>
+                      </span>
+                      <span>•</span>
+                      {spot.sourceName.startsWith('Photo:') && spot.sourceUrl ? (
+                        <a
+                          href={spot.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline underline-offset-2"
+                        >
+                          {spot.sourceName.replace(/^Photo:\s*/, '')}
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 flex-wrap">
+                          <span>Shared by</span>
+                          <UserNametag
+                            displayName={spot.sourceName}
+                            badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
+                            size="sm"
+                          />
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Practical actions */}
+                    <div className="pt-4 border-t border-[#E8E5DE] flex flex-wrap items-center gap-2.5">
+                      {spot.questId && (
+                        <Link
+                          href={appRoutes.quest(spot.questId)}
+                          className="btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
+                        >
+                          <Trophy className="w-4 h-4 text-[#582F0E]" />
+                          <span>Play Eco-Quest</span>
+                        </Link>
+                      )}
+
+                      <Link
+                        href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
+                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] border border-[#E3DFD5] text-xs font-bold transition cursor-pointer min-h-[44px]"
+                      >
+                        <MapPin className="w-4 h-4 text-[#2D6A4F]" />
+                        <span>View on Map</span>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={handleShare}
+                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] text-[#582F0E] text-xs font-bold transition cursor-pointer min-h-[44px]"
+                        aria-label="Share Destination"
+                      >
+                        {shareCopied ? <Check className="w-4 h-4 text-[#2D6A4F]" /> : <Share2 className="w-4 h-4" />}
+                        <span>{shareCopied ? 'Link copied' : 'Share'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleLike}
+                        className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
+                          isLiked
+                            ? 'bg-rose-50 border-rose-200 shadow-2xs'
+                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-rose-300'
+                        }`}
+                        aria-label={isLiked ? 'Liked destination' : 'Like destination'}
+                        aria-pressed={isLiked}
+                        title={isLiked ? 'Liked' : 'Like'}
+                      >
+                        <PixelHeart isLiked={isLiked} size="md" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleSave}
+                        className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
+                          isSaved
+                            ? 'bg-amber-100 border-amber-300 shadow-2xs'
+                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-amber-300'
+                        }`}
+                        aria-label={isSaved ? 'Saved' : 'Save'}
+                        aria-pressed={isSaved}
+                        title={isSaved ? 'Saved' : 'Save'}
+                      >
+                        <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
+                      </button>
+                    </div>
+                  </header>
+                </div>
+              </div>
+            </div>
           </section>
 
-          {/* 2. INFORMATION SECTION BELOW FULL-SCREEN PHOTO (Navigated with Scroll) */}
-          <div id="spot-info" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
-            {/* Header Card & Action Bar */}
-            <header className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
-              {/* Badges & Meta */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#D8F3DC] text-[#2D6A4F] text-xs font-black uppercase tracking-wider">
-                  <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
-                  <span>{spot.category.replace('_', ' ')}</span>
-                </span>
-
-                {spot.trustLevel === 'lgu_verified' && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    <span>LGU Verified Landmark</span>
-                  </span>
-                )}
-
-                {spot.questId && (
-                  <Link
-                    href={appRoutes.quest(spot.questId)}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-[#B45309] text-xs font-black border border-amber-200 hover:bg-amber-100 transition"
-                  >
-                    <Trophy className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>Linked Quest Trail</span>
-                  </Link>
-                )}
-
-                {spot.isTest && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300">
-                    Fictional alpha post
-                  </span>
-                )}
-              </div>
-
-              {/* Title & Subtitle */}
-              <div className="space-y-1.5">
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#582F0E] tracking-tight leading-tight">
-                  {spot.name}
-                </h1>
-
-                {/* Destination Badges Showcase */}
-                <DestinationBadgeList
-                  badges={getSampleDestinationBadges(spot.id, spot.category)}
-                  maxDisplay={5}
-                  size="sm"
-                  className="pt-1 pb-1"
-                />
-
-                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#837560]">
-                  <span className="flex items-center gap-1 font-semibold text-[#2D6A4F]">
-                    <MapPin className="w-4 h-4" />
-                    <span>{spot.address || spot.municipality}</span>
-                  </span>
-                  <span>•</span>
-                  {spot.sourceName.startsWith('Photo:') && spot.sourceUrl ? (
-                    <a
-                      href={spot.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline underline-offset-2"
-                    >
-                      {spot.sourceName.replace(/^Photo:\s*/, '')}
-                    </a>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 flex-wrap">
-                      <span>Shared by</span>
-                      <UserNametag
-                        displayName={spot.sourceName}
-                        badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
-                        size="sm"
-                      />
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action & Engagement Bar */}
-              <div className="pt-4 border-t border-[#E8E5DE] flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[200px]">
-                  {spot.questId && (
-                    <Link
-                      href={appRoutes.quest(spot.questId)}
-                      className="btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
-                    >
-                      <Trophy className="w-4 h-4 text-[#582F0E]" />
-                      <span>Play Eco-Quest</span>
-                    </Link>
-                  )}
-
-                  <Link
-                    href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                    className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] border border-[#E3DFD5] text-xs font-bold transition cursor-pointer min-h-[44px]"
-                  >
-                    <MapPin className="w-4 h-4 text-[#2D6A4F]" />
-                    <span>View on Map</span>
-                  </Link>
-                </div>
-
-                {/* Engagement Buttons */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleToggleLike}
-                    className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
-                      isLiked
-                        ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold shadow-2xs'
-                        : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-rose-300'
-                    }`}
-                    aria-label={isLiked ? 'Liked destination' : 'Like destination'}
-                    aria-pressed={isLiked}
-                    title={isLiked ? 'Liked' : 'Like'}
-                  >
-                    <PixelHeart isLiked={isLiked} size="md" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleToggleSave}
-                    className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
-                      isSaved
-                        ? 'bg-amber-100 border-amber-300 text-[#7D5800] font-bold shadow-2xs'
-                        : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#582F0E] hover:border-amber-300'
-                    }`}
-                    aria-label={isSaved ? 'Saved' : 'Save'}
-                    aria-pressed={isSaved}
-                    title={isSaved ? 'Saved' : 'Save'}
-                  >
-                    <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleShare}
-                    className="p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] text-[#582F0E] transition cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    aria-label="Share Destination"
-                  >
-                    {shareCopied ? <Check className="w-4 h-4 text-[#2D6A4F]" /> : <Share2 className="w-4 h-4" />}
-                  </button>
-
-                  {/* Crowd Status Pill */}
-                  {spot.crowdStatus === 'estimated_busy' ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#FFF3E8] border border-[#FFD8B8] text-xs font-bold text-[#D95D00]">
-                      <AlertTriangle className="w-3.5 h-3.5 text-[#D95D00]" />
-                      <span>Peak Hours</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#2D6A4F]">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                      <span>Low Crowd</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            </header>
-
+          {/* 3. DOWNSTREAM READING CONTENT (opaque canvas continues below the stage) */}
+          <div className="w-full bg-[var(--color-bg-canvas)]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14 space-y-6 sm:space-y-8">
             {/* Two-Column Maximized Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left/Main Column (lg:col-span-8) */}
               <div className="lg:col-span-8 space-y-6">
                 {/* About Narrative */}
-                <section className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4">
+                <section
+                  id="spot-about"
+                  className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
+                >
                   <h2 className="text-xl sm:text-2xl font-black text-[#582F0E]">
                     About {spot.name}
                   </h2>
@@ -697,7 +835,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       <MapPin className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-0.5" />
                       <div>
                         <p className="font-bold text-[#582F0E]">{spot.municipality}</p>
-                        <p className="text-xs text-[#837560]">{spot.address || 'Pangasinan'}</p>
+                        <p className="text-xs text-[#837560]">{spot.address || spot.municipality || 'Location not recorded'}</p>
                       </div>
                     </div>
 
@@ -790,6 +928,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 )}
               </div>
             </div>
+            </div>
+          </div>
           {/* Author Quest Creation In-Page Modal */}
           {isQuestModalOpen && (
             <div
@@ -947,9 +1087,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               </div>
             </div>
           )}
-        </div>
 
-          {/* 3. LIGHTBOX MODAL (On Tap Image) */}
+          {/* 4. LIGHTBOX MODAL (On Tap Image) */}
           {isLightboxOpen && (
             <div
               className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-200"
