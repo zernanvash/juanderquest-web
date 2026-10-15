@@ -118,9 +118,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
-  // Reactive bottom gradient state (activates when mouse/touch is detected)
-  const [isMouseActive, setIsMouseActive] = useState(false);
-
   useEffect(() => {
     if (!slug) return;
     fetchWithCache(
@@ -204,7 +201,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEndX(null);
     setTouchStartX(e.targetTouches[0].clientX);
-    setIsMouseActive(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -282,24 +278,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const stageRef = useRef<HTMLElement | null>(null);
   const parallaxFrame = useRef<number | null>(null);
 
-  const handleStagePointerEnter = useCallback((event: React.PointerEvent<HTMLElement>) => {
-    if (event.pointerType === 'mouse') {
-      setIsMouseActive(true);
-    }
-  }, []);
-
   const handleStagePointerMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
     if (event.pointerType !== 'mouse') return;
-    setIsMouseActive(true);
     const stage = stageRef.current;
     if (!stage) return;
-
-    const { clientX, clientY } = event;
-    const rect = stage.getBoundingClientRect();
-    if (rect.width > 0) {
-      const mousePercentX = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-      stage.style.setProperty('--mouse-x', `${mousePercentX.toFixed(1)}%`);
-    }
 
     if (
       typeof window !== 'undefined' &&
@@ -309,8 +291,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
       return;
     }
     if (parallaxFrame.current !== null) return;
+    const { clientX, clientY } = event;
     parallaxFrame.current = requestAnimationFrame(() => {
       parallaxFrame.current = null;
+      const rect = stage.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       const relativeX = (clientX - rect.left) / rect.width - 0.5;
       const relativeY = (clientY - rect.top) / rect.height - 0.5;
@@ -320,12 +304,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   }, []);
 
   const handleStagePointerLeave = useCallback(() => {
-    setIsMouseActive(false);
     const stage = stageRef.current;
     if (!stage) return;
     stage.style.setProperty('--parallax-x', '0px');
     stage.style.setProperty('--parallax-y', '0px');
-    stage.style.setProperty('--mouse-x', '50%');
   }, []);
 
   if (error) {
@@ -365,7 +347,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            onPointerEnter={handleStagePointerEnter}
             onPointerMove={handleStagePointerMove}
             onPointerLeave={handleStagePointerLeave}
             onKeyDown={(event) => {
@@ -403,30 +384,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
               {/* Light lateral scrim keeps the title legible without hiding the photo */}
               <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent pointer-events-none" />
-
-              {/* Top gradient for floating navigation controls */}
-              <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 via-black/20 to-transparent pointer-events-none" />
-
-              {/* Faint static bottom scrim preserving title contrast at all times */}
-              <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
-
-              {/* Reactive glowing bottom gradient — activates when mouse is detected */}
-              <div
-                aria-hidden="true"
-                data-testid="spot-reactive-bottom-gradient"
-                className={`spot-bottom-reactive-scrim absolute inset-x-0 bottom-0 pointer-events-none select-none transition-all duration-700 ease-out ${
-                  isMouseActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
-                }`}
-              >
-                {/* Deep dark gradient rising from bottom */}
-                <div className="absolute inset-x-0 bottom-0 h-72 sm:h-80 lg:h-96 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none" />
-                {/* Luminous emerald/gold glowing aura */}
-                <div className="spot-bottom-glow-container absolute inset-x-0 bottom-0 h-56 sm:h-64 lg:h-80 pointer-events-none overflow-hidden">
-                  <div className="spot-bottom-glow-aura w-full h-full pointer-events-none" />
-                </div>
-                {/* Radiant bottom horizon beam */}
-                <div className="spot-bottom-edge-beam absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-[#FFB703]/80 via-emerald-400/60 to-transparent pointer-events-none blur-[0.5px]" />
-              </div>
 
               {/* Subtle join: appears with the story surface and blends the photo into the canvas */}
               <div className="cinematic-join-fade absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[var(--color-bg-canvas)] pointer-events-none" />

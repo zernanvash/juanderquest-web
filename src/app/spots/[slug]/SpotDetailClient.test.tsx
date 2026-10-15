@@ -143,39 +143,11 @@ describe('SpotDetailClient saved-place action', () => {
     expect(screen.getByRole('button', { name: /close fullscreen view/i })).toBeTruthy();
   });
 
-  it('makes the bottom gradient reactive to mouse detection and pointer movement', async () => {
+  it('does not render bottom gradient scrims over the scenic photo stage', async () => {
     render(<SpotDetailClient slug="spot-1" />);
 
-    const stage = await screen.findByRole('region', { name: /cinematic showcase for test beach/i });
-    const reactiveGradient = screen.getByTestId('spot-reactive-bottom-gradient');
-
-    // Initially hidden
-    expect(reactiveGradient.className).toContain('opacity-0');
-    expect(reactiveGradient.className).toContain('translate-y-3');
-
-    // Mouse enters stage
-    act(() => {
-      fireEvent.pointerEnter(stage, { pointerType: 'mouse' });
-    });
-    expect(reactiveGradient.className).toContain('opacity-100');
-    expect(reactiveGradient.className).toContain('translate-y-0');
-
-    // Mouse moves across stage
-    act(() => {
-      fireEvent.pointerMove(stage, {
-        pointerType: 'mouse',
-        clientX: 200,
-        clientY: 300,
-      });
-    });
-    expect(reactiveGradient.className).toContain('opacity-100');
-
-    // Mouse leaves stage
-    act(() => {
-      fireEvent.pointerLeave(stage);
-    });
-    expect(reactiveGradient.className).toContain('opacity-0');
-    expect(reactiveGradient.className).toContain('translate-y-3');
+    await screen.findByRole('region', { name: /cinematic showcase for test beach/i });
+    expect(screen.queryByTestId('spot-reactive-bottom-gradient')).toBeNull();
   });
 });
 
