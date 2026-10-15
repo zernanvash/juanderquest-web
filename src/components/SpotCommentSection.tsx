@@ -316,17 +316,17 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
   return (
     <div className="space-y-4">
       {/* Header with Comment Counter */}
-      <div className="flex items-center justify-between pb-1 border-b border-white/15">
+      <div className="flex items-center justify-between pb-1 border-b border-[#E8E5DE]">
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-emerald-300" />
-          <h3 className="text-xs font-black uppercase tracking-wider text-white">
+          <MessageSquare className="w-4 h-4 text-[#2D6A4F]" />
+          <h3 className="text-xs font-black uppercase tracking-wider text-[#582F0E]">
             Comments &amp; Travel Chat
           </h3>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 text-[10px] font-black">
+          <span className="px-2 py-0.5 rounded-full bg-[#E2F0E8] text-[#2D6A4F] text-[10px] font-black">
             {comments.length}
           </span>
         </div>
-        <span className="text-[10px] text-white/60">Public discussion</span>
+        <span className="text-[10px] text-[#837560]">Public discussion</span>
       </div>
 
       {/* Modern Comment Composer */}
@@ -567,19 +567,19 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
       {/* Comments List */}
       {loading ? (
         <div className="py-6 text-center space-y-2">
-          <Loader2 className="w-5 h-5 text-emerald-300 animate-spin mx-auto" />
-          <p className="text-xs text-white/60">Loading comments...</p>
+          <Loader2 className="w-5 h-5 text-[#2D6A4F] animate-spin mx-auto" />
+          <p className="text-xs text-[#837560]">Loading comments...</p>
         </div>
       ) : comments.length === 0 ? (
-        <div className="p-6 text-center rounded-2xl bg-white/8 border border-white/15 space-y-1">
-          <MessageSquare className="w-7 h-7 text-white/30 mx-auto" />
-          <p className="text-xs font-bold text-white">No comments yet</p>
-          <p className="text-[11px] text-white/60">
+        <div className="p-6 text-center rounded-2xl bg-white border border-[#E3DFD5] space-y-1">
+          <MessageSquare className="w-7 h-7 text-[#E3DFD5] mx-auto" />
+          <p className="text-xs font-bold text-[#582F0E]">No comments yet</p>
+          <p className="text-[11px] text-[#837560]">
             Be the first to share tips, recommend a spot, or attach a photo!
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-white/10 border-t border-white/10 pt-1">
+        <div className="divide-y divide-[#EFECE6] border-t border-[#EFECE6] pt-1">
           {comments.map((comment) => {
             const isLiked = user?.id ? comment.helpful_user_ids.includes(user.id) : false;
             const initials = comment.author_name
@@ -607,7 +607,7 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="truncate text-xs font-bold text-white">
+                        <span className="truncate text-xs font-bold text-[#2C221E]">
                           {comment.author_name}
                         </span>
                         <UserBadgesRow
@@ -625,13 +625,13 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
                     </div>
                   </div>
 
-                  <span className="text-[10px] text-white/55 font-mono shrink-0">
+                  <span className="text-[10px] text-[#837560] font-mono shrink-0">
                     {formatTimeAgo(comment.created_at)}
                   </span>
                 </div>
 
                 {/* Comment Text Content */}
-                <p className="text-xs text-white/85 leading-relaxed pl-9 whitespace-pre-wrap">
+                <p className="text-xs text-[#3D332A] leading-relaxed pl-9 whitespace-pre-wrap">
                   {comment.content}
                 </p>
 
@@ -654,7 +654,7 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
                   <div className="pl-9">
                     <div 
                       onClick={() => setZoomedImage(comment.image_url || null)}
-                      className="relative inline-block rounded-xl overflow-hidden border border-white/15 shadow-xs cursor-pointer group max-w-sm"
+                      className="relative inline-block rounded-xl overflow-hidden border border-[#E3DFD5] shadow-xs cursor-pointer group max-w-sm"
                     >
                       <img
                         src={comment.image_url}
@@ -669,15 +669,15 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
 
                 {/* Comment Footer: Like Action */}
                 <div className="flex items-center justify-between pt-1 pl-9">
-                  <span className="text-[10px] text-white/45">Pangasinan Community</span>
+                  <span className="text-[10px] text-stone-400">Pangasinan Community</span>
 
                   <button
                     type="button"
                     onClick={() => handleToggleLike(comment.id)}
                     className={`btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
                       isLiked
-                        ? 'bg-rose-500/15 text-rose-300 border border-rose-400/40'
-                        : 'text-white/65 hover:text-white hover:bg-white/10'
+                        ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                        : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
                     }`}
                   >
                     <PixelHeart isLiked={isLiked} size="xs" />

@@ -580,7 +580,6 @@ export interface UserNametagProps {
   badgeSize?: 'xs' | 'sm' | 'md';
   enablePreviewModal?: boolean;
   className?: string;
-  nameClassName?: string;
 }
 
 export const UserNametag: React.FC<UserNametagProps> = ({
@@ -594,7 +593,6 @@ export const UserNametag: React.FC<UserNametagProps> = ({
   badgeSize,
   enablePreviewModal = true,
   className = '',
-  nameClassName = '',
 }) => {
   const [activeBadges, setActiveBadges] = useState<UserBadge[]>(() => {
     if (customBadges && customBadges.length > 0) return customBadges;
@@ -623,7 +621,7 @@ export const UserNametag: React.FC<UserNametagProps> = ({
   return (
     <div className={`inline-flex items-center flex-wrap gap-1.5 leading-tight ${className}`}>
       <span
-        className={`font-black truncate ${nameClassName || 'text-[var(--color-brand-brown)]'} ${
+        className={`font-black text-[var(--color-brand-brown)] truncate ${
           size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base sm:text-lg' : 'text-sm'
         }`}
       >

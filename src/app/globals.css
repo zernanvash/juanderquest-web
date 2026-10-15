@@ -192,28 +192,6 @@ h1, h2, h3, h4, h5, h6 {
   animation: spot-photo-reveal 480ms ease-out both;
 }
 
-/* Contrast guarantee is the deep fill itself; backdrop blur is a bounded
-   progressive enhancement. Safe fallback fill works with images disabled. */
-.photo-panel {
-  background-color: rgba(10, 20, 30, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 14px 40px rgba(4, 10, 16, 0.45);
-}
-
-.photo-panel-solid {
-  background-color: rgba(10, 20, 30, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 14px 40px rgba(4, 10, 16, 0.45);
-}
-
-@supports ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
-  .photo-panel {
-    background-color: rgba(10, 20, 30, 0.74);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hero-cue-icon,
   .spot-photo-reveal {

@@ -324,8 +324,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   image.style.visibility = 'hidden';
                 }}
               />
-              <div className="absolute inset-0 bg-[#0A141E]/35" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#0A141E]/55 via-transparent to-[#0A141E]/70" />
             </div>
           </div>
 
@@ -386,23 +384,17 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               </button>
             </div>
 
-            {/* Directional pine/charcoal scrim protecting the compact title block */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0A141E]/90 via-[#0A141E]/45 to-transparent pointer-events-none"
-            />
-
-            {/* Compact protected hero block: title, truthful locality, teaser, high-value actions */}
+            {/* Compact hero block: title, truthful locality, teaser, high-value actions */}
             <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 pb-24 lg:pb-20 space-y-3">
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 {spot.name}
               </h1>
-              <p className="text-sm sm:text-base text-white/95 flex items-center gap-1.5 font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+              <p className="text-sm sm:text-base text-white flex items-center gap-1.5 font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                 <MapPin className="w-4 h-4 text-[#FFB703]" />
                 <span>{spot.municipality}</span>
               </p>
               {spot.description && (
-                <p className="max-w-2xl text-xs sm:text-sm text-white/80 line-clamp-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+                <p className="max-w-2xl text-xs sm:text-sm text-white font-medium line-clamp-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                   {spot.description}
                 </p>
               )}
@@ -420,7 +412,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 <Link
                   href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                  className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/25 backdrop-blur-md text-xs sm:text-sm font-bold transition cursor-pointer min-h-[44px]"
+                  className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-black/55 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md text-xs sm:text-sm font-bold transition cursor-pointer min-h-[44px]"
                 >
                   <MapPin className="w-4 h-4 text-[#FFB703]" />
                   <span>View on Map</span>
@@ -439,12 +431,12 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             </button>
           </section>
 
-          {/* 2. STORY INTRO — dark translucent panel scrolling over the photo */}
+          {/* 2. STORY INTRO — white panel scrolling over the photo */}
           <div
             id="spot-info"
             className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 scroll-mt-16 lg:scroll-mt-4"
           >
-            <header className="photo-panel rounded-3xl p-5 sm:p-7 space-y-5 text-white">
+            <header className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
                     {/* Status & category chips */}
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#D8F3DC] text-[#2D6A4F] text-xs font-black uppercase tracking-wider">
@@ -495,8 +487,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                     />
 
                     {/* Truthful place context and real attribution */}
-                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-white/75">
-                      <span className="flex items-center gap-1 font-semibold text-emerald-300">
+                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#837560]">
+                      <span className="flex items-center gap-1 font-semibold text-[#2D6A4F]">
                         <MapPin className="w-4 h-4" />
                         <span>{spot.address || spot.municipality}</span>
                       </span>
@@ -517,14 +509,13 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                             displayName={spot.sourceName}
                             badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
                             size="sm"
-                            nameClassName="text-white"
                           />
                         </span>
                       )}
                     </div>
 
                     {/* Practical actions */}
-                    <div className="pt-4 border-t border-white/15 flex flex-wrap items-center gap-2.5">
+                    <div className="pt-4 border-t border-[#E8E5DE]/40 flex flex-wrap items-center gap-2.5">
                       {spot.questId && (
                         <Link
                           href={appRoutes.quest(spot.questId)}
@@ -537,19 +528,19 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                       <Link
                         href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/25 text-xs font-bold transition cursor-pointer min-h-[44px]"
+                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] border border-[#E3DFD5] text-xs font-bold transition cursor-pointer min-h-[44px]"
                       >
-                        <MapPin className="w-4 h-4 text-[#FFB703]" />
+                        <MapPin className="w-4 h-4 text-[#2D6A4F]" />
                         <span>View on Map</span>
                       </Link>
 
                       <button
                         type="button"
                         onClick={handleShare}
-                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/25 text-white text-xs font-bold transition cursor-pointer min-h-[44px]"
+                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] text-[#582F0E] text-xs font-bold transition cursor-pointer min-h-[44px]"
                         aria-label="Share Destination"
                       >
-                        {shareCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
+                        {shareCopied ? <Check className="w-4 h-4 text-[#2D6A4F]" /> : <Share2 className="w-4 h-4" />}
                         <span>{shareCopied ? 'Link copied' : 'Share'}</span>
                       </button>
 
@@ -558,8 +549,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         onClick={handleToggleLike}
                         className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
                           isLiked
-                            ? 'bg-rose-50 border-rose-300 shadow-2xs'
-                            : 'bg-white/85 border-white/40 hover:border-rose-300'
+                            ? 'bg-rose-50 border-rose-200 shadow-2xs'
+                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-rose-300'
                         }`}
                         aria-label={isLiked ? 'Liked destination' : 'Like destination'}
                         aria-pressed={isLiked}
@@ -573,14 +564,14 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         onClick={handleToggleSave}
                         className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
                           isSaved
-                            ? 'bg-amber-50 border-amber-300 shadow-2xs'
-                            : 'bg-white/85 border-white/40 hover:border-amber-300'
+                            ? 'bg-amber-100 border-amber-300 shadow-2xs'
+                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-amber-300'
                         }`}
                         aria-label={isSaved ? 'Saved' : 'Save'}
                         aria-pressed={isSaved}
                         title={isSaved ? 'Saved' : 'Save'}
                       >
-                        <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-stone-500'}`} />
+                        <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
                       </button>
                     </div>
                   </header>
@@ -595,26 +586,26 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 {/* About Narrative */}
                 <section
                   id="spot-about"
-                  className="photo-panel p-6 sm:p-8 rounded-2xl sm:rounded-3xl space-y-4 text-white scroll-mt-16 lg:scroll-mt-8"
+                  className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
                 >
-                  <h2 className="text-xl sm:text-2xl font-black text-white">
+                  <h2 className="text-xl sm:text-2xl font-black text-[#582F0E]">
                     About {spot.name}
                   </h2>
-                  <p className="text-sm text-white/85 leading-relaxed whitespace-pre-line">
+                  <p className="text-sm text-[#514532] leading-relaxed whitespace-pre-line">
                     {spot.description}
                   </p>
 
                   {/* Amenities & Highlights */}
                   {spot.amenities && spot.amenities.length > 0 && (
-                    <div className="pt-4 border-t border-white/15 space-y-3">
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                    <div className="pt-4 border-t border-[#E8E5DE] space-y-3">
+                      <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">
                         Amenities &amp; Features
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {spot.amenities.map((amenity, idx) => (
                           <span
                             key={idx}
-                            className="px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-semibold text-white/90 capitalize"
+                            className="px-3 py-1.5 rounded-full bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-semibold text-[#582F0E] capitalize"
                           >
                             {amenity.replace('_', ' ')}
                           </span>
@@ -625,7 +616,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 </section>
 
                 {/* Community Traveler Notes & Tips Forum */}
-                <section className="photo-panel-solid rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+                <section className="bg-white rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs p-4 sm:p-6">
                   <SpotCommentSection spotId={spot.id} spotName={spot.name} />
                 </section>
               </div>
@@ -668,20 +659,20 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 {/* Active Quest on this Destination */}
                 {spot.questId && (
-                  <div className="photo-panel p-6 rounded-2xl sm:rounded-3xl space-y-3.5 text-white">
-                    <div className="flex items-center justify-between pb-2 border-b border-white/15">
+                  <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-amber-200/90 shadow-xs space-y-3.5">
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-100">
                       <div className="flex items-center gap-2">
                         <Award className="w-4 h-4 text-[#FFB703]" />
-                        <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                        <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
                           Active Eco-Quest
                         </h3>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
                         Earn Tokens
                       </span>
                     </div>
 
-                    <p className="text-xs text-white/80 leading-relaxed">
+                    <p className="text-xs text-[#514532] leading-relaxed">
                       This destination has an active Eco-Quest checkpoint. Travelers can verify their physical visit on-site to earn $mJDQ tokens and Explorer XP.
                     </p>
 
@@ -696,35 +687,35 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 )}
 
                 {/* Venue Summary Facts */}
-                <div className="photo-panel p-6 rounded-2xl sm:rounded-3xl space-y-4 text-white">
-                  <h3 className="text-xs font-black text-white uppercase tracking-wider pb-2 border-b border-white/15">
+                <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4">
+                  <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider pb-2 border-b border-[#E8E5DE]">
                     Venue Details
                   </h3>
 
                   <div className="space-y-3.5 text-xs sm:text-sm">
                     <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-emerald-300 shrink-0 mt-0.5" />
+                      <MapPin className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-white">{spot.municipality}</p>
-                        <p className="text-xs text-white/70">{spot.address || spot.municipality || 'Location not recorded'}</p>
+                        <p className="font-bold text-[#582F0E]">{spot.municipality}</p>
+                        <p className="text-xs text-[#837560]">{spot.address || spot.municipality || 'Location not recorded'}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-3">
-                      <Clock className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+                      <Clock className="w-4 h-4 text-[#7D5800] shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-white">Operating Hours</p>
-                        <p className="text-xs text-white/70">
+                        <p className="font-bold text-[#582F0E]">Operating Hours</p>
+                        <p className="text-xs text-[#837560]">
                           {spot.hours?.daily || (spot.trustLevel === 'open_data' ? 'Hours not confirmed' : 'Open to visitors daily')}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-3">
-                      <ShieldCheck className="w-4 h-4 text-sky-300 shrink-0 mt-0.5" />
+                      <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-white">Verification</p>
-                        <p className="text-xs text-white/70">
+                        <p className="font-bold text-[#582F0E]">Verification</p>
+                        <p className="text-xs text-[#837560]">
                           {spot.trustLevel === 'lgu_verified'
                             ? 'LGU Verified Landmark'
                             : spot.trustLevel === 'open_data'
@@ -734,12 +725,12 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-white/15 space-y-2.5">
+                    <div className="pt-3 border-t border-[#E8E5DE] space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-white">Location Map</span>
+                        <span className="font-bold text-[#582F0E]">Location Map</span>
                         <Link
                           href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                          className="text-emerald-300 hover:underline font-bold text-xs flex items-center gap-1"
+                          className="text-[#2D6A4F] hover:underline font-bold text-xs flex items-center gap-1"
                         >
                           <span>Full Map</span>
                           <ExternalLink className="w-3 h-3" />
@@ -761,9 +752,9 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 {/* Smart Diversion: Quieter Alternatives */}
                 {alternatives.length > 0 && (
-                  <div className="photo-panel p-6 rounded-2xl sm:rounded-3xl space-y-4 text-white">
-                    <div className="flex items-center justify-between pb-2 border-b border-white/15">
-                      <h3 className="text-xs font-black text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-emerald-200/90 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-emerald-100">
+                      <h3 className="text-xs font-black text-[#2D6A4F] uppercase tracking-wider flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
                         <span>Nearby Alternatives</span>
                       </h3>
@@ -774,7 +765,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         <Link
                           key={alt.id}
                           href={appRoutes.spot(alt.id)}
-                          className="flex gap-3 p-3 rounded-xl bg-white/8 border border-white/12 hover:border-emerald-300/60 hover:bg-white/12 transition group"
+                          className="flex gap-3 p-3 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
                         >
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
                             <DestinationMedia
@@ -786,11 +777,11 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                             />
                           </div>
                           <div className="min-w-0 flex-1 space-y-0.5">
-                            <h4 className="text-xs font-bold text-white group-hover:text-emerald-200 transition truncate">
+                            <h4 className="text-xs font-bold text-[#582F0E] group-hover:text-[#2D6A4F] transition truncate">
                               {alt.name}
                             </h4>
-                            <p className="text-[11px] text-amber-200/90">{alt.municipality}</p>
-                            <p className="text-[10px] text-white/60 line-clamp-1">{alt.description}</p>
+                            <p className="text-[11px] text-[#7D5800]">{alt.municipality}</p>
+                            <p className="text-[10px] text-[#837560] line-clamp-1">{alt.description}</p>
                           </div>
                         </Link>
                       ))}
@@ -800,8 +791,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               </div>
             </div>
           </div>
-          {/* Intentional end-of-story fade into the app footer — no abrupt slab */}
-          <div aria-hidden="true" className="h-24 sm:h-28 bg-gradient-to-b from-transparent to-[var(--color-bg-canvas)]" />
           </div>
           {/* Author Quest Creation In-Page Modal */}
           {isQuestModalOpen && (
