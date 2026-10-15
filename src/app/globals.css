@@ -200,11 +200,6 @@ h1, h2, h3, h4, h5, h6 {
     animation-timeline: scroll(root);
     animation-range: 0px 90px;
   }
-  .cinematic-join-fade {
-    animation: cinematic-join-in linear both;
-    animation-timeline: scroll(root);
-    animation-range: 0px 200px;
-  }
   @keyframes cinematic-settle {
     from { transform: scale(1.08); }
     to { transform: scale(1); }
@@ -213,17 +208,12 @@ h1, h2, h3, h4, h5, h6 {
     from { opacity: 0.9; }
     to { opacity: 0; pointer-events: none; }
   }
-  @keyframes cinematic-join-in {
-    from { opacity: 0; }
-    to { opacity: 0.55; }
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hero-cue-icon,
   .cinematic-backdrop,
   .cinematic-cue,
-  .cinematic-join-fade,
   .cinematic-parallax {
     animation: none !important;
     transition: none !important;

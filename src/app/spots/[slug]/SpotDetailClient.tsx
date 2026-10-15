@@ -381,12 +381,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   }
                 }}
               />
-
-              {/* Light lateral scrim keeps the title legible without hiding the photo */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent pointer-events-none" />
-
-              {/* Subtle join: appears with the story surface and blends the photo into the canvas */}
-              <div className="cinematic-join-fade absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[var(--color-bg-canvas)] pointer-events-none" />
             </div>
 
             {/* Video lead: explicit play affordance instead of a silent frame behind text */}
@@ -484,10 +478,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
             {/* Minimal reading block — the photo is the hero */}
             <div className="absolute left-4 sm:left-8 lg:left-10 right-4 sm:right-10 bottom-32 lg:bottom-24 z-30 max-w-xl text-white pointer-events-none">
-              <h1 className="text-2xl sm:text-3xl lg:text-5xl font-black leading-[1.05] tracking-tight drop-shadow-md">
+              <h1 className="text-2xl sm:text-3xl lg:text-5xl font-black leading-[1.05] tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
                 {spot.name}
               </h1>
-              <p className="mt-1.5 text-xs sm:text-sm text-white/85 flex items-center gap-1.5 font-medium drop-shadow-sm">
+              <p className="mt-1.5 text-xs sm:text-sm text-white/95 flex items-center gap-1.5 font-medium drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
                 <MapPin className="w-3.5 h-3.5 text-[#FFB703]" />
                 <span>{spot.municipality}</span>
               </p>
