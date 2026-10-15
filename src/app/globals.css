@@ -192,6 +192,92 @@ h1, h2, h3, h4, h5, h6 {
   animation: spot-photo-reveal 480ms ease-out both;
 }
 
+/* Stage Presence System (YouTube-Fullscreen-Inspired) */
+[data-spot-presence="hidden"] [data-spot-chrome] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+[data-spot-presence="fading"] [data-spot-chrome] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+[data-spot-presence="visible"] [data-spot-chrome] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition: opacity 100ms ease, transform 100ms ease;
+}
+
+/* Fine pointer idle cursor hiding over the hero stage */
+@media (pointer: fine) {
+  [data-spot-presence="hidden"].spot-stage-cursor-hide {
+    cursor: none;
+  }
+}
+
+/* Reduced motion disables auto-hide transitions and preserves permanent visibility */
+@media (prefers-reduced-motion: reduce) {
+  [data-spot-presence] [data-spot-chrome] {
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    transition: none !important;
+  }
+  .spot-stage-cursor-hide {
+    cursor: default !important;
+  }
+}
+
+/* Micro-interaction Tokens */
+.chip-live {
+  transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), border-color 160ms ease, background-color 160ms ease;
+}
+.chip-live:hover {
+  transform: translateY(-1px);
+}
+.chip-live:active {
+  transform: scale(0.97);
+}
+
+@keyframes panel-enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel-enter {
+  animation: panel-enter-rise 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip-live,
+  .chip-live:hover,
+  .chip-live:active {
+    transform: none !important;
+  }
+  .panel-enter {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Reading Progress Scrubber Line */
+.spot-reading-progress {
+  width: var(--reading-progress, 0%);
+  transition: width 80ms linear;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-cue-icon,
   .spot-photo-reveal {

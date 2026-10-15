@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -40,6 +40,10 @@ import { SpotCommentSection } from '@/components/SpotCommentSection';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { DestinationBadgeList, UserNametag } from '@/components/Badges';
 import { getSampleDestinationBadges, SAMPLE_USER_BADGES, getActiveNametagBadges } from '@/lib/badges';
+import { SpotPresenceController, SpotPresenceState, SPOT_CHROME_IDLE_MS } from '@/lib/spot-ui-presence';
+import { SpotGestureHandler } from '@/lib/spot-ui-gestures';
+import { getAvailableChapters, scrollToChapter } from '@/lib/spot-ui-chapters';
+
 
 function getAuthorBadges(spotId: string, authorName: string, currentUser?: { displayName?: string }) {
   if (currentUser?.displayName && authorName.toLowerCase() === currentUser.displayName.toLowerCase()) {
@@ -69,6 +73,26 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  // Stage presence systems (YouTube-Fullscreen-inspired)
+  const [heroPresence, setHeroPresence] = useState<SpotPresenceState>('visible');
+  const [lightboxPresence, setLightboxPresence] = useState<SpotPresenceState>('visible');
+  const heroPresenceRef = useRef<SpotPresenceController | null>(null);
+  const lightboxPresenceRef = useRef<SpotPresenceController | null>(null);
+
+  // Gesture handler for hero stage (tap to toggle, double tap for gallery)
+  const gestureHandlerRef = useRef<SpotGestureHandler | null>(null);
+
+  // Scroll cue retirement
+  const [cueRetired, setCueRetired] = useState(false);
+
+  // Reading progress scrubber
+  const scrubberRef = useRef<HTMLDivElement | null>(null);
+  const [readingProgress, setReadingProgress] = useState(0);
+
+  // Chapters & Scroll-spy
+  const chapters = useMemo(() => getAvailableChapters(alternatives.length > 0), [alternatives.length]);
+  const [activeChapter, setActiveChapter] = useState('spot-info');
 
   const { user } = useAuth();
   const isAuthor = Boolean(user?.id && spot?.createdBy && user.id === spot.createdBy);
@@ -271,6 +295,112 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   }, []);
 
+  // Initialize Stage Presence and Gestures
+  useEffect(() => {
+    const heroController = new SpotPresenceController({
+      idleMs: SPOT_CHROME_IDLE_MS,
+      onStateChange: setHeroPresence,
+    });
+    heroPresenceRef.current = heroController;
+    heroController.wake();
+
+    gestureHandlerRef.current = new SpotGestureHandler({
+      onSingleTap: () => heroPresenceRef.current?.toggle(),
+      onDoubleTap: () => setIsLightboxOpen(true),
+    });
+
+    return () => {
+      heroController.destroy();
+      gestureHandlerRef.current?.cancel();
+    };
+  }, []);
+
+  // Lightbox Presence Lifecycle
+  useEffect(() => {
+    if (isLightboxOpen) {
+      const lbController = new SpotPresenceController({
+        idleMs: SPOT_CHROME_IDLE_MS,
+        onStateChange: setLightboxPresence,
+      });
+      lightboxPresenceRef.current = lbController;
+      lbController.wake();
+    } else {
+      lightboxPresenceRef.current?.destroy();
+      lightboxPresenceRef.current = null;
+      setLightboxPresence('visible');
+    }
+    return () => {
+      lightboxPresenceRef.current?.destroy();
+    };
+  }, [isLightboxOpen]);
+
+  // Reading Progress Scrubber & Cue Retirement via rAF-throttled scroll listener
+  useEffect(() => {
+    let rAFId: number | null = null;
+    const handleScroll = () => {
+      if (rAFId !== null) return;
+      rAFId = requestAnimationFrame(() => {
+        rAFId = null;
+        const scrollY = window.scrollY;
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const progress = Math.min(100, Math.max(0, (scrollY / maxScroll) * 100));
+        setReadingProgress(progress);
+        if (scrubberRef.current) {
+          scrubberRef.current.style.setProperty('--reading-progress', `${progress}%`);
+        }
+        if (scrollY > 120 && !cueRetired) {
+          setCueRetired(true);
+        }
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rAFId !== null) cancelAnimationFrame(rAFId);
+    };
+  }, [cueRetired]);
+
+  // Scroll-spy with IntersectionObserver for chapters
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+    const chapterIds = chapters.map((c) => c.id);
+    const elements = chapterIds.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntries = entries.filter((e) => e.isIntersecting);
+        if (visibleEntries.length > 0) {
+          const topEntry = visibleEntries.reduce((prev, curr) =>
+            Math.abs(curr.boundingClientRect.top) < Math.abs(prev.boundingClientRect.top) ? curr : prev
+          );
+          if (topEntry.target.id) {
+            setActiveChapter(topEntry.target.id);
+          }
+        }
+      },
+      { rootMargin: '-10% 0px -60% 0px', threshold: [0, 0.25, 0.5] }
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [chapters]);
+
+  const handleSeekProgress = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const targetY = ratio * maxScroll;
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: targetY, behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
+
   if (error) {
     return (
       <Navigation>
@@ -328,14 +458,23 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
           </div>
 
           <div className="relative z-10 flex flex-col w-full">
-          {/* 1. HERO — photo-led first viewport with a compact protected title block */}
+          {/* 1. HERO — photo-led first viewport with presence system */}
           <section
             aria-label={`Destination showcase for ${spot.name}`}
-            className="relative w-full min-h-[calc(100dvh-3.5rem)] lg:min-h-dvh flex flex-col justify-end select-none"
+            data-spot-presence={heroPresence}
+            className="relative w-full min-h-[calc(100dvh-3.5rem)] lg:min-h-dvh flex flex-col justify-end select-none spot-stage-cursor-hide"
+            onPointerMove={() => heroPresenceRef.current?.wake()}
+            onPointerDown={() => heroPresenceRef.current?.wake()}
+            onTouchStart={() => heroPresenceRef.current?.wake()}
+            onFocus={() => heroPresenceRef.current?.wake()}
+            onClick={(e) => {
+              gestureHandlerRef.current?.handleTap(e.target);
+            }}
           >
             {/* Video lead: explicit play affordance instead of a silent frame behind text */}
             {leadIsVideo && (
               <button
+                data-spot-chrome
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -350,11 +489,16 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             )}
 
             {/* Top Floating Control Bar */}
-            <div className="absolute top-4 sm:top-6 left-4 sm:left-8 right-4 sm:right-8 z-20 flex items-center justify-between pointer-events-none">
+            <div
+              data-spot-chrome
+              className="absolute top-4 sm:top-6 left-4 sm:left-8 right-4 sm:right-8 z-20 flex items-center justify-between pointer-events-none"
+              onMouseEnter={() => heroPresenceRef.current?.suspend()}
+              onMouseLeave={() => heroPresenceRef.current?.resume()}
+            >
               {/* Back Button */}
               <Link
                 href="/explore"
-                className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white font-bold text-xs transition shadow-lg pointer-events-auto cursor-pointer active:scale-95"
+                className="chip-live inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white font-bold text-xs transition shadow-lg pointer-events-auto cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4 text-[#FFB703]" />
                 <span className="hidden sm:inline">Back to Explore</span>
@@ -373,7 +517,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
               <button
                 type="button"
                 onClick={() => setIsLightboxOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition shadow-lg pointer-events-auto cursor-pointer active:scale-95 min-h-[44px]"
+                className="chip-live inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition shadow-lg pointer-events-auto cursor-pointer min-h-[44px]"
                 aria-label="Open fullscreen photo gallery"
               >
                 <Camera className="w-4 h-4 text-[#FFB703]" />
@@ -385,7 +529,12 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             </div>
 
             {/* Compact hero block: title, truthful locality, teaser, high-value actions */}
-            <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 pb-24 lg:pb-20 space-y-3">
+            <div
+              data-spot-chrome
+              className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 pb-24 lg:pb-20 space-y-3 pointer-events-auto"
+              onMouseEnter={() => heroPresenceRef.current?.suspend()}
+              onMouseLeave={() => heroPresenceRef.current?.resume()}
+            >
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 {spot.name}
               </h1>
@@ -403,7 +552,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 {spot.questId && (
                   <Link
                     href={appRoutes.quest(spot.questId)}
-                    className="btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
+                    className="chip-live btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
                   >
                     <Trophy className="w-4 h-4 text-[#582F0E]" />
                     <span>Play Eco-Quest</span>
@@ -412,7 +561,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 <Link
                   href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                  className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-black/55 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md text-xs sm:text-sm font-bold transition cursor-pointer min-h-[44px]"
+                  className="chip-live btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-black/55 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md text-xs sm:text-sm font-bold transition cursor-pointer min-h-[44px]"
                 >
                   <MapPin className="w-4 h-4 text-[#FFB703]" />
                   <span>View on Map</span>
@@ -421,14 +570,34 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             </div>
 
             {/* Subtle floating scroll caret */}
-            <button
-              type="button"
-              onClick={scrollToSpotInfo}
-              className="absolute bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer group"
-              aria-label="Scroll to explore the destination story"
+            {!cueRetired && (
+              <button
+                data-spot-chrome
+                type="button"
+                onClick={scrollToSpotInfo}
+                className="absolute bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer group active:scale-90"
+                aria-label="Scroll to explore the destination story"
+              >
+                <ChevronDown className="hero-cue-icon w-5 h-5 text-white/70 group-hover:text-white transition-colors drop-shadow-md" aria-hidden="true" />
+              </button>
+            )}
+
+            {/* Story-progress line (scrubber analog) */}
+            <div
+              data-spot-chrome
+              ref={scrubberRef}
+              onClick={handleSeekProgress}
+              className="absolute bottom-0 left-0 right-0 z-30 h-3 flex items-end cursor-pointer group pointer-events-auto"
+              aria-label="Story reading progress scrubber, click to seek"
+              role="progressbar"
+              aria-valuenow={Math.round(readingProgress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
             >
-              <ChevronDown className="hero-cue-icon w-5 h-5 text-white/70 group-hover:text-white transition-colors drop-shadow-md" aria-hidden="true" />
-            </button>
+              <div className="w-full h-[3px] bg-white/20 group-hover:h-[5px] transition-all">
+                <div className="spot-reading-progress h-full bg-[#FFB703]" />
+              </div>
+            </div>
           </section>
 
           {/* 2. STORY INTRO — white panel scrolling over the photo */}
@@ -436,7 +605,32 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             id="spot-info"
             className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 scroll-mt-16 lg:scroll-mt-4"
           >
-            <header className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
+            <header className="panel-enter bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
+                    {/* Chapter Navigation Bar (YouTube chapters analog) */}
+                    <nav aria-label="Story chapters" className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 border-b border-[#E8E5DE]/50">
+                      <span className="text-[11px] font-bold text-[#837560] uppercase tracking-wider mr-1 hidden sm:inline">
+                        Chapters:
+                      </span>
+                      {chapters.map((chapter) => {
+                        const isActive = activeChapter === chapter.id;
+                        return (
+                          <button
+                            key={chapter.id}
+                            type="button"
+                            onClick={() => scrollToChapter(chapter.id)}
+                            aria-current={isActive ? 'true' : undefined}
+                            className={`chip-live px-3.5 py-1.5 rounded-full text-xs font-bold transition min-h-[44px] inline-flex items-center cursor-pointer shrink-0 ${
+                              isActive
+                                ? 'bg-[#2D6A4F] text-white shadow-xs'
+                                : 'bg-[#FAF9F5] hover:bg-white text-[#582F0E] border border-[#E3DFD5]'
+                            }`}
+                          >
+                            {chapter.label}
+                          </button>
+                        );
+                      })}
+                    </nav>
+
                     {/* Status & category chips */}
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#D8F3DC] text-[#2D6A4F] text-xs font-black uppercase tracking-wider">
@@ -586,7 +780,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 {/* About Narrative */}
                 <section
                   id="spot-about"
-                  className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
+                  className="panel-enter bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
                 >
                   <h2 className="text-xl sm:text-2xl font-black text-[#582F0E]">
                     About {spot.name}
@@ -616,7 +810,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 </section>
 
                 {/* Community Traveler Notes & Tips Forum */}
-                <section className="bg-white rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs p-4 sm:p-6">
+                <section
+                  id="spot-comments"
+                  className="panel-enter bg-white rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs p-4 sm:p-6 scroll-mt-16 lg:scroll-mt-8"
+                >
                   <SpotCommentSection spotId={spot.id} spotName={spot.name} />
                 </section>
               </div>
@@ -687,7 +884,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 )}
 
                 {/* Venue Summary Facts */}
-                <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4">
+                <div
+                  id="spot-venue"
+                  className="panel-enter bg-white p-6 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
+                >
                   <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider pb-2 border-b border-[#E8E5DE]">
                     Venue Details
                   </h3>
@@ -752,7 +952,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 {/* Smart Diversion: Quieter Alternatives */}
                 {alternatives.length > 0 && (
-                  <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-emerald-200/90 shadow-xs space-y-4">
+                  <div
+                    id="spot-alternatives"
+                    className="panel-enter bg-white p-6 rounded-2xl sm:rounded-3xl border border-emerald-200/90 shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
+                  >
                     <div className="flex items-center justify-between pb-2 border-b border-emerald-100">
                       <h3 className="text-xs font-black text-[#2D6A4F] uppercase tracking-wider flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
@@ -950,14 +1153,21 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
             </div>
           )}
 
-          {/* 4. LIGHTBOX MODAL (On Tap Image) */}
+          {/* 4. LIGHTBOX MODAL (On Tap Image with Presence & End Card) */}
           {isLightboxOpen && (
             <div
-              className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-200"
-              onClick={() => setIsLightboxOpen(false)}
+              data-spot-presence={lightboxPresence}
+              className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-200 spot-stage-cursor-hide select-none"
+              onPointerMove={() => lightboxPresenceRef.current?.wake()}
+              onTouchStart={() => lightboxPresenceRef.current?.wake()}
+              onClick={() => lightboxPresenceRef.current?.toggle()}
             >
               {/* Lightbox Header */}
-              <div className="flex items-center justify-between text-white z-10">
+              <div
+                data-spot-chrome
+                className="flex items-center justify-between text-white z-10"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm sm:text-base">{spot.name}</span>
                   {slides.length > 1 && (
@@ -969,7 +1179,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 <button
                   type="button"
                   onClick={() => setIsLightboxOpen(false)}
-                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                  className="chip-live p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
                   aria-label="Close fullscreen view"
                 >
                   <X className="w-5 h-5" />
@@ -1003,34 +1213,112 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 {slides.length > 1 && (
                   <>
                     <button
+                      data-spot-chrome
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length);
                       }}
-                      className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 transition cursor-pointer"
+                      className="chip-live absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 transition cursor-pointer"
                       aria-label="Previous photo"
                     >
                       <ChevronLeft className="w-6 h-6" />
                     </button>
                     <button
+                      data-spot-chrome
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setActiveSlide((prev) => (prev + 1) % slides.length);
                       }}
-                      className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 transition cursor-pointer"
+                      className="chip-live absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 transition cursor-pointer"
                       aria-label="Next photo"
                     >
                       <ChevronRight className="w-6 h-6" />
                     </button>
                   </>
                 )}
+
+                {/* Lightbox End Card (YouTube "end screen" analog) */}
+                {activeSlide === slides.length - 1 && slides.length > 1 && (
+                  <div
+                    data-spot-chrome
+                    className="absolute bottom-6 right-2 sm:right-6 z-30 max-w-xs sm:max-w-sm w-full bg-black/85 backdrop-blur-md rounded-2xl border border-white/20 p-4 sm:p-5 text-white shadow-2xl space-y-3 panel-enter"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#FFB703]">Story Summary</span>
+                        <span className="text-xs text-stone-400">{slides.length}/{slides.length} photos</span>
+                      </div>
+                      <h4 className="text-sm sm:text-base font-extrabold text-white truncate">{spot.name}</h4>
+                      <p className="text-xs text-stone-300 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-[#FFB703]" />
+                        <span>{spot.municipality}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/10">
+                      {spot.questId && (
+                        <Link
+                          href={appRoutes.quest(spot.questId)}
+                          className="chip-live inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFB703] text-[#582F0E] text-xs font-bold"
+                        >
+                          <Trophy className="w-3.5 h-3.5 text-[#582F0E]" />
+                          <span>Play Quest</span>
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleToggleLike}
+                        className={`chip-live p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 ${
+                          isLiked ? 'bg-rose-500/20 border-rose-400 text-rose-300' : 'bg-white/10 border-white/20 text-white'
+                        }`}
+                        aria-label={isLiked ? 'Liked destination' : 'Like destination'}
+                      >
+                        <PixelHeart isLiked={isLiked} size="sm" />
+                        <span>{isLiked ? 'Liked' : 'Like'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleSave}
+                        className={`chip-live p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 ${
+                          isSaved ? 'bg-amber-500/20 border-amber-400 text-amber-300' : 'bg-white/10 border-white/20 text-white'
+                        }`}
+                        aria-label={isSaved ? 'Saved' : 'Save'}
+                      >
+                        <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current text-[#FFB703]' : ''}`} />
+                        <span>{isSaved ? 'Saved' : 'Save'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleShare}
+                        className="chip-live p-1.5 rounded-lg border border-white/20 bg-white/10 text-white text-xs font-bold flex items-center gap-1"
+                        aria-label="Share Destination"
+                      >
+                        {shareCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+                        <span>{shareCopied ? 'Copied' : 'Share'}</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsLightboxOpen(false)}
+                      className="chip-live w-full py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs transition cursor-pointer"
+                    >
+                      Back to Story
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Lightbox Pagination */}
               {slides.length > 1 && (
-                <div className="flex items-center justify-center gap-2 py-2 z-10" onClick={(e) => e.stopPropagation()}>
+                <div
+                  data-spot-chrome
+                  className="flex items-center justify-center gap-2 py-2 z-10"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {slides.map((_, idx) => (
                     <button
                       key={idx}

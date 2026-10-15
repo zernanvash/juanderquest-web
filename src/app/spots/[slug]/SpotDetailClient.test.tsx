@@ -153,5 +153,91 @@ describe('SpotDetailClient saved-place action', () => {
     expect(screen.queryByRole('button', { name: /^next photo$/i })).toBeNull();
     expect(screen.getByRole('button', { name: /open fullscreen photo gallery/i })).toBeTruthy();
   });
+
+  it('renders stage presence, scrubber line, and chapter navigation anchors', async () => {
+    const scrollIntoView = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    render(<SpotDetailClient slug="spot-1" />);
+
+    const hero = await screen.findByRole('region', { name: /destination showcase for test beach/i });
+    expect(hero.getAttribute('data-spot-presence')).toBe('visible');
+
+    // Scrubber line exists
+    const scrubber = screen.getByRole('progressbar', { name: /story reading progress scrubber/i });
+    expect(scrubber).toBeTruthy();
+
+    // Chapter navigation bar exists
+    const chaptersNav = screen.getByRole('navigation', { name: /story chapters/i });
+    expect(chaptersNav).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'About' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Comments' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Venue & Map' })).toBeTruthy();
+
+    // Stable anchor IDs exist
+    expect(document.getElementById('spot-info')).toBeTruthy();
+    expect(document.getElementById('spot-about')).toBeTruthy();
+    expect(document.getElementById('spot-comments')).toBeTruthy();
+    expect(document.getElementById('spot-venue')).toBeTruthy();
+
+    // Clicking chapter scrolls into view
+    fireEvent.click(screen.getByRole('button', { name: 'About' }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  });
+
+  it('renders Nearby chapter when alternatives exist', async () => {
+    apiMock.get.mockImplementation((url: string) => Promise.resolve({
+      data: {
+        data: url.endsWith('/alternatives')
+          ? [{ ...spot, id: 'alt-1', name: 'Nearby Cave' }]
+          : spot,
+      },
+    }));
+
+    render(<SpotDetailClient slug="spot-1" />);
+
+    await screen.findByRole('heading', { level: 1, name: 'Test Beach' });
+    expect(screen.getByRole('button', { name: 'Nearby' })).toBeTruthy();
+    expect(document.getElementById('spot-alternatives')).toBeTruthy();
+  });
+
+  it('renders Lightbox with presence controls and End Card on the last photo', async () => {
+    apiMock.get.mockImplementation((url: string) => Promise.resolve({
+      data: {
+        data: url.endsWith('/alternatives') ? [] : {
+          ...spot,
+          questId: 'quest-123',
+          imageUrl: 'https://cdn.example/photo1.jpg',
+          photos: ['https://cdn.example/photo1.jpg', 'https://cdn.example/photo2.jpg'],
+        },
+      },
+    }));
+
+    render(<SpotDetailClient slug="spot-1" />);
+
+    const openGallery = await screen.findByRole('button', { name: /open fullscreen photo gallery/i });
+    fireEvent.click(openGallery);
+
+    // Lightbox open with presence
+    const closeBtn = screen.getByRole('button', { name: /close fullscreen view/i });
+    expect(closeBtn).toBeTruthy();
+
+    // On slide 1: Next button exists
+    const nextBtn = screen.getByRole('button', { name: /next photo/i });
+    fireEvent.click(nextBtn);
+
+    // Now on slide 2 (last slide): End Card appears
+    expect(screen.getByText('Story Summary')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /play quest/i })).toBeTruthy();
+    const backToStoryBtn = screen.getByRole('button', { name: /back to story/i });
+    expect(backToStoryBtn).toBeTruthy();
+
+    // Clicking Back to Story closes lightbox
+    fireEvent.click(backToStoryBtn);
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /close fullscreen view/i })).toBeNull();
+    });
+  });
 });
 
