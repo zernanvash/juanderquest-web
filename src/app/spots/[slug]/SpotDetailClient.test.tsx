@@ -108,17 +108,17 @@ describe('SpotDetailClient saved-place action', () => {
     expect(heading).toBeTruthy();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.queryByText('Bolinao, Pangasinan')).toBeNull();
+    expect(screen.queryByRole('heading', { level: 2, name: 'Test Beach' })).toBeNull();
 
-    const stage = screen.getByRole('region', { name: /cinematic showcase for test beach/i });
-    const backdrop = stage.querySelector('img');
+    const hero = screen.getByRole('region', { name: /destination showcase for test beach/i });
+    expect(hero).toBeTruthy();
+
+    const backdrop = document.querySelector('.spot-backdrop');
     expect(backdrop?.getAttribute('src')).toContain('bg_landscape.png');
     expect(backdrop?.getAttribute('loading')).toBe('eager');
 
     expect(screen.getByRole('button', { name: /scroll to explore the destination story/i })).toBeTruthy();
     expect(document.getElementById('spot-info')).toBeTruthy();
-
-    const overlayHeading = screen.getByRole('heading', { level: 2, name: 'Test Beach' });
-    expect(overlayHeading).toBeTruthy();
     expect(document.getElementById('spot-about')).toBeTruthy();
   });
 
@@ -134,8 +134,7 @@ describe('SpotDetailClient saved-place action', () => {
     const play = await screen.findByRole('button', { name: /play destination video in gallery/i });
     expect(document.querySelector('video')).toBeNull();
 
-    const stage = screen.getByRole('region', { name: /cinematic showcase for test beach/i });
-    const backdrop = stage.querySelector('img');
+    const backdrop = document.querySelector('.spot-backdrop');
     expect(backdrop?.getAttribute('src')).toContain('bg_landscape.png');
 
     fireEvent.click(play);
@@ -143,11 +142,16 @@ describe('SpotDetailClient saved-place action', () => {
     expect(screen.getByRole('button', { name: /close fullscreen view/i })).toBeTruthy();
   });
 
-  it('does not render bottom gradient scrims over the scenic photo stage', async () => {
+  it('renders one stationary backdrop photo and no floating carousel arrows', async () => {
     render(<SpotDetailClient slug="spot-1" />);
 
-    await screen.findByRole('region', { name: /cinematic showcase for test beach/i });
+    await screen.findByRole('region', { name: /destination showcase for test beach/i });
     expect(screen.queryByTestId('spot-reactive-bottom-gradient')).toBeNull();
+    expect(document.querySelectorAll('.spot-backdrop')).toHaveLength(1);
+
+    expect(screen.queryByRole('button', { name: /^previous photo$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^next photo$/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /open fullscreen photo gallery/i })).toBeTruthy();
   });
 });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -18,7 +18,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Compass,
   Film,
   X,
   ExternalLink,
@@ -162,14 +161,14 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
   const currentSlideUrl = slides[activeSlide] || slides[0] || '';
 
-  // Cinematic backdrop: a still image always holds the stage. Video leads stay
-  // explicit playable items in the gallery instead of autoplaying behind text.
-  const stillSlides = useMemo(() => slides.filter((url) => !isVideoMedia(url)), [slides]);
-  const activeMediaUrl = slides[activeSlide] || '';
-  const activeIsVideo = Boolean(activeMediaUrl) && isVideoMedia(activeMediaUrl);
-  const heroStillUrl = activeIsVideo
-    ? stillSlides[0] || '/bg_landscape.png'
-    : activeMediaUrl || '/bg_landscape.png';
+  // Stationary backdrop: selected once per page load (first licensed still).
+  // Gallery navigation never replaces the page background mid-read; a video
+  // lead gets a still poster plus an explicit play affordance instead of autoplay.
+  const backdropStillUrl = useMemo(
+    () => slides.find((url) => !isVideoMedia(url)) || '/bg_landscape.png',
+    [slides]
+  );
+  const leadIsVideo = isVideoMedia(slides[0] || '');
 
   // Keyboard navigation for carousel & lightbox
   useEffect(() => {
@@ -272,43 +271,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   }, []);
 
-  // Subtle reactive parallax on the still photo (fine pointers only, rAF-throttled,
-  // never React state per frame, disabled for reduced motion).
-  const stageRef = useRef<HTMLElement | null>(null);
-  const parallaxFrame = useRef<number | null>(null);
-
-  const handleStagePointerMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
-    if (event.pointerType !== 'mouse') return;
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    if (
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      return;
-    }
-    if (parallaxFrame.current !== null) return;
-    const { clientX, clientY } = event;
-    parallaxFrame.current = requestAnimationFrame(() => {
-      parallaxFrame.current = null;
-      const rect = stage.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      const relativeX = (clientX - rect.left) / rect.width - 0.5;
-      const relativeY = (clientY - rect.top) / rect.height - 0.5;
-      stage.style.setProperty('--parallax-x', `${(relativeX * -12).toFixed(2)}px`);
-      stage.style.setProperty('--parallax-y', `${(relativeY * -8).toFixed(2)}px`);
-    });
-  }, []);
-
-  const handleStagePointerLeave = useCallback(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    stage.style.setProperty('--parallax-x', '0px');
-    stage.style.setProperty('--parallax-y', '0px');
-  }, []);
-
   if (error) {
     return (
       <Navigation>
@@ -337,53 +299,44 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   return (
     <Navigation theater>
       <ErrorBoundary fallbackTitle="Unable to load Destination Spot">
-        <div className="w-full flex flex-col">
-          {/* 1. BOUNDED CINEMATIC STAGE — still photo holds while the story rises over it */}
-          <section
-            ref={stageRef}
-            aria-label={`Cinematic showcase for ${spot.name}`}
-            className="cinematic-stage relative w-full"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onPointerMove={handleStagePointerMove}
-            onPointerLeave={handleStagePointerLeave}
-            onKeyDown={(event) => {
-              if (event.target !== event.currentTarget) return;
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                setIsLightboxOpen(true);
-              }
-            }}
-            tabIndex={0}
-          >
-            {/* Pinned media stage (sticky within this bounded section on desktop only) */}
-            <div className="relative w-full h-[calc(100dvh-3.5rem)] min-h-[420px] lg:sticky lg:top-0 lg:h-dvh lg:min-h-[560px] overflow-hidden bg-black select-none">
-            {/* Still backdrop (video leads fall back to a poster still, never autoplay) */}
-            <div
-              className="cinematic-parallax absolute -inset-3 w-auto h-auto cursor-pointer"
-              onClick={() => setIsLightboxOpen(true)}
-              title="Open fullscreen gallery"
-            >
+        <div className="relative w-full flex flex-col">
+          {/* One stationary destination photo spans the entire story. It never
+              pans, scales or parallaxes; the story panels scroll over it and it
+              ends at the page/footer boundary with an intentional fade. */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[#0A141E] select-none">
+            <div className="sticky top-0 h-[100dvh] w-full">
               <img
-                key={heroStillUrl}
-                src={heroStillUrl}
-                alt={`${spot.name}${spot.municipality ? ` — ${spot.municipality}` : ''}`}
+                src={backdropStillUrl}
+                alt=""
                 loading="eager"
                 fetchPriority="high"
-                className="cinematic-backdrop w-full h-full object-cover"
+                className="spot-backdrop spot-photo-reveal w-full h-full object-cover"
+                style={{ objectPosition: '50% 42%' }}
                 onError={(event) => {
                   const image = event.currentTarget;
                   if (image.dataset.fallbackApplied !== 'true' && !image.src.endsWith('/bg_landscape.png')) {
                     image.dataset.fallbackApplied = 'true';
                     image.src = '/bg_landscape.png';
+                    return;
                   }
+                  // Even the branded fallback failed: keep the deliberate dark
+                  // brand backdrop and drop the broken-image artifact.
+                  image.style.visibility = 'hidden';
                 }}
               />
+              <div className="absolute inset-0 bg-[#0A141E]/35" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0A141E]/55 via-transparent to-[#0A141E]/70" />
             </div>
+          </div>
 
+          <div className="relative z-10 flex flex-col w-full">
+          {/* 1. HERO — photo-led first viewport with a compact protected title block */}
+          <section
+            aria-label={`Destination showcase for ${spot.name}`}
+            className="relative w-full min-h-[calc(100dvh-3.5rem)] lg:min-h-dvh flex flex-col justify-end select-none"
+          >
             {/* Video lead: explicit play affordance instead of a silent frame behind text */}
-            {activeIsVideo && (
+            {leadIsVideo && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -412,99 +365,86 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
               {/* Center Breadcrumb (Desktop) */}
               <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/15 text-white/95 text-xs font-semibold shadow-md pointer-events-auto">
-                <MapPin className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                <MapPin className="w-3.5 h-3.5 text-emerald-300" />
                 <span>{spot.municipality}</span>
                 <span>•</span>
                 <span className="capitalize">{spot.subcategory.replace('_', ' ')}</span>
               </div>
 
-              {/* Top Right Controls (photo counter) */}
-              {slides.length > 1 && (
-                <div className="flex items-center gap-2 pointer-events-auto">
-                  <div className="px-3 py-1.5 rounded-xl sm:rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-lg">
-                    <Camera className="w-3.5 h-3.5 text-[#FFB703]" />
-                    <span>{activeSlide + 1} / {slides.length}</span>
-                  </div>
-                </div>
-              )}
+              {/* Top Right: explicit Gallery entry (no large floating arrows) */}
+              <button
+                type="button"
+                onClick={() => setIsLightboxOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition shadow-lg pointer-events-auto cursor-pointer active:scale-95 min-h-[44px]"
+                aria-label="Open fullscreen photo gallery"
+              >
+                <Camera className="w-4 h-4 text-[#FFB703]" />
+                <span>Gallery</span>
+                {slides.length > 1 && (
+                  <span className="font-mono text-white/80">{activeSlide + 1}/{slides.length}</span>
+                )}
+              </button>
             </div>
 
-            {/* Large Prev / Next Navigation Arrows (when multiple photos exist) */}
-            {slides.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length);
-                  }}
-                  className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center transition shadow-2xl cursor-pointer z-20 active:scale-90"
-                  aria-label="Previous photo"
-                >
-                  <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveSlide((prev) => (prev + 1) % slides.length);
-                  }}
-                  className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-white border border-white/25 flex items-center justify-center transition shadow-2xl cursor-pointer z-20 active:scale-90"
-                  aria-label="Next photo"
-                >
-                  <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
-                </button>
+            {/* Directional pine/charcoal scrim protecting the compact title block */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0A141E]/90 via-[#0A141E]/45 to-transparent pointer-events-none"
+            />
 
-                {/* Jump dots (desktop only, bottom-right, clear of the reading block) */}
-                <div className="hidden lg:flex absolute bottom-[calc(12vh+1rem)] right-10 items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 z-30">
-                  {slides.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveSlide(idx);
-                      }}
-                      className={`h-2 rounded-full transition-all cursor-pointer ${
-                        activeSlide === idx ? 'w-6 sm:w-8 bg-[#FFB703]' : 'w-2 bg-white/40 hover:bg-white/90'
-                      }`}
-                      aria-label={`Jump to photo ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Minimal reading block — the photo is the hero */}
-            <div className="absolute left-4 sm:left-8 lg:left-10 right-4 sm:right-10 bottom-32 lg:bottom-24 z-30 max-w-xl text-white pointer-events-none">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+            {/* Compact protected hero block: title, truthful locality, teaser, high-value actions */}
+            <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 pb-24 lg:pb-20 space-y-3">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 {spot.name}
               </h1>
-              <p className="mt-1 text-xs sm:text-sm text-white/95 flex items-center gap-1.5 font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
-                <MapPin className="w-3.5 h-3.5 text-[#FFB703]" />
+              <p className="text-sm sm:text-base text-white/95 flex items-center gap-1.5 font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+                <MapPin className="w-4 h-4 text-[#FFB703]" />
                 <span>{spot.municipality}</span>
               </p>
+              {spot.description && (
+                <p className="max-w-2xl text-xs sm:text-sm text-white/80 line-clamp-1 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+                  {spot.description}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2.5 pt-2">
+                {spot.questId && (
+                  <Link
+                    href={appRoutes.quest(spot.questId)}
+                    className="btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
+                  >
+                    <Trophy className="w-4 h-4 text-[#582F0E]" />
+                    <span>Play Eco-Quest</span>
+                  </Link>
+                )}
+
+                <Link
+                  href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
+                  className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/25 backdrop-blur-md text-xs sm:text-sm font-bold transition cursor-pointer min-h-[44px]"
+                >
+                  <MapPin className="w-4 h-4 text-[#FFB703]" />
+                  <span>View on Map</span>
+                </Link>
+              </div>
             </div>
 
             {/* Subtle floating scroll caret */}
             <button
               type="button"
               onClick={scrollToSpotInfo}
-              className="cinematic-cue absolute bottom-20 lg:bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer group"
+              className="absolute bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer group"
               aria-label="Scroll to explore the destination story"
             >
               <ChevronDown className="hero-cue-icon w-5 h-5 text-white/70 group-hover:text-white transition-colors drop-shadow-md" aria-hidden="true" />
             </button>
-            </div>
+          </section>
 
-            {/* 2. RISING STORY SURFACE — the reading card crosses the photo, then the stage scrolls away */}
-            <div
-              id="spot-info"
-              className="relative z-10 scroll-mt-16 lg:scroll-mt-4"
-            >
-              <div className="bg-[var(--color-bg-canvas)] rounded-t-[2rem] lg:rounded-t-[2.5rem] border-t border-white/70 shadow-[0_-10px_30px_rgba(43,35,25,0.18)] pt-5 sm:pt-7 pb-6 sm:pb-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <header className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
+          {/* 2. STORY INTRO — dark translucent panel scrolling over the photo */}
+          <div
+            id="spot-info"
+            className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 scroll-mt-16 lg:scroll-mt-4"
+          >
+            <header className="photo-panel rounded-3xl p-5 sm:p-7 space-y-5 text-white">
                     {/* Status & category chips */}
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#D8F3DC] text-[#2D6A4F] text-xs font-black uppercase tracking-wider">
@@ -548,13 +488,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       )}
                     </div>
 
-                    {/* Destination Title in Description Overlay */}
-                    <div className="space-y-1">
-                      <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#582F0E] tracking-tight leading-snug">
-                        {spot.name}
-                      </h2>
-                    </div>
-
                     <DestinationBadgeList
                       badges={getSampleDestinationBadges(spot.id, spot.category)}
                       maxDisplay={5}
@@ -562,8 +495,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                     />
 
                     {/* Truthful place context and real attribution */}
-                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#837560]">
-                      <span className="flex items-center gap-1 font-semibold text-[#2D6A4F]">
+                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-white/75">
+                      <span className="flex items-center gap-1 font-semibold text-emerald-300">
                         <MapPin className="w-4 h-4" />
                         <span>{spot.address || spot.municipality}</span>
                       </span>
@@ -584,13 +517,14 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                             displayName={spot.sourceName}
                             badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
                             size="sm"
+                            nameClassName="text-white"
                           />
                         </span>
                       )}
                     </div>
 
                     {/* Practical actions */}
-                    <div className="pt-4 border-t border-[#E8E5DE]/40 flex flex-wrap items-center gap-2.5">
+                    <div className="pt-4 border-t border-white/15 flex flex-wrap items-center gap-2.5">
                       {spot.questId && (
                         <Link
                           href={appRoutes.quest(spot.questId)}
@@ -603,19 +537,19 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                       <Link
                         href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] border border-[#E3DFD5] text-xs font-bold transition cursor-pointer min-h-[44px]"
+                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/25 text-xs font-bold transition cursor-pointer min-h-[44px]"
                       >
-                        <MapPin className="w-4 h-4 text-[#2D6A4F]" />
+                        <MapPin className="w-4 h-4 text-[#FFB703]" />
                         <span>View on Map</span>
                       </Link>
 
                       <button
                         type="button"
                         onClick={handleShare}
-                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] text-[#582F0E] text-xs font-bold transition cursor-pointer min-h-[44px]"
+                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/25 text-white text-xs font-bold transition cursor-pointer min-h-[44px]"
                         aria-label="Share Destination"
                       >
-                        {shareCopied ? <Check className="w-4 h-4 text-[#2D6A4F]" /> : <Share2 className="w-4 h-4" />}
+                        {shareCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
                         <span>{shareCopied ? 'Link copied' : 'Share'}</span>
                       </button>
 
@@ -624,8 +558,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         onClick={handleToggleLike}
                         className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
                           isLiked
-                            ? 'bg-rose-50 border-rose-200 shadow-2xs'
-                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-rose-300'
+                            ? 'bg-rose-50 border-rose-300 shadow-2xs'
+                            : 'bg-white/85 border-white/40 hover:border-rose-300'
                         }`}
                         aria-label={isLiked ? 'Liked destination' : 'Like destination'}
                         aria-pressed={isLiked}
@@ -639,25 +573,21 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         onClick={handleToggleSave}
                         className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
                           isSaved
-                            ? 'bg-amber-100 border-amber-300 shadow-2xs'
-                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-amber-300'
+                            ? 'bg-amber-50 border-amber-300 shadow-2xs'
+                            : 'bg-white/85 border-white/40 hover:border-amber-300'
                         }`}
                         aria-label={isSaved ? 'Saved' : 'Save'}
                         aria-pressed={isSaved}
                         title={isSaved ? 'Saved' : 'Save'}
                       >
-                        <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
+                        <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-stone-500'}`} />
                       </button>
                     </div>
                   </header>
-                </div>
-              </div>
-            </div>
-          </section>
+          </div>
 
-          {/* 3. DOWNSTREAM READING CONTENT (opaque canvas continues below the stage) */}
-          <div className="w-full bg-[var(--color-bg-canvas)]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14 space-y-6 sm:space-y-8">
+          {/* 3. STORY MODULES — dark-tinted panels with the photo visible between them */}
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14 space-y-6 sm:space-y-8">
             {/* Two-Column Maximized Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left/Main Column (lg:col-span-8) */}
@@ -665,26 +595,26 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 {/* About Narrative */}
                 <section
                   id="spot-about"
-                  className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
+                  className="photo-panel p-6 sm:p-8 rounded-2xl sm:rounded-3xl space-y-4 text-white scroll-mt-16 lg:scroll-mt-8"
                 >
-                  <h2 className="text-xl sm:text-2xl font-black text-[#582F0E]">
+                  <h2 className="text-xl sm:text-2xl font-black text-white">
                     About {spot.name}
                   </h2>
-                  <p className="text-sm text-[#514532] leading-relaxed whitespace-pre-line">
+                  <p className="text-sm text-white/85 leading-relaxed whitespace-pre-line">
                     {spot.description}
                   </p>
 
                   {/* Amenities & Highlights */}
                   {spot.amenities && spot.amenities.length > 0 && (
-                    <div className="pt-4 border-t border-[#E8E5DE] space-y-3">
-                      <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">
+                    <div className="pt-4 border-t border-white/15 space-y-3">
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">
                         Amenities &amp; Features
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {spot.amenities.map((amenity, idx) => (
                           <span
                             key={idx}
-                            className="px-3 py-1.5 rounded-full bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-semibold text-[#582F0E] capitalize"
+                            className="px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-semibold text-white/90 capitalize"
                           >
                             {amenity.replace('_', ' ')}
                           </span>
@@ -695,7 +625,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 </section>
 
                 {/* Community Traveler Notes & Tips Forum */}
-                <section className="space-y-4 pt-2">
+                <section className="photo-panel-solid rounded-2xl sm:rounded-3xl p-4 sm:p-6">
                   <SpotCommentSection spotId={spot.id} spotName={spot.name} />
                 </section>
               </div>
@@ -738,20 +668,20 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 {/* Active Quest on this Destination */}
                 {spot.questId && (
-                  <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-amber-200/90 shadow-xs space-y-3.5">
-                    <div className="flex items-center justify-between pb-2 border-b border-amber-100">
+                  <div className="photo-panel p-6 rounded-2xl sm:rounded-3xl space-y-3.5 text-white">
+                    <div className="flex items-center justify-between pb-2 border-b border-white/15">
                       <div className="flex items-center gap-2">
                         <Award className="w-4 h-4 text-[#FFB703]" />
-                        <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
+                        <h3 className="text-xs font-black text-white uppercase tracking-wider">
                           Active Eco-Quest
                         </h3>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
                         Earn Tokens
                       </span>
                     </div>
 
-                    <p className="text-xs text-[#514532] leading-relaxed">
+                    <p className="text-xs text-white/80 leading-relaxed">
                       This destination has an active Eco-Quest checkpoint. Travelers can verify their physical visit on-site to earn $mJDQ tokens and Explorer XP.
                     </p>
 
@@ -766,35 +696,35 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 )}
 
                 {/* Venue Summary Facts */}
-                <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4">
-                  <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider pb-2 border-b border-[#E8E5DE]">
+                <div className="photo-panel p-6 rounded-2xl sm:rounded-3xl space-y-4 text-white">
+                  <h3 className="text-xs font-black text-white uppercase tracking-wider pb-2 border-b border-white/15">
                     Venue Details
                   </h3>
 
                   <div className="space-y-3.5 text-xs sm:text-sm">
                     <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-0.5" />
+                      <MapPin className="w-4 h-4 text-emerald-300 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-[#582F0E]">{spot.municipality}</p>
-                        <p className="text-xs text-[#837560]">{spot.address || spot.municipality || 'Location not recorded'}</p>
+                        <p className="font-bold text-white">{spot.municipality}</p>
+                        <p className="text-xs text-white/70">{spot.address || spot.municipality || 'Location not recorded'}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-3">
-                      <Clock className="w-4 h-4 text-[#7D5800] shrink-0 mt-0.5" />
+                      <Clock className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-[#582F0E]">Operating Hours</p>
-                        <p className="text-xs text-[#837560]">
+                        <p className="font-bold text-white">Operating Hours</p>
+                        <p className="text-xs text-white/70">
                           {spot.hours?.daily || (spot.trustLevel === 'open_data' ? 'Hours not confirmed' : 'Open to visitors daily')}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-start gap-3">
-                      <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                      <ShieldCheck className="w-4 h-4 text-sky-300 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold text-[#582F0E]">Verification</p>
-                        <p className="text-xs text-[#837560]">
+                        <p className="font-bold text-white">Verification</p>
+                        <p className="text-xs text-white/70">
                           {spot.trustLevel === 'lgu_verified'
                             ? 'LGU Verified Landmark'
                             : spot.trustLevel === 'open_data'
@@ -804,12 +734,12 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-[#E8E5DE] space-y-2.5">
+                    <div className="pt-3 border-t border-white/15 space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-[#582F0E]">Location Map</span>
+                        <span className="font-bold text-white">Location Map</span>
                         <Link
                           href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                          className="text-[#2D6A4F] hover:underline font-bold text-xs flex items-center gap-1"
+                          className="text-emerald-300 hover:underline font-bold text-xs flex items-center gap-1"
                         >
                           <span>Full Map</span>
                           <ExternalLink className="w-3 h-3" />
@@ -831,9 +761,9 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
                 {/* Smart Diversion: Quieter Alternatives */}
                 {alternatives.length > 0 && (
-                  <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-emerald-200/90 shadow-xs space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-emerald-100">
-                      <h3 className="text-xs font-black text-[#2D6A4F] uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="photo-panel p-6 rounded-2xl sm:rounded-3xl space-y-4 text-white">
+                    <div className="flex items-center justify-between pb-2 border-b border-white/15">
+                      <h3 className="text-xs font-black text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
                         <span>Nearby Alternatives</span>
                       </h3>
@@ -844,7 +774,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                         <Link
                           key={alt.id}
                           href={appRoutes.spot(alt.id)}
-                          className="flex gap-3 p-3 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
+                          className="flex gap-3 p-3 rounded-xl bg-white/8 border border-white/12 hover:border-emerald-300/60 hover:bg-white/12 transition group"
                         >
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
                             <DestinationMedia
@@ -856,11 +786,11 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                             />
                           </div>
                           <div className="min-w-0 flex-1 space-y-0.5">
-                            <h4 className="text-xs font-bold text-[#582F0E] group-hover:text-[#2D6A4F] transition truncate">
+                            <h4 className="text-xs font-bold text-white group-hover:text-emerald-200 transition truncate">
                               {alt.name}
                             </h4>
-                            <p className="text-[11px] text-[#7D5800]">{alt.municipality}</p>
-                            <p className="text-[10px] text-[#837560] line-clamp-1">{alt.description}</p>
+                            <p className="text-[11px] text-amber-200/90">{alt.municipality}</p>
+                            <p className="text-[10px] text-white/60 line-clamp-1">{alt.description}</p>
                           </div>
                         </Link>
                       ))}
@@ -869,7 +799,9 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 )}
               </div>
             </div>
-            </div>
+          </div>
+          {/* Intentional end-of-story fade into the app footer — no abrupt slab */}
+          <div aria-hidden="true" className="h-24 sm:h-28 bg-gradient-to-b from-transparent to-[var(--color-bg-canvas)]" />
           </div>
           {/* Author Quest Creation In-Page Modal */}
           {isQuestModalOpen && (
