@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer as LeafletTileLayer } from 'leaflet';
@@ -13,6 +13,7 @@ import { createQuestPinHtml, createSpotPinHtml, createAreaHitboxHtml } from '@/l
 import { declutterItems } from '@/lib/map-declutter';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
+import { clampMapZoom, isValidLatitude, isValidLongitude } from '@/lib/map-url';
 import { appRoutes } from '@/lib/routes';
 import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePanel';
 import { AreaDefinition, findAreaByIdOrName, KNOWN_AREAS } from '@/lib/areas';
@@ -28,6 +29,7 @@ import {
   AlertTriangle,
   Bookmark,
   Search,
+  LocateFixed,
 } from 'lucide-react';
 
 const PHILIPPINES_CENTER: [number, number] = [15.89, 120.30];
@@ -86,14 +88,14 @@ function MapUrlSync({
     if (latParam && lngParam && nameParam) {
       const lat = parseFloat(latParam);
       const lng = parseFloat(lngParam);
-      if (!isNaN(lat) && !isNaN(lng)) {
+      if (isValidLatitude(lat) && isValidLongitude(lng)) {
         const osmArea: AreaDefinition = {
           id: `osm-${lat.toFixed(4)}-${lng.toFixed(4)}`,
           name: nameParam,
           type: (searchParams.get('type') as any) || 'city',
           subtitle: searchParams.get('subtitle') || 'Territory via OpenStreetMap',
           center: [lat, lng],
-          zoom: parseInt(searchParams.get('zoom') || '13', 10),
+          zoom: clampMapZoom(parseFloat(searchParams.get('zoom') || '13')),
           keywords: [nameParam.toLowerCase()],
           source: 'osm',
         };
@@ -145,6 +147,12 @@ export default function QuestMapPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tilesUnavailable, setTilesUnavailable] = useState(false);
+
+  // Explicit locate flow only: no location request before the traveler asks.
+  const [locating, setLocating] = useState(false);
+  const [locationNotice, setLocationNotice] = useState('');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const followUserRef = useRef(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletMap | null>(null);
@@ -198,14 +206,14 @@ export default function QuestMapPage() {
             setIsDesktopCollapsed(true);
             setMobileSnap('peek');
           }
-        } else if (!isNaN(urlLat) && !isNaN(urlLng) && urlName) {
+        } else if (isValidLatitude(urlLat) && isValidLongitude(urlLng) && urlName) {
           const osmArea: AreaDefinition = {
             id: `osm-${urlLat.toFixed(4)}-${urlLng.toFixed(4)}`,
             name: urlName,
             type: (searchParams.get('type') as any) || 'city',
             subtitle: searchParams.get('subtitle') || 'Territory via OpenStreetMap',
             center: [urlLat, urlLng],
-            zoom: parseInt(searchParams.get('zoom') || '13', 10),
+            zoom: clampMapZoom(parseFloat(searchParams.get('zoom') || '13')),
             keywords: [urlName.toLowerCase()],
             source: 'osm',
           };
@@ -224,7 +232,7 @@ export default function QuestMapPage() {
             setSelectedItem({ type: 'quest', data: matchedQuest });
             setMobileSnap('half');
           }
-        } else if (!isNaN(urlLat) && !isNaN(urlLng)) {
+        } else if (isValidLatitude(urlLat) && isValidLongitude(urlLng)) {
           const matchedSpot = loadedSpots.find(
             (s) => Math.abs(s.gpsLat - urlLat) < 0.005 && Math.abs(s.gpsLng - urlLng) < 0.005
           );
@@ -272,6 +280,48 @@ export default function QuestMapPage() {
     } else {
       map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
     }
+  }, []);
+
+  // Truthful locate flow: explicit action, bounded timeout, honest failure copy.
+  const handleUseMyLocation = useCallback(() => {
+    setLocationNotice('');
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationNotice('Location is not available in this browser. Use search or pan the map instead.');
+      return;
+    }
+    setLocating(true);
+    followUserRef.current = true;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        const { latitude, longitude, accuracy } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude, accuracy });
+        if (accuracy > 2000) {
+          setLocationNotice(`Approximate location shown (±${Math.round(accuracy)} m). Move to an open area for a better fix.`);
+        }
+        // Respect a manual pan that happened while the fix was pending.
+        if (!followUserRef.current) return;
+        const map = mapInstanceRef.current || retainedMap;
+        if (map) {
+          try {
+            map.flyTo([latitude, longitude], Math.max(map.getZoom(), 14), { duration: 0.8 });
+          } catch (e) {
+            console.warn('Locate camera flight deferred:', e);
+          }
+        }
+      },
+      (geoError) => {
+        setLocating(false);
+        if (geoError.code === 1) {
+          setLocationNotice('Location permission was denied. Search or pan the map instead.');
+        } else if (geoError.code === 3) {
+          setLocationNotice('Finding your location timed out. Try again or use search.');
+        } else {
+          setLocationNotice('Your location could not be determined. Search or pan the map instead.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
   }, []);
 
   // 1. Initialize or Re-attach Retained Leaflet Map
@@ -385,11 +435,18 @@ export default function QuestMapPage() {
           activeMap.on('moveend', onViewportEnd);
           activeMap.on('click', onMapClick);
 
+          // A manual pan cancels any automatic follow after locating.
+          const onDragStart = () => {
+            followUserRef.current = false;
+          };
+          activeMap.on('dragstart', onDragStart);
+
           activeMapCleanup = () => {
             activeMap.off('zoom', onZoomUpdate);
             activeMap.off('zoomend', onViewportEnd);
             activeMap.off('moveend', onViewportEnd);
             activeMap.off('click', onMapClick);
+            activeMap.off('dragstart', onDragStart);
           };
 
           activeMap.invalidateSize({ pan: false });
@@ -436,10 +493,24 @@ export default function QuestMapPage() {
     if (map) {
       try {
         const targetZoom = Math.max(map.getZoom(), 15);
+        // Pad the camera so the opened panel/sheet never hides the selected pin.
+        let center: [number, number] = [data.gpsLat, data.gpsLng];
+        try {
+          const isDesktopView =
+            typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
+          const point = map.project([data.gpsLat, data.gpsLng], targetZoom);
+          const containerHeight = map.getContainer().clientHeight || 0;
+          const offsetX = isDesktopView ? -170 : 0; // pin sits right of the left desktop dock
+          const offsetY = isDesktopView ? 0 : Math.round(containerHeight * 0.18); // pin above the mobile sheet
+          const shifted = map.unproject(point.add([offsetX, offsetY]), targetZoom);
+          center = [shifted.lat, shifted.lng];
+        } catch {
+          // Fall back to exact centering when projection is unavailable.
+        }
         if ((map as any)._loaded) {
-          map.flyTo([data.gpsLat, data.gpsLng], targetZoom, { duration: 0.8 });
+          map.flyTo(center, targetZoom, { duration: 0.8 });
         } else {
-          map.setView([data.gpsLat, data.gpsLng], targetZoom);
+          map.setView(center, targetZoom);
         }
       } catch (e) {
         console.warn('Map view update deferred:', e);
@@ -563,9 +634,34 @@ export default function QuestMapPage() {
         }
       });
 
+      // Render the traveler's own location only after an explicit locate action.
+      if (userLocation) {
+        group.addLayer(
+          L.circle([userLocation.lat, userLocation.lng], {
+            radius: Math.min(userLocation.accuracy || 0, 2000),
+            color: '#1D4ED8',
+            weight: 1,
+            opacity: 0.35,
+            fillColor: '#1D4ED8',
+            fillOpacity: 0.08,
+            interactive: false,
+          })
+        );
+        group.addLayer(
+          L.marker([userLocation.lat, userLocation.lng], {
+            interactive: false,
+            icon: L.divIcon({
+              className: '',
+              html: '<div style="width:18px;height:18px;border-radius:9999px;background:#1D4ED8;border:3px solid #fff;box-shadow:0 0 0 2px rgba(29,78,216,0.35),0 2px 6px rgba(0,0,0,0.3)"></div>',
+              iconSize: [18, 18],
+              iconAnchor: [9, 9],
+            }),
+          })
+        );
+      }
+
       // 2. Render transparent interactive hitboxes over existing map tile place names (zoom <= 13)
-      if (currentZoom <= 13 && (!filterType || filterType === 'all')) {
-        const candidateAreas = KNOWN_AREAS.filter((a) => {
+      if (currentZoom <= 13 && (!filterType || filterType === 'all')) {        const candidateAreas = KNOWN_AREAS.filter((a) => {
           if (a.id === 'philippines' || a.id === 'luzon' || a.id === 'ilocos') return false;
           return isInViewport(a.center[0], a.center[1]);
         });
@@ -606,9 +702,8 @@ export default function QuestMapPage() {
           }
         }
 
-        if (!isNaN(urlLat) && !isNaN(urlLng)) {
-          const zoomParam = parseInt(searchParams.get('zoom') || '', 10);
-          const zoom = !isNaN(zoomParam) ? zoomParam : (urlName ? 13 : FOCUSED_ZOOM);
+        if (isValidLatitude(urlLat) && isValidLongitude(urlLng)) {
+          const zoom = clampMapZoom(parseFloat(searchParams.get('zoom') || ''), urlName ? 13 : FOCUSED_ZOOM);
           if (urlName) {
             const dynamicArea: AreaDefinition = {
               id: `osm-${urlLat.toFixed(4)}-${urlLng.toFixed(4)}`,
@@ -660,6 +755,7 @@ export default function QuestMapPage() {
     isZoomedIn,
     currentZoom,
     mapViewportNonce,
+    userLocation,
     handleSelectItem,
   ]);
 
@@ -699,6 +795,26 @@ export default function QuestMapPage() {
       }
     }
   }, []);
+
+  // Accessible, non-map results list (same filter semantics as the pins).
+  const visiblePlaces = useMemo(() => {
+    const items: Array<{ type: 'quest' | 'spot'; data: QuestModel | SpotModel }> = [];
+    if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
+      quests
+        .filter((q) => filterType !== 'saved' || isSaved('quests', q.id))
+        .forEach((q) => items.push({ type: 'quest', data: q }));
+    }
+    if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
+      spots
+        .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
+        .forEach((s) => items.push({ type: 'spot', data: s }));
+    }
+    return items.sort((a, b) => {
+      const nameA = ('title' in a.data ? a.data.title : a.data.name).toLowerCase();
+      const nameB = ('title' in b.data ? b.data.title : b.data.name).toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }, [quests, spots, filterType, isSaved]);
 
   return (
     <Navigation fullBleed>
@@ -749,6 +865,21 @@ export default function QuestMapPage() {
             // Floating tools (Top-right)
             floatingTools={
               <>
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  disabled={locating}
+                  title="Use my location"
+                  aria-label="Use my location"
+                  className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer disabled:opacity-60"
+                >
+                  {locating ? (
+                    <RotateCw className="w-4 h-4 animate-spin text-[#2D6A4F]" />
+                  ) : (
+                    <LocateFixed className="w-4 h-4" />
+                  )}
+                </button>
+
                 {activeArea && (
                   <button
                     type="button"
@@ -1065,6 +1196,44 @@ export default function QuestMapPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* Accessible non-map results list: same filter semantics as the pins */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#837560] px-1">
+                    Places at a glance ({visiblePlaces.length})
+                  </span>
+                  {visiblePlaces.length === 0 ? (
+                    <p className="text-[11px] text-[#837560] px-1 leading-relaxed">
+                      {loading
+                        ? 'Loading places…'
+                        : error
+                        ? 'Places could not be loaded from the server. The basemap is still interactive.'
+                        : filterType === 'saved'
+                        ? 'Nothing saved yet. Use the bookmark on a place to save it.'
+                        : 'No places match this filter.'}
+                    </p>
+                  ) : (
+                    <ul className="max-h-64 overflow-y-auto rounded-xl border border-[#E3DFD5] bg-white divide-y divide-[#EFEEEA]">
+                      {visiblePlaces.slice(0, 60).map(({ type, data }) => (
+                        <li key={`${type}-${data.id}`}>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectItem(type, data)}
+                            className="w-full text-left px-3 py-2.5 min-h-[44px] hover:bg-[#FAF9F5] transition cursor-pointer"
+                          >
+                            <span className="flex items-center gap-1.5 text-xs font-bold text-[#2C221E]">
+                              <span aria-hidden="true">{type === 'quest' ? '🏆' : '📍'}</span>
+                              <span className="truncate">{'title' in data ? data.title : data.name}</span>
+                            </span>
+                            <span className="block text-[10px] text-[#837560] truncate mt-0.5">
+                              {'locationName' in data ? data.locationName : data.municipality}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             )}
           </MapWorkspacePanel>
@@ -1091,9 +1260,19 @@ export default function QuestMapPage() {
             </div>
           )}
 
+          {locationNotice && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="absolute bottom-36 left-4 right-4 z-20 rounded-2xl border border-blue-200 bg-blue-50/95 px-4 py-3 text-xs font-semibold text-blue-900 shadow-md sm:right-auto sm:max-w-sm"
+            >
+              {locationNotice}
+            </div>
+          )}
+
           {tilesUnavailable && (
             <div role="status" className="absolute bottom-20 left-4 right-4 z-20 rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-xs font-semibold text-amber-900 shadow-md sm:right-auto sm:max-w-sm">
-              Map tiles are unavailable in this local setup. Pins and place details still work.{' '}
+              Basemap tiles are temporarily unavailable. Pins, search and place details still work.{' '}
               <button type="button" onClick={() => retainedTileLayer?.redraw()} className="min-h-11 font-bold underline underline-offset-2">
                 Retry tiles
               </button>
