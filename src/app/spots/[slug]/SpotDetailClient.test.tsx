@@ -117,8 +117,8 @@ describe('SpotDetailClient saved-place action', () => {
     expect(screen.getByRole('button', { name: /scroll to explore the destination story/i })).toBeTruthy();
     expect(document.getElementById('spot-info')).toBeTruthy();
 
-    const continueReading = screen.getByRole('link', { name: /continue reading/i });
-    expect(continueReading.getAttribute('href')).toBe('#spot-about');
+    const overlayHeading = screen.getByRole('heading', { level: 2, name: 'Test Beach' });
+    expect(overlayHeading).toBeTruthy();
     expect(document.getElementById('spot-about')).toBeTruthy();
   });
 

@@ -170,7 +170,6 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const heroStillUrl = activeIsVideo
     ? stillSlides[0] || '/bg_landscape.png'
     : activeMediaUrl || '/bg_landscape.png';
-  const teaser = spot?.description?.trim() || '';
 
   // Keyboard navigation for carousel & lightbox
   useEffect(() => {
@@ -478,10 +477,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
             {/* Minimal reading block — the photo is the hero */}
             <div className="absolute left-4 sm:left-8 lg:left-10 right-4 sm:right-10 bottom-32 lg:bottom-24 z-30 max-w-xl text-white pointer-events-none">
-              <h1 className="text-2xl sm:text-3xl lg:text-5xl font-black leading-[1.05] tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 {spot.name}
               </h1>
-              <p className="mt-1.5 text-xs sm:text-sm text-white/95 flex items-center gap-1.5 font-medium drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
+              <p className="mt-1 text-xs sm:text-sm text-white/95 flex items-center gap-1.5 font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
                 <MapPin className="w-3.5 h-3.5 text-[#FFB703]" />
                 <span>{spot.municipality}</span>
               </p>
@@ -549,21 +548,12 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       )}
                     </div>
 
-                    {/* Short teaser derived from the real description; the full story lives below */}
-                    {teaser ? (
-                      <div className="space-y-2">
-                        <p className="text-sm sm:text-base text-[#514532] leading-relaxed line-clamp-2">
-                          {teaser}
-                        </p>
-                        <a
-                          href="#spot-about"
-                          className="inline-flex items-center gap-1 text-xs font-black text-[#2D6A4F] hover:underline underline-offset-2"
-                        >
-                          <span>Continue reading</span>
-                          <span aria-hidden="true">↓</span>
-                        </a>
-                      </div>
-                    ) : null}
+                    {/* Destination Title in Description Overlay */}
+                    <div className="space-y-1">
+                      <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#582F0E] tracking-tight leading-snug">
+                        {spot.name}
+                      </h2>
+                    </div>
 
                     <DestinationBadgeList
                       badges={getSampleDestinationBadges(spot.id, spot.category)}
