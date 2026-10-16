@@ -3,12 +3,15 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer as LeafletTileLayer } from 'leaflet';
+import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer as LeafletTileLayer, Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { SpotPostingWizard } from '@/components/SpotPostingWizard';
+import { TrailPreviewCard } from '@/components/TrailPreviewCard';
+import type { SpotPostingPin } from '@/lib/spot-posting';
 import { createQuestPinHtml, createSpotPinHtml, createAreaHitboxHtml } from '@/lib/map-icons';
 import { declutterItems } from '@/lib/map-declutter';
 import { useSavedLibrary } from '@/lib/saved-library';
@@ -30,6 +33,8 @@ import {
   Bookmark,
   Search,
   LocateFixed,
+  HelpCircle,
+  PlusCircle,
 } from 'lucide-react';
 
 const PHILIPPINES_CENTER: [number, number] = [15.89, 120.30];
@@ -153,6 +158,20 @@ export default function QuestMapPage() {
   const [locationNotice, setLocationNotice] = useState('');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const followUserRef = useRef(false);
+
+  // Map-first destination posting: armed pin placement, draft pin and wizard.
+  const [pinPlacementActive, setPinPlacementActive] = useState(false);
+  const [draftPin, setDraftPin] = useState<SpotPostingPin | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardMinimized, setWizardMinimized] = useState(false);
+  const [pinHelpOpen, setPinHelpOpen] = useState(false);
+  const pinPlacementRef = useRef(false);
+  const pinPlacementCommitRef = useRef<((lat: number, lng: number) => void) | null>(null);
+  const draftMarkerRef = useRef<LeafletMarker | null>(null);
+
+  useEffect(() => {
+    pinPlacementRef.current = pinPlacementActive;
+  }, [pinPlacementActive]);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletMap | null>(null);
@@ -401,6 +420,13 @@ export default function QuestMapPage() {
           const onMapClick = (e: any) => {
             if (!e?.latlng) return;
 
+            // Armed destination-pin placement: commit the draft pin instead of
+            // area selection or zoom behavior.
+            if (pinPlacementRef.current) {
+              pinPlacementCommitRef.current?.(e.latlng.lat, e.latlng.lng);
+              return;
+            }
+
             // Check if traveler clicked directly on or near an existing place/town name on the map tile
             const clickPt = activeMap.latLngToContainerPoint(e.latlng);
             let matchedArea: AreaDefinition | null = null;
@@ -430,10 +456,17 @@ export default function QuestMapPage() {
             }
           };
 
+          const onContextMenu = (e: any) => {
+            if (e?.originalEvent?.preventDefault) e.originalEvent.preventDefault();
+            if (!e?.latlng) return;
+            pinPlacementCommitRef.current?.(e.latlng.lat, e.latlng.lng);
+          };
+
           activeMap.on('zoom', onZoomUpdate);
           activeMap.on('zoomend', onViewportEnd);
           activeMap.on('moveend', onViewportEnd);
           activeMap.on('click', onMapClick);
+          activeMap.on('contextmenu', onContextMenu);
 
           // A manual pan cancels any automatic follow after locating.
           const onDragStart = () => {
@@ -446,6 +479,7 @@ export default function QuestMapPage() {
             activeMap.off('zoomend', onViewportEnd);
             activeMap.off('moveend', onViewportEnd);
             activeMap.off('click', onMapClick);
+            activeMap.off('contextmenu', onContextMenu);
             activeMap.off('dragstart', onDragStart);
           };
 
@@ -531,6 +565,64 @@ export default function QuestMapPage() {
     },
     [handleSelectItem]
   );
+
+  const handlePlaceDestinationPin = useCallback((lat: number, lng: number) => {
+    setDraftPin({ lat, lng });
+    setWizardOpen(true);
+    setWizardMinimized(false);
+    setPinPlacementActive(false);
+  }, []);
+
+  useEffect(() => {
+    pinPlacementCommitRef.current = handlePlaceDestinationPin;
+  }, [handlePlaceDestinationPin]);
+
+  const handleCancelPinPlacement = useCallback(() => {
+    setPinPlacementActive(false);
+    if (wizardOpen) setWizardMinimized(false);
+  }, [wizardOpen]);
+
+  const handleRequestMovePin = useCallback(() => {
+    setWizardMinimized(true);
+    setPinPlacementActive(true);
+  }, []);
+
+  // Draft destination pin: draggable marker shown while the wizard is active.
+  useEffect(() => {
+    let disposed = false;
+    (async () => {
+      const map = mapInstanceRef.current || retainedMap;
+      const L = (await import('leaflet')).default;
+      if (disposed || !map) return;
+      if (draftMarkerRef.current) {
+        draftMarkerRef.current.remove();
+        draftMarkerRef.current = null;
+      }
+      if (!draftPin) return;
+      const marker = L.marker([draftPin.lat, draftPin.lng], {
+        draggable: true,
+        keyboard: false,
+        icon: L.divIcon({
+          className: 'leaflet-custom-marker',
+          html: '<div style="position:relative;width:38px;height:38px"><div style="position:absolute;inset:0;border:3px dashed #FFB703;border-radius:9999px;background:rgba(255,183,3,0.12);box-shadow:0 0 0 3px rgba(255,183,3,0.2)"></div><div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;line-height:1">📍</div></div>',
+          iconSize: [38, 38],
+          iconAnchor: [19, 19],
+        }),
+      }).addTo(map);
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        setDraftPin({ lat: pos.lat, lng: pos.lng });
+      });
+      draftMarkerRef.current = marker;
+    })();
+    return () => {
+      disposed = true;
+      if (draftMarkerRef.current) {
+        draftMarkerRef.current.remove();
+        draftMarkerRef.current = null;
+      }
+    };
+  }, [draftPin]);
 
   // 2. Render Markers on Map when Data or Filters Update
   useEffect(() => {
@@ -867,6 +959,41 @@ export default function QuestMapPage() {
               <>
                 <button
                   type="button"
+                  onClick={() => {
+                    if (pinPlacementActive) {
+                      handleCancelPinPlacement();
+                    } else if (wizardOpen && !wizardMinimized) {
+                      handleRequestMovePin();
+                    } else {
+                      setPinPlacementActive(true);
+                      if (wizardOpen) setWizardMinimized(true);
+                    }
+                  }}
+                  title={pinPlacementActive ? 'Cancel pin placement' : 'Pin a destination on the map'}
+                  aria-label={pinPlacementActive ? 'Cancel pin placement' : 'Pin a new destination on the map'}
+                  aria-pressed={pinPlacementActive}
+                  className={`w-10 h-10 rounded-2xl border shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer ${
+                    pinPlacementActive
+                      ? 'bg-[#FFB703] border-amber-400 text-[#582F0E] animate-pulse'
+                      : 'bg-white/95 backdrop-blur-md border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white'
+                  }`}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPinHelpOpen((open) => !open)}
+                  title="How destination pinning works"
+                  aria-label="How destination pinning works"
+                  aria-expanded={pinHelpOpen}
+                  className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleUseMyLocation}
                   disabled={locating}
                   title="Use my location"
@@ -1111,6 +1238,10 @@ export default function QuestMapPage() {
                     />
                   </button>
                 </div>
+
+                {selectedItem.type === 'spot' && (
+                  <TrailPreviewCard key={(selectedItem.data as SpotModel).id} />
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -1238,6 +1369,58 @@ export default function QuestMapPage() {
             )}
           </MapWorkspacePanel>
 
+          {pinPlacementActive && (
+            <div
+              role="status"
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex max-w-[92vw] items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/95 backdrop-blur-md px-4 py-2.5 text-xs font-bold text-[#7D5800] shadow-md"
+            >
+              <MapPin className="w-4 h-4 text-[#B45309] shrink-0" />
+              <span className="min-w-0">
+                {wizardMinimized
+                  ? 'Click the map to move the destination pin.'
+                  : 'Click the map to place your destination pin.'}
+              </span>
+              <button
+                type="button"
+                onClick={handleCancelPinPlacement}
+                className="shrink-0 rounded-lg border border-amber-300 bg-white px-2 py-1 text-[10px] font-black text-[#7D5800] transition hover:bg-amber-100 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {pinHelpOpen && (
+            <div className="absolute right-4 top-16 z-30 w-72 max-w-[calc(100vw-2rem)] space-y-2.5 rounded-2xl border border-[#E3DFD5] bg-white/97 backdrop-blur-md p-4 text-xs leading-relaxed text-[#514532] shadow-xl">
+              <div className="flex items-center justify-between">
+                <span className="font-black text-[#582F0E]">Pin a destination</span>
+                <button
+                  type="button"
+                  onClick={() => setPinHelpOpen(false)}
+                  aria-label="Close pin help"
+                  className="rounded-lg p-1 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <p>
+                <strong className="text-[#582F0E]">Desktop:</strong> right-click anywhere on the map, or press the
+                pin button and then click the map.
+              </p>
+              <p>
+                <strong className="text-[#582F0E]">Touch:</strong> press the pin button, then tap the map. Drag the
+                draft pin to adjust it.
+              </p>
+              <p>
+                Nothing is published until you review the answers and press Publish. Prefer a full page?{' '}
+                <Link href="/spots/new" className="font-bold text-[#2D6A4F] hover:underline">
+                  Use the classic submission form
+                </Link>
+                .
+              </p>
+            </div>
+          )}
+
           {/* Loading Indicator Toast */}
           {loading && (
             <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-[#E3DFD5] shadow-md flex items-center gap-2 text-xs font-bold text-[#582F0E]">
@@ -1277,6 +1460,25 @@ export default function QuestMapPage() {
                 Retry tiles
               </button>
             </div>
+          )}
+
+          {wizardOpen && (
+            <SpotPostingWizard
+              pin={draftPin}
+              minimized={wizardMinimized}
+              onClose={() => {
+                setWizardOpen(false);
+                setWizardMinimized(false);
+                setDraftPin(null);
+              }}
+              onRequestMovePin={handleRequestMovePin}
+              onPublished={(spot) => {
+                setSpots((previous) =>
+                  previous.some((s) => s.id === spot.id) ? previous : [spot, ...previous]
+                );
+                handleSelectSpot(spot);
+              }}
+            />
           )}
         </div>
       </ErrorBoundary>

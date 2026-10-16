@@ -20,34 +20,14 @@ import { api, uploadSpotMedia, isVideoMedia } from '@/lib/api';
 import { invalidateCache } from '@/lib/cache';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MiniMapPreview } from '@/components/MiniMapPreview';
+import {
+  SPOT_POSTING_AMENITIES,
+  SPOT_POSTING_CATEGORIES,
+  buildSpotPayload,
+  validatePostingMediaFile,
+} from '@/lib/spot-posting';
 
-const categories = [
-  {
-    id: 'eat_drink',
-    label: '🍜 Food & Culinary',
-    subcategories: ['kaleskes', 'bangus_grill', 'puto_calasiao', 'seafood_shack', 'tupig_stand', 'third_wave_coffee'],
-  },
-  {
-    id: 'nature_outdoors',
-    label: '🏖️ Nature & Beaches',
-    subcategories: ['white_sand_beach', 'waterfall', 'cave_system', 'island_cove', 'tidal_pool', 'mountain_viewpoint'],
-  },
-  {
-    id: 'culture_heritage',
-    label: '🏛️ Heritage & Shrines',
-    subcategories: ['colonial_church', 'historical_lighthouse', 'heritage_mansion', 'provincial_capitol', 'shrine_monument'],
-  },
-  {
-    id: 'activities_wellness',
-    label: '🧗 Outdoor & Eco',
-    subcategories: ['island_hopping', 'snorkeling_dive', 'mangrove_paddling', 'eco_trail_hike', 'campground'],
-  },
-  {
-    id: 'shopping_local',
-    label: '🛍️ Local MSME Crafts',
-    subcategories: ['bagoong_distillery', 'salt_beds_farm', 'bamboo_crafts', 'night_market', 'local_cooperative'],
-  },
-];
+const categories = SPOT_POSTING_CATEGORIES;
 
 const availableTags = [
   'hidden_gem',
@@ -62,16 +42,7 @@ const availableTags = [
   'scenic_drive',
 ];
 
-const availableAmenities = [
-  'parking',
-  'restrooms',
-  'food_nearby',
-  'guide_available',
-  'cottage_rentals',
-  'boat_service',
-  'wifi_signal',
-  'pwd_accessible',
-];
+const availableAmenities = SPOT_POSTING_AMENITIES;
 
 export default function NewSpotPage() {
   const router = useRouter();
@@ -129,10 +100,10 @@ export default function NewSpotPage() {
 
     setUploadError(null);
     const isVideo = file.type.startsWith('video/');
-    const maxSize = isVideo ? 30 * 1024 * 1024 : 8 * 1024 * 1024;
+    const fileError = validatePostingMediaFile(file);
 
-    if (file.size > maxSize) {
-      setUploadError(`File is too large. Max ${isVideo ? '30 MB for video' : '8 MB for photos'}.`);
+    if (fileError) {
+      setUploadError(fileError);
       return;
     }
 
@@ -240,23 +211,25 @@ export default function NewSpotPage() {
         setUploading(false);
       }
 
-      const res = await api.post('/spots', {
-        name,
-        category,
-        subcategory,
-        description,
-        municipality,
-        address,
-        gps_lat: gpsLat,
-        gps_lng: gpsLng,
-        price_level: priceLevel,
-        hours: { daily: dailyHours },
-        tags: selectedTags,
-        amenities: selectedAmenities,
-        image_url: uploadedPhotoUrl || '',
-        asset_id: finalAssetId || undefined,
-        asset_ids: finalAssetId ? [finalAssetId] : undefined,
-      });
+      const res = await api.post(
+        '/spots',
+        buildSpotPayload(
+          {
+            name,
+            category,
+            subcategory,
+            description,
+            municipality,
+            address,
+            pin: { lat: gpsLat, lng: gpsLng },
+            dailyHours,
+            priceLevel,
+            tags: selectedTags,
+            amenities: selectedAmenities,
+          },
+          { assetId: finalAssetId, imageUrl: uploadedPhotoUrl }
+        )
+      );
 
       if (res.data?.success) {
         invalidateCache('spots');
