@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { isAxiosError } from 'axios';
 import type { PreviewStatus } from './preview';
 import { invalidateCache } from './cache';
 import { isTravelerSession } from './traveler-session';
@@ -22,7 +23,7 @@ interface AuthContextType {
   verifyEmailOtp: (email: string, code: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: (credential: string, rememberMe?: boolean) => Promise<boolean>;
   loginWithSeed: (seedId: string) => Promise<boolean>;
-  loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<boolean>;
+  loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; error?: string }>;
   loginWithWallet: (address: string, signature: string, rememberMe: boolean) => Promise<boolean>;
   loginWithLocalWallet: (address: string, rememberMe: boolean) => Promise<boolean>;
   loginAsGuest: (rememberMe: boolean) => Promise<boolean>;
@@ -338,7 +339,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const loginWithSimulatedWallet = async (username: string, password: string, rememberMe: boolean) => {
+  const loginWithSimulatedWallet = async (username: string, password: string, rememberMe: boolean): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
       const res = await api.post('/auth/simulated-wallet-login', { username, password });
@@ -346,20 +347,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const normalized = normalizeUser(res.data.data.user);
         if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
           window.location.assign(adminHandoffUrl());
-          return false;
+          return { success: false };
         }
         clearStoredSession();
         invalidateCache();
         setToken('cookie-session');
         setUser(normalized);
         setIsLoading(false);
-        return true;
+        return { success: true };
       }
     } catch (e) {
+      const apiError = isAxiosError<{ error?: { code?: string } }>(e) ? e.response?.data?.error : undefined;
+      if (apiError?.code === 'SIMULATED_LOGIN_DISABLED' || apiError?.code === 'SIMULATED_LOGIN_RESERVED') {
+        setIsLoading(false);
+        return { success: false, error: 'Simulated login is unavailable on this server. Connect a wallet instead.' };
+      }
       console.error('Simulated wallet login error', e);
     }
     setIsLoading(false);
-    return false;
+    return { success: false, error: 'Could not sign in with the simulated wallet. Please try again.' };
   };
 
   const storeWalletSession = (data: { token: string; user: Parameters<typeof normalizeUser>[0] }) => {
