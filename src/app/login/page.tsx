@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { safeReturnPath } from '@/lib/routes';
 import { isTravelerSession } from '@/lib/traveler-session';
+import { DevWalletLogin } from '@/components/DevWalletLogin';
 
 type AuthTab = 'signin' | 'register' | 'forgot' | 'verify_otp';
 type WalletMode = 'local' | 'signature';
@@ -529,6 +530,9 @@ export default function LoginPage() {
             </div>
           </div>
         )}
+
+        {/* Local dev wallet sign-in: dev builds only, and only when the API is in local wallet mode. */}
+        <DevWalletLogin mode={mode} rememberMe={rememberMe} onFinish={finish} />
 
         {/* Web3 EVM Option (Active in Production; Disabled in Local Dev by default) */}
         {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_DISABLE_WALLET_LOGIN !== 'true' && (
