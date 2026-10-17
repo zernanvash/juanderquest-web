@@ -20,7 +20,7 @@ describe('map deep-link parameter hardening', () => {
   it('clamps zoom into the supported tile range and falls back for invalid input', () => {
     expect(clampMapZoom(13)).toBe(13);
     expect(clampMapZoom(2)).toBe(6);
-    expect(clampMapZoom(42)).toBe(19);
+    expect(clampMapZoom(42)).toBe(18);
     expect(clampMapZoom(12.6)).toBe(13);
     expect(clampMapZoom(Number.NaN, 10)).toBe(10);
     expect(clampMapZoom(Number.POSITIVE_INFINITY, 10)).toBe(10);

@@ -11,7 +11,8 @@ describe('map tile coordinate validation', () => {
   it('rejects malformed and out-of-range coordinates', () => {
     expect(parseTileCoordinate('../11')).toBeNull();
     expect(parseTileCoordinate('930.jpg', true)).toBeNull();
-    expect(isValidTileCoordinate(20, 1, 1)).toBe(false);
+    expect(isValidTileCoordinate(20, 1, 1)).toBe(true);
+    expect(isValidTileCoordinate(31, 1, 1)).toBe(false);
     expect(isValidTileCoordinate(2, 4, 0)).toBe(false);
   });
 });

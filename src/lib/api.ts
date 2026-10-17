@@ -700,6 +700,9 @@ export interface RouteManeuver {
 }
 
 export interface RouteModel {
+  degraded?: boolean;
+  navigationMode?: 'turn_by_turn' | 'straight_line_estimate';
+  warning?: { code: 'STRAIGHT_LINE_FALLBACK' | 'OUTSIDE_ROUTING_COVERAGE'; message: string; coverageLabel?: string };
   summary: {
     distanceKm: number;
     durationSeconds: number;
@@ -711,6 +714,14 @@ export interface RouteModel {
   coordinates: [number, number][];
   maneuvers: RouteManeuver[];
 }
+
+export const isStraightLineFallback = (route: RouteModel) =>
+  route.degraded === true || route.navigationMode === 'straight_line_estimate' || route.warning?.code === 'STRAIGHT_LINE_FALLBACK' || route.warning?.code === 'OUTSIDE_ROUTING_COVERAGE';
+
+export const externalRouteUrls = (lat: number, lng: number) => ({
+  googleMaps: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`,
+  waze: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`,
+});
 
 export async function fetchRoute(params: {
   startLat: number;

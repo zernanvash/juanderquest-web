@@ -16,7 +16,10 @@ import type { SpotPostingPin } from '@/lib/spot-posting';
 import { createQuestPinHtml, createSpotPinHtml, createAreaHitboxHtml } from '@/lib/map-icons';
 import { declutterItems } from '@/lib/map-declutter';
 import { useSavedLibrary } from '@/lib/saved-library';
-import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
+import { clusterPoints, MapCluster, MapClusterPoint } from '@/lib/map-cluster';
+import { createClusterIcon } from '@/components/map/ClusterIcon';
+import { createBaseTileLayer, MAP_MAP_MAX_ZOOM } from '@/lib/map-tiles';
+import { PANGASINAN_BOUNDS, PH_LEAFLET_BOUNDS } from '@/lib/map-bounds';
 import { clampMapZoom, isValidLatitude, isValidLongitude } from '@/lib/map-url';
 import { appRoutes } from '@/lib/routes';
 import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePanel';
@@ -53,6 +56,17 @@ const FOCUSED_ZOOM = 13;
 let retainedMap: LeafletMap | null = null;
 let retainedHost: HTMLDivElement | null = null;
 let retainedTileLayer: LeafletTileLayer | null = null;
+let retainedMarkersLayer: LeafletFeatureGroup | null = null;
+const retainedMarkerRegistry = new Map<string, LeafletMarker>();
+const retainedMarkerSignatures = new Map<string, string>();
+const retainedAreaMarkers = new Map<string, LeafletMarker>();
+let retainedUserMarker: LeafletMarker | null = null;
+let retainedUserCircle: ReturnType<typeof import('leaflet').circle> | null = null;
+
+function hasMapFocusParameters(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return ['area', 'q', 'spot', 'quest', 'lat', 'lng'].some((key) => params.has(key));
+}
 
 function MapUrlSync({
   onSelectArea,
@@ -148,6 +162,7 @@ export default function QuestMapPage() {
   const [filterType, setFilterType] = useState<'all' | 'quests' | 'spots' | 'saved'>('all');
   const [currentZoom, setCurrentZoom] = useState<number>(REGIONAL_ZOOM);
   const [mapViewportNonce, setMapViewportNonce] = useState(0);
+  const [clusterZoom, setClusterZoom] = useState<number>(REGIONAL_ZOOM);
   const isZoomedIn = currentZoom >= DESTINATIONS_MIN_ZOOM;
 
   // Responsive Workspace Panel state (collapsed as default per user directive)
@@ -163,6 +178,7 @@ export default function QuestMapPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tilesUnavailable, setTilesUnavailable] = useState(false);
+  const [clusterItems, setClusterItems] = useState<Array<{ type: 'quest' | 'spot'; data: QuestModel | SpotModel }> | null>(null);
 
   // Explicit locate flow only: no location request before the traveler asks.
   const [locating, setLocating] = useState(false);
@@ -186,7 +202,10 @@ export default function QuestMapPage() {
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletMap | null>(null);
-  const markersLayerRef = useRef<LeafletFeatureGroup | null>(null);
+  const markersLayerRef = useRef<LeafletFeatureGroup | null>(retainedMarkersLayer);
+  const markerRegistryRef = useRef(retainedMarkerRegistry);
+  const markerSignaturesRef = useRef(retainedMarkerSignatures);
+  const areaMarkersRef = useRef(retainedAreaMarkers);
   const allCoordinatesRef = useRef<[number, number][]>([]);
   const fittedRef = useRef(false);
 
@@ -398,13 +417,14 @@ export default function QuestMapPage() {
         if (retainedMap && retainedHost) {
           container.replaceChildren(retainedHost);
           mapInstanceRef.current = retainedMap;
-          if (typeof window !== 'undefined' && !window.location.search && !fittedRef.current) {
-            retainedMap.setView(PANGASINAN_CENTER, REGIONAL_ZOOM, { animate: false });
+          if (typeof window !== 'undefined' && !hasMapFocusParameters(window.location.search) && !fittedRef.current) {
+            retainedMap.fitBounds(PANGASINAN_BOUNDS, { animate: false });
           }
           setCurrentZoom(retainedMap.getZoom());
 
           if (!markersLayerRef.current) {
-            markersLayerRef.current = L.featureGroup().addTo(retainedMap);
+            markersLayerRef.current = retainedMarkersLayer ?? L.featureGroup().addTo(retainedMap);
+            retainedMarkersLayer = markersLayerRef.current;
           }
         } else {
           const host = document.createElement('div');
@@ -419,21 +439,26 @@ export default function QuestMapPage() {
           const map = L.map(host, {
             center: PANGASINAN_CENTER,
             zoom: REGIONAL_ZOOM,
+            minZoom: 5,
+            maxZoom: MAP_MAP_MAX_ZOOM,
+            maxBounds: L.latLngBounds(PH_LEAFLET_BOUNDS).pad(0.1),
+            maxBoundsViscosity: 0.8,
             zoomControl: false,
           });
 
           L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-          retainedTileLayer = L.tileLayer(MAP_TILE_URL, {
-            maxZoom: MAP_TILE_MAX_ZOOM,
-            attribution: MAP_TILE_ATTRIBUTION,
-          }).addTo(map);
+          retainedTileLayer = createBaseTileLayer(L).addTo(map);
 
           markersLayerRef.current = L.featureGroup().addTo(map);
+          retainedMarkersLayer = markersLayerRef.current;
           mapInstanceRef.current = map;
           retainedMap = map;
           retainedHost = host;
           setCurrentZoom(REGIONAL_ZOOM);
+          if (typeof window === 'undefined' || !hasMapFocusParameters(window.location.search)) {
+            map.fitBounds(PANGASINAN_BOUNDS, { animate: false });
+          }
         }
 
         retainedTileLayer?.on('tileerror', onTileError);
@@ -450,6 +475,7 @@ export default function QuestMapPage() {
           const onViewportEnd = () => {
             if (!isDisposed) {
               setCurrentZoom(activeMap.getZoom());
+              setClusterZoom(activeMap.getZoom());
               setMapViewportNonce((v) => v + 1);
             }
           };
@@ -660,39 +686,55 @@ export default function QuestMapPage() {
     };
   }, [draftPin]);
 
-  // 2. Render Markers on Map when Data or Filters Update
+  const markerCandidates = useMemo(() => {
+    const items: Array<{ type: 'spot' | 'quest'; data: SpotModel | QuestModel }> = [];
+    const points: MapClusterPoint[] = [];
+    const byId = new Map<string, { type: 'spot' | 'quest'; data: SpotModel | QuestModel }>();
+    if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
+      for (const quest of quests) {
+        if (filterType === 'saved' && !isSaved('quests', quest.id)) continue;
+        items.push({ type: 'quest', data: quest });
+        const id = `quest:${quest.id}`;
+        points.push({ id, kind: 'quest', lat: quest.gpsLat, lng: quest.gpsLng,
+          pinned: (selectedItem?.type === 'quest' && selectedItem.data.id === quest.id) ||
+            isSaved('quests', quest.id) || quest.funding?.status === 'active' });
+        byId.set(id, { type: 'quest', data: quest });
+      }
+    }
+    if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
+      for (const spot of spots) {
+        if (filterType === 'saved' && !isSaved('spots', spot.id)) continue;
+        items.push({ type: 'spot', data: spot });
+        const id = `spot:${spot.id}`;
+        points.push({ id, kind: 'spot', lat: spot.gpsLat, lng: spot.gpsLng,
+          pinned: (selectedItem?.type === 'spot' && selectedItem.data.id === spot.id) || isSaved('spots', spot.id) });
+        byId.set(id, { type: 'spot', data: spot });
+      }
+    }
+    return { items, points, byId };
+  }, [quests, spots, filterType, isSaved, savedLibrary, selectedItem?.type, selectedItem?.data.id]);
+  const clusteredDestinations = useMemo(
+    () => clusterPoints(markerCandidates.points, clusterZoom),
+    [markerCandidates.points, clusterZoom],
+  );
+
+  // Diff destination markers by stable identity. A pan updates labels and hitbox
+  // visibility without recreating any destination marker.
   useEffect(() => {
     const map = mapInstanceRef.current || retainedMap;
-    const group = markersLayerRef.current;
+    const group = markersLayerRef.current || retainedMarkersLayer;
     if (!map || !group) return;
 
     let isDisposed = false;
-
     (async () => {
       const L = (await import('leaflet')).default;
       if (isDisposed) return;
 
-      group.clearLayers();
       const allCoordinates: [number, number][] = [
         ...quests.map((q): [number, number] => [q.gpsLat, q.gpsLng]),
         ...spots.map((s): [number, number] => [s.gpsLat, s.gpsLng]),
       ];
       allCoordinatesRef.current = allCoordinates;
-
-      // 1. Render smart decluttered destination markers (visible & clickable at all zooms)
-      const candidateItems: Array<{ type: 'spot' | 'quest'; data: SpotModel | QuestModel }> = [];
-
-      if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
-        quests
-          .filter((q) => filterType !== 'saved' || isSaved('quests', q.id))
-          .forEach((q) => candidateItems.push({ type: 'quest', data: q }));
-      }
-
-      if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
-        spots
-          .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
-          .forEach((s) => candidateItems.push({ type: 'spot', data: s }));
-      }
 
       const bounds = map.getBounds().pad(0.15);
       const isInViewport = (lat: number, lng: number) => bounds.contains([lat, lng]);
@@ -700,72 +742,161 @@ export default function QuestMapPage() {
         const pt = map.latLngToContainerPoint([lat, lng]);
         return { x: pt.x, y: pt.y };
       };
-
       const selectedId = selectedItem?.data.id;
       const decluttered = declutterItems(
-        candidateItems,
+        markerCandidates.items,
         currentZoom,
         toScreenPoint,
         isInViewport,
         selectedId,
-        isSaved
+        isSaved,
+      );
+      const labelIds = new Set(
+        decluttered.filter((item) => item.showLabel).map((item) => `${item.type}:${item.data.id}`),
       );
 
-      // Track placed screen coordinates for collision avoidance with area labels
-      const occupiedScreenPoints: Array<{ x: number; y: number }> = [];
+      const desiredKeys = new Set<string>();
+      for (const result of clusteredDestinations) {
+        const key = result.type === 'cluster' ? `cluster:${result.key}` : result.id;
+        desiredKeys.add(key);
+        const existing = markerRegistryRef.current.get(key);
+        let marker: LeafletMarker;
+        let signature: string;
 
-      decluttered.forEach(({ type, data, showLabel, screenPoint }) => {
-        if (screenPoint) {
-          occupiedScreenPoints.push(screenPoint);
-        }
-        const isSelected = selectedId === data.id;
-        if (type === 'quest') {
-          const q = data as QuestModel;
-          const icon = L.divIcon({
-            className: 'leaflet-custom-marker',
-            html: createQuestPinHtml(
-              isSelected,
-              isSaved('quests', q.id),
-              showLabel ? q.title : undefined,
-              q.category
-            ),
-            iconAnchor: [18, 44],
+        if (result.type === 'cluster') {
+          const cluster = result as MapCluster;
+          const icon = createClusterIcon(L, cluster);
+          signature = `${cluster.count}:${cluster.hasQuest}`;
+          if (existing) {
+            marker = existing;
+            marker.setLatLng([cluster.lat, cluster.lng]);
+            if (markerSignaturesRef.current.get(key) !== signature) marker.setIcon(icon);
+          } else {
+            marker = L.marker([cluster.lat, cluster.lng], {
+              icon,
+              keyboard: true,
+              title: `${cluster.count} destinations, zoom in`,
+            }).addTo(group);
+            markerRegistryRef.current.set(key, marker);
+          }
+          marker.off('click');
+          marker.on('click', (event: any) => {
+            if (event?.originalEvent) event.originalEvent.stopPropagation();
+            const span = cluster.bounds.maxLat !== cluster.bounds.minLat ||
+              cluster.bounds.maxLng !== cluster.bounds.minLng;
+            if (span) {
+              map.fitBounds(
+                L.latLngBounds(
+                  [cluster.bounds.minLat, cluster.bounds.minLng],
+                  [cluster.bounds.maxLat, cluster.bounds.maxLng],
+                ).pad(0.2),
+                { maxZoom: Math.min(map.getZoom() + 3, 16) },
+              );
+            } else {
+              const items = cluster.ids
+                .map((id) => markerCandidates.byId.get(id))
+                .filter((item): item is { type: 'spot' | 'quest'; data: SpotModel | QuestModel } => Boolean(item));
+              setClusterItems(items);
+              setIsDesktopCollapsed(true);
+              setMobileSnap('peek');
+            }
           });
-
-          L.marker([q.gpsLat, q.gpsLng], { icon })
-            .on('click', (e) => {
-              if (e?.originalEvent) e.originalEvent.stopPropagation();
-              handleSelectItem('quest', q);
-            })
-            .addTo(group);
         } else {
-          const s = data as SpotModel;
-          const icon = L.divIcon({
-            className: 'leaflet-custom-marker',
-            html: createSpotPinHtml(
-              isSelected,
-              isSaved('spots', s.id),
-              showLabel ? s.name : undefined,
-              s.imageUrl,
-              s.category,
-              s.subcategory
-            ),
-            iconAnchor: [18, 44],
+          const point = markerCandidates.byId.get(result.id);
+          if (!point) continue;
+          const isSelected = selectedId === point.data.id;
+          const showLabel = labelIds.has(result.id);
+          const icon = point.type === 'quest'
+            ? L.divIcon({
+                className: 'leaflet-custom-marker',
+                html: createQuestPinHtml(
+                  isSelected,
+                  isSaved('quests', point.data.id),
+                  showLabel ? (point.data as QuestModel).title : undefined,
+                  (point.data as QuestModel).category,
+                ),
+                iconAnchor: [18, 44],
+              })
+            : L.divIcon({
+                className: 'leaflet-custom-marker',
+                html: createSpotPinHtml(
+                  isSelected,
+                  isSaved('spots', point.data.id),
+                  showLabel ? (point.data as SpotModel).name : undefined,
+                  (point.data as SpotModel).imageUrl,
+                  (point.data as SpotModel).category,
+                  (point.data as SpotModel).subcategory,
+                ),
+                iconAnchor: [18, 44],
+              });
+          signature = String(icon.options.html);
+          const latLng: [number, number] = [point.data.gpsLat, point.data.gpsLng];
+          if (existing) {
+            marker = existing;
+            marker.setLatLng(latLng);
+            if (markerSignaturesRef.current.get(key) !== signature) marker.setIcon(icon);
+          } else {
+            marker = L.marker(latLng, {
+              icon,
+              keyboard: true,
+              title: 'title' in point.data ? point.data.title : point.data.name,
+            }).addTo(group);
+            markerRegistryRef.current.set(key, marker);
+          }
+          marker.off('click');
+          marker.on('click', (event: any) => {
+            if (event?.originalEvent) event.originalEvent.stopPropagation();
+            handleSelectItem(point.type, point.data);
           });
-
-          L.marker([s.gpsLat, s.gpsLng], { icon })
-            .on('click', (e) => {
-              if (e?.originalEvent) e.originalEvent.stopPropagation();
-              handleSelectItem('spot', s);
-            })
-            .addTo(group);
         }
-      });
+        markerSignaturesRef.current.set(key, signature);
+      }
 
-      // Render the traveler's own location only after an explicit locate action.
+      for (const [key, marker] of markerRegistryRef.current) {
+        if (!desiredKeys.has(key)) {
+          marker.remove();
+          markerRegistryRef.current.delete(key);
+          markerSignaturesRef.current.delete(key);
+        }
+      }
+
+      // Area hitboxes are created once and only have visibility/pointer state
+      // updated after pans, so map movement never creates replacement markers.
+      const areaBounds = map.getBounds();
+      for (const area of KNOWN_AREAS) {
+        if (area.id === 'philippines' || area.id === 'luzon' || area.id === 'ilocos') continue;
+        let marker = areaMarkersRef.current.get(area.id);
+        if (!marker) {
+          const areaIcon = L.divIcon({
+            className: 'leaflet-custom-marker',
+            html: createAreaHitboxHtml(area.name),
+            iconAnchor: [38, 16],
+          });
+          marker = L.marker(area.center, { icon: areaIcon, keyboard: false }).addTo(group);
+          areaMarkersRef.current.set(area.id, marker);
+        }
+        marker.off('click');
+        marker.on('click', (event: any) => {
+          if (event?.originalEvent) event.originalEvent.stopPropagation();
+          if (map.getZoom() <= 13 && filterType === 'all' && areaBounds.contains(area.center)) {
+            handleSelectArea(area);
+          }
+        });
+        const visible = map.getZoom() <= 13 && filterType === 'all' && areaBounds.contains(area.center);
+        marker.setOpacity(visible ? 1 : 0);
+        const element = marker.getElement();
+        if (element) {
+          element.style.pointerEvents = visible ? 'auto' : 'none';
+          element.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
+      }
+
       if (userLocation) {
-        group.addLayer(
-          L.circle([userLocation.lat, userLocation.lng], {
+        if (retainedUserCircle) {
+          retainedUserCircle.setLatLng([userLocation.lat, userLocation.lng]);
+          retainedUserCircle.setRadius(Math.min(userLocation.accuracy || 0, 2000));
+        } else {
+          retainedUserCircle = L.circle([userLocation.lat, userLocation.lng], {
             radius: Math.min(userLocation.accuracy || 0, 2000),
             color: '#1D4ED8',
             weight: 1,
@@ -773,44 +904,30 @@ export default function QuestMapPage() {
             fillColor: '#1D4ED8',
             fillOpacity: 0.08,
             interactive: false,
-          })
-        );
-        group.addLayer(
-          L.marker([userLocation.lat, userLocation.lng], {
+          }).addTo(group);
+        }
+        if (retainedUserMarker) {
+          retainedUserMarker.setLatLng([userLocation.lat, userLocation.lng]);
+        } else {
+          retainedUserMarker = L.marker([userLocation.lat, userLocation.lng], {
             interactive: false,
+            keyboard: false,
             icon: L.divIcon({
               className: '',
               html: '<div style="width:18px;height:18px;border-radius:9999px;background:#1D4ED8;border:3px solid #fff;box-shadow:0 0 0 2px rgba(29,78,216,0.35),0 2px 6px rgba(0,0,0,0.3)"></div>',
               iconSize: [18, 18],
               iconAnchor: [9, 9],
             }),
-          })
-        );
+          }).addTo(group);
+        }
+      } else {
+        retainedUserMarker?.remove();
+        retainedUserCircle?.remove();
+        retainedUserMarker = null;
+        retainedUserCircle = null;
       }
 
-      // 2. Render transparent interactive hitboxes over existing map tile place names (zoom <= 13)
-      if (currentZoom <= 13 && (!filterType || filterType === 'all')) {        const candidateAreas = KNOWN_AREAS.filter((a) => {
-          if (a.id === 'philippines' || a.id === 'luzon' || a.id === 'ilocos') return false;
-          return isInViewport(a.center[0], a.center[1]);
-        });
-
-        candidateAreas.forEach((area) => {
-          const areaIcon = L.divIcon({
-            className: 'leaflet-custom-marker',
-            html: createAreaHitboxHtml(area.name),
-            iconAnchor: [38, 16],
-          });
-
-          L.marker(area.center, { icon: areaIcon })
-            .on('click', (e) => {
-              if (e?.originalEvent) e.originalEvent.stopPropagation();
-              handleSelectArea(area);
-            })
-            .addTo(group);
-        });
-      }
-
-      // Check URL parameters for explicit destination focus
+      // Preserve explicit URL focus behavior after the point data has loaded.
       if (typeof window !== 'undefined' && !fittedRef.current) {
         const searchParams = new URLSearchParams(window.location.search);
         const urlArea = searchParams.get('area') || searchParams.get('q');
@@ -819,7 +936,6 @@ export default function QuestMapPage() {
         const urlName = searchParams.get('name');
         const urlSpot = searchParams.get('spot');
         const urlQuest = searchParams.get('quest');
-
         if (urlArea) {
           const matchedArea = findAreaByIdOrName(urlArea);
           if (matchedArea) {
@@ -829,11 +945,10 @@ export default function QuestMapPage() {
             return;
           }
         }
-
         if (isValidLatitude(urlLat) && isValidLongitude(urlLng)) {
           const zoom = clampMapZoom(parseFloat(searchParams.get('zoom') || ''), urlName ? 13 : FOCUSED_ZOOM);
           if (urlName) {
-            const dynamicArea: AreaDefinition = {
+            setActiveArea({
               id: `osm-${urlLat.toFixed(4)}-${urlLng.toFixed(4)}`,
               name: urlName,
               type: (searchParams.get('type') as any) || 'city',
@@ -842,37 +957,27 @@ export default function QuestMapPage() {
               zoom,
               keywords: [urlName.toLowerCase()],
               source: 'osm',
-            };
-            setActiveArea(dynamicArea);
+            });
           }
           map.setView([urlLat, urlLng], zoom, { animate: true });
           fittedRef.current = true;
           return;
         }
-
-        if (urlSpot) {
-          const matched = spots.find((s) => s.id === urlSpot || s.slug === urlSpot);
-          if (matched) {
-            map.setView([matched.gpsLat, matched.gpsLng], FOCUSED_ZOOM, { animate: true });
-            fittedRef.current = true;
-            return;
-          }
+        const matchedSpot = urlSpot && spots.find((spot) => spot.id === urlSpot || spot.slug === urlSpot);
+        if (matchedSpot) {
+          map.setView([matchedSpot.gpsLat, matchedSpot.gpsLng], FOCUSED_ZOOM, { animate: true });
+          fittedRef.current = true;
+          return;
         }
-
-        if (urlQuest) {
-          const matched = quests.find((q) => q.id === urlQuest);
-          if (matched) {
-            map.setView([matched.gpsLat, matched.gpsLng], FOCUSED_ZOOM, { animate: true });
-            fittedRef.current = true;
-            return;
-          }
+        const matchedQuest = urlQuest && quests.find((quest) => quest.id === urlQuest);
+        if (matchedQuest) {
+          map.setView([matchedQuest.gpsLat, matchedQuest.gpsLng], FOCUSED_ZOOM, { animate: true });
+          fittedRef.current = true;
         }
       }
     })();
 
-    return () => {
-      isDisposed = true;
-    };
+    return () => { isDisposed = true; };
   }, [
     quests,
     spots,
@@ -880,15 +985,17 @@ export default function QuestMapPage() {
     selectedItem?.data.id,
     savedLibrary,
     isSaved,
-    isZoomedIn,
     currentZoom,
+    clusterZoom,
     mapViewportNonce,
     userLocation,
+    markerCandidates,
+    clusteredDestinations,
     handleSelectItem,
   ]);
 
   // Center on a wide geographic area (e.g. Pangasinan province, Bolinao municipality)
-  const handleSelectArea = useCallback((area: AreaDefinition) => {
+  function handleSelectArea(area: AreaDefinition) {
     setActiveArea((prev) => (prev?.id === area.id ? prev : area));
     setSelectedItem(null);
     setIsDesktopCollapsed(true);
@@ -905,7 +1012,7 @@ export default function QuestMapPage() {
         console.warn('Map camera flight deferred:', e);
       }
     }
-  }, []);
+  }
 
   // Clear area filter and return to Pangasinan regional view
   const handleClearActiveArea = useCallback(() => {
@@ -1410,6 +1517,66 @@ export default function QuestMapPage() {
               </div>
             )}
           </MapWorkspacePanel>
+
+          {clusterItems && (
+            <div
+              className="absolute inset-0 z-50 flex items-end justify-center bg-black/35 p-3 sm:items-center"
+              onClick={() => setClusterItems(null)}
+            >
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="map-cluster-list-title"
+                className="max-h-[78vh] w-full max-w-lg overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white p-4 shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 id="map-cluster-list-title" className="text-base font-black text-[#582F0E]">
+                      Destinations at this location
+                    </h2>
+                    <p className="mt-1 text-xs text-stone-600">{clusterItems.length} destinations</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close destination list"
+                    onClick={() => setClusterItems(null)}
+                    className="min-h-11 min-w-11 rounded-full text-xl text-stone-600 hover:bg-stone-100"
+                  >
+                    ×
+                  </button>
+                </div>
+                <ul className="mt-3 max-h-[62vh] divide-y divide-stone-100 overflow-y-auto">
+                  {clusterItems.map((item) => {
+                    const title = 'title' in item.data ? item.data.title : item.data.name;
+                    const subtitle = 'locationName' in item.data
+                      ? item.data.locationName
+                      : (item.data.address || item.data.municipality);
+                    return (
+                      <li key={`${item.type}:${item.data.id}`}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClusterItems(null);
+                            handleSelectItem(item.type, item.data);
+                          }}
+                          className="flex min-h-14 w-full items-center gap-3 py-2 text-left hover:bg-stone-50"
+                        >
+                          <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[#2D6A4F]">
+                            {item.type === 'quest' ? '🏆' : '📍'}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-bold text-[#2C221E]">{title}</span>
+                            <span className="block truncate text-xs text-stone-600">{subtitle}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            </div>
+          )}
 
           {pinPlacementActive && (
             <div

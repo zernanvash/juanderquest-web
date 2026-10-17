@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExternalLink, MapPin, Maximize2, Compass } from 'lucide-react';
-import { MAP_TILE_URL, MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM } from '@/lib/map-tiles';
+import { createBaseTileLayer } from '@/lib/map-tiles';
 import { createSpotPinHtml, createQuestPinHtml, createDestinationPinHtml } from '@/lib/map-icons';
 
 export interface MiniMapPreviewProps {
@@ -108,10 +108,7 @@ export function MiniMapPreview({
           keyboard: false,
         }).setView([viewRef.current.lat, viewRef.current.lng], viewRef.current.zoom);
 
-        L.tileLayer(MAP_TILE_URL, {
-          maxZoom: MAP_TILE_MAX_ZOOM,
-          attribution: MAP_TILE_ATTRIBUTION,
-        }).addTo(map);
+        createBaseTileLayer(L).addTo(map);
 
         // Select pin icon generator
         let pinHtml = createSpotPinHtml(true);

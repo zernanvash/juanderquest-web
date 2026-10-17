@@ -16,8 +16,8 @@ import {
   ChevronRight,
   Route as RouteIcon,
 } from 'lucide-react';
-import { fetchRoute, RouteModel } from '@/lib/api';
-import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map-tiles';
+import { externalRouteUrls, fetchRoute, isStraightLineFallback, RouteModel } from '@/lib/api';
+import { createBaseTileLayer } from '@/lib/map-tiles';
 
 interface RouteModalProps {
   isOpen: boolean;
@@ -126,10 +126,7 @@ export function RouteModal({ isOpen, onClose, destination }: RouteModalProps) {
           attributionControl: true,
         }).setView([destination.lat, destination.lng], 12);
 
-        L.tileLayer(MAP_TILE_URL, {
-          maxZoom: MAP_TILE_MAX_ZOOM,
-          attribution: MAP_TILE_ATTRIBUTION,
-        }).addTo(map);
+        createBaseTileLayer(L).addTo(map);
 
 
 
@@ -151,9 +148,10 @@ export function RouteModal({ isOpen, onClose, destination }: RouteModalProps) {
         const polyline = L.polyline(latLngs, {
           color: avoidCongested ? '#2D6A4F' : '#0284C7',
           weight: 5,
-          opacity: 0.85,
-          dashArray: avoidCongested ? undefined : '5, 10',
+          dashArray: isStraightLineFallback(route) ? '6, 8' : avoidCongested ? undefined : '5, 10',
+          opacity: isStraightLineFallback(route) ? 0.6 : 0.85,
         }).addTo(map);
+        if (isStraightLineFallback(route)) polyline.bindTooltip('Straight-line distance estimate');
 
         polylineLayerRef.current = polyline;
 
@@ -284,7 +282,15 @@ export function RouteModal({ isOpen, onClose, destination }: RouteModalProps) {
           </div>
 
           {/* Route Metrics Summary Card */}
-          {route && (
+          {route && isStraightLineFallback(route) ? (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
+              <p className="text-sm font-bold text-amber-900">{route.warning?.message || 'Road routing is unavailable. This line is a straight-line distance estimate.'}</p>
+              <p className="text-xs font-semibold text-amber-900">≈ {route.summary.distanceKm} km straight-line distance{route.warning?.coverageLabel ? ` · ${route.warning.coverageLabel} coverage` : ''}</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(externalRouteUrls(destination.lat, destination.lng)).map(([name, href]) => <a key={name} href={href} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-950">Open {name === 'googleMaps' ? 'Google Maps' : 'Waze'}</a>)}
+              </div>
+            </div>
+          ) : route && (
             <div className="p-4 rounded-2xl bg-[#2D6A4F]/10 border border-[#2D6A4F]/20 flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Estimated Travel</span>
@@ -311,7 +317,7 @@ export function RouteModal({ isOpen, onClose, destination }: RouteModalProps) {
           )}
 
           {/* Turn-by-Turn Maneuvers List */}
-          {route && route.maneuvers.length > 0 && (
+          {route && !isStraightLineFallback(route) && route.maneuvers.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">Maneuver Directions:</h3>
               <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
