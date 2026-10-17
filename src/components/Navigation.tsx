@@ -383,7 +383,7 @@ export const Navigation: React.FC<{
       items: [
         { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
         { label: 'Explore Feed', href: '/explore', icon: Compass },
-        { label: 'Interactive Map', href: '/map', icon: MapPin },
+        { label: 'Map', href: '/map', icon: MapPin },
         { label: 'The Trail', href: '/trail', icon: Route },
         { label: 'Eco-Quests', href: '/quests', icon: Zap, hasNews: true },
         { label: 'JuanChoice', href: '/choice', icon: Award, hasNews: true },

@@ -187,7 +187,7 @@ export function MiniMapPreview({
       onKeyDown={!interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleOpenFullMap(e); } : undefined}
       role={!interactive ? 'button' : undefined}
       tabIndex={!interactive ? 0 : undefined}
-      aria-label={!interactive ? `View ${name || 'location'} on interactive map` : 'Map preview'}
+      aria-label={!interactive ? `View ${name || 'location'} on the map` : 'Map preview'}
     >
       {/* Underlying Leaflet Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />

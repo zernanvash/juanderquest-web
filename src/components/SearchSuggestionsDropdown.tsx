@@ -209,7 +209,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                     <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
                     <span>Geographic Areas (Explore on Map)</span>
                   </div>
-                  <span className="text-[10px] text-[#2D6A4F] font-bold">Interactive Map</span>
+                  <span className="text-[10px] text-[#2D6A4F] font-bold">Map</span>
                 </div>
                 <div className="space-y-1">
                   {matchedAreas.map((area) => {
@@ -442,7 +442,7 @@ export const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps>
                   <div className="flex items-center gap-2">
                     <Compass className="h-3.5 w-3.5 text-[#2D6A4F] group-hover:text-[#FFB703]" />
                     <span>
-                      Explore &ldquo;{matchedAreas[0].name}&rdquo; on Interactive Map
+                      Explore &ldquo;{matchedAreas[0].name}&rdquo; on the map
                       {matchedAreas[0].source === 'osm' ? ' (OSM)' : ''}
                     </span>
                   </div>
