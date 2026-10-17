@@ -16,8 +16,9 @@ import {
   ChevronRight,
   Route as RouteIcon,
 } from 'lucide-react';
-import { externalRouteUrls, fetchRoute, isStraightLineFallback, RouteModel } from '@/lib/api';
+import { fetchRoute, isStraightLineFallback, RouteModel } from '@/lib/api';
 import { createBaseTileLayer } from '@/lib/map-tiles';
+import { RouteFallbackNotice } from './RouteFallbackNotice';
 
 interface RouteModalProps {
   isOpen: boolean;
@@ -283,13 +284,7 @@ export function RouteModal({ isOpen, onClose, destination }: RouteModalProps) {
 
           {/* Route Metrics Summary Card */}
           {route && isStraightLineFallback(route) ? (
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
-              <p className="text-sm font-bold text-amber-900">{route.warning?.message || 'Road routing is unavailable. This line is a straight-line distance estimate.'}</p>
-              <p className="text-xs font-semibold text-amber-900">≈ {route.summary.distanceKm} km straight-line distance{route.warning?.coverageLabel ? ` · ${route.warning.coverageLabel} coverage` : ''}</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(externalRouteUrls(destination.lat, destination.lng)).map(([name, href]) => <a key={name} href={href} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-950">Open {name === 'googleMaps' ? 'Google Maps' : 'Waze'}</a>)}
-              </div>
-            </div>
+            <RouteFallbackNotice route={route} destination={destination} />
           ) : route && (
             <div className="p-4 rounded-2xl bg-[#2D6A4F]/10 border border-[#2D6A4F]/20 flex items-center justify-between">
               <div>

@@ -20,12 +20,13 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { externalRouteUrls, fetchRoute, isStraightLineFallback, RouteModel, api, SpotModel, normalizeSpot } from '@/lib/api';
+import { fetchRoute, isStraightLineFallback, RouteModel, api, SpotModel, normalizeSpot } from '@/lib/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { createUserLocationPinHtml, createDestinationPinHtml, createStepPinHtml } from '@/lib/map-icons';
 import { createBaseTileLayer, MAP_MAP_MAX_ZOOM } from '@/lib/map-tiles';
 import { PH_LEAFLET_BOUNDS } from '@/lib/map-bounds';
 import { MapWorkspacePanel, MobileSnapState, MapWorkspaceTab } from '@/components/MapWorkspacePanel';
+import { RouteFallbackNotice } from '@/components/RouteFallbackNotice';
 
 function NavigateContent() {
   const searchParams = useSearchParams();
@@ -520,11 +521,7 @@ function NavigateContent() {
 
             {/* Route Metric Summary Card */}
             {route && (isStraightLineFallback(route) ? (
-              <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
-                <p className="text-xs font-bold text-amber-950">{route.warning?.message || 'Road routing is unavailable. This line is a distance estimate.'}</p>
-                <p className="text-xs font-semibold text-amber-900">≈ {route.summary.distanceKm} km straight-line distance{route.warning?.coverageLabel ? ` · ${route.warning.coverageLabel} coverage` : ''}</p>
-                <div className="flex flex-wrap gap-2">{Object.entries(externalRouteUrls(destination.lat, destination.lng)).map(([name, href]) => <a key={name} href={href} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-950">Open {name === 'googleMaps' ? 'Google Maps' : 'Waze'}</a>)}</div>
-              </div>
+              <RouteFallbackNotice route={route} destination={destination} />
             ) : (
               <div className="p-3.5 bg-[#FFFDF7] rounded-2xl border border-[#E8DCB8] space-y-2">
                 <div className="flex items-baseline justify-between">
