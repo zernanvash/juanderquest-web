@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { MapPin, ChevronDown, ChevronUp, Users, Trophy } from 'lucide-react';
-import type { TownStandingItem } from '@/lib/plaza-api';
+import type { TownEntry } from '@/lib/plaza-api';
 
 interface TownBoardProps {
-  towns: TownStandingItem[];
+  towns: TownEntry[];
 }
 
 export const TownBoard: React.FC<TownBoardProps> = ({ towns }) => {

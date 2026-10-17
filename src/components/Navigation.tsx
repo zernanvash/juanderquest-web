@@ -28,6 +28,7 @@ import {
   PanelLeftClose,
   ChevronRight,
   ChevronUp,
+  Users,
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { CelebrationEffects, triggerCelebration } from '@/components/CelebrationEffects';
@@ -42,7 +43,7 @@ export interface NavigationNotification {
   time: string;
   href: string;
   read: boolean;
-  type: 'quest' | 'dao' | 'system' | 'funding' | 'sponsorship';
+  type: 'quest' | 'dao' | 'system' | 'funding' | 'sponsorship' | 'social';
   durable?: boolean;
 }
 
@@ -555,6 +556,7 @@ export const Navigation: React.FC<{
                           {item.type === 'sponsorship' && <Store className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'dao' && <Vote className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'system' && <Compass className="w-3.5 h-3.5 text-stone-600" />}
+                          {item.type === 'social' && <Users className="w-3.5 h-3.5 text-sky-700" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
@@ -760,6 +762,7 @@ export const Navigation: React.FC<{
                           {item.type === 'sponsorship' && <Store className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'dao' && <Vote className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'system' && <Compass className="w-3.5 h-3.5 text-stone-600" />}
+                          {item.type === 'social' && <Users className="w-3.5 h-3.5 text-sky-700" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">

@@ -15,7 +15,7 @@ import {
   followUser,
   unfollowUser,
   StandingsResponseData,
-  TownStandingItem,
+  TownEntry,
   ActivityItem,
   StandingEntry,
 } from '@/lib/plaza-api';
@@ -48,7 +48,7 @@ function PlazaContent() {
   const [standingsLoading, setStandingsLoading] = useState(true);
   const [standingsError, setStandingsError] = useState<string | null>(null);
 
-  const [towns, setTowns] = useState<TownStandingItem[]>([]);
+  const [towns, setTowns] = useState<TownEntry[]>([]);
 
   // Feed state
   const [feedScope, setFeedScope] = useState<'mixed' | 'following'>('mixed');
@@ -78,7 +78,7 @@ function PlazaContent() {
   const loadTowns = useCallback(async () => {
     try {
       const data = await getTowns();
-      setTowns(data.towns);
+      setTowns(data?.towns ?? []);
     } catch {
       // Towns board optional failover
     }
@@ -103,7 +103,7 @@ function PlazaContent() {
             if (!hasIt) {
               try {
                 const single = await getActivity(queryActivityId);
-                res.items.unshift(single);
+                if (single) res.items.unshift(single);
               } catch {}
             }
           }
@@ -272,6 +272,7 @@ function PlazaContent() {
                   limit: 20,
                   after_rank: standingsData.next_after_rank,
                 }).then((more) => {
+                  if (!more) return;
                   setStandingsData((prev) =>
                     prev
                       ? {

@@ -2,7 +2,7 @@ import { api } from '@/lib/api';
 
 export type DurableNotification = {
   id: string;
-  kind: 'quest_funding' | 'sponsorship' | 'quest_reward';
+  kind: 'quest_funding' | 'sponsorship' | 'quest_reward' | 'follow' | 'cheer' | 'comment' | 'overtaken' | 'weekly_recap' | 'weekly_champion';
   title: string;
   message: string;
   href: string;
