@@ -170,7 +170,7 @@ describe('JuanChoiceExperience component integration tests', () => {
     // Wait for receipt display
     await waitFor(() => {
       expect(mockJuanChoice.putJuanChoiceBallot).toHaveBeenCalled();
-      expect(screen.getByText(/Demo ballot recorded\. \+25 demo Civic XP and \+1 demo stamp in the separate test database only; 0 mJDQ issued\./i)).toBeTruthy();
+      expect(screen.getByText(/Demo ballot recorded\. \+25 demo Civic XP and \+1 demo stamp in the separate test database only; 0 points cost\./i)).toBeTruthy();
     });
   });
 

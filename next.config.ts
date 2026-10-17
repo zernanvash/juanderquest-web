@@ -5,7 +5,7 @@ const latestAndroidApk = "https://github.com/zernanvash/juanderquest-mobile/rele
 const localApiPort = process.env.NODE_ENV === "production" ? 4000 : 4100;
 
 const rawDistDir = process.env.NEXT_DIST_DIR?.trim();
-const allowedDistDirs = new Set([".next", ".next-presentation", ".next-catalog-dev", ".next-alpha-release"]);
+const allowedDistDirs = new Set([".next", ".next-presentation", ".next-catalog-dev", ".next-alpha-release", ".next-alpha-release-next"]);
 if (rawDistDir && !allowedDistDirs.has(rawDistDir)) {
   throw new Error(`Invalid NEXT_DIST_DIR "${rawDistDir}". Must be one of: ${Array.from(allowedDistDirs).join(", ")}`);
 }
@@ -44,11 +44,17 @@ if (distDir === ".next-presentation") {
   }
 }
 
+const disableDevIndicators = process.env.DISABLE_DEV_INDICATORS === "true" || process.env.CI === "true";
+
 const nextConfig: NextConfig = {
   basePath,
   ...(distDir ? { distDir } : {}),
+  ...(disableDevIndicators ? { devIndicators: false } : {}),
   async redirects() {
-    return [{ source: "/download/juanderquest-latest.apk", destination: "/api/v1/app/download", permanent: false }];
+    return [
+      { source: "/download/juanderquest-latest.apk", destination: "/api/v1/app/download", permanent: false },
+      { source: "/spots/new", destination: "/map?add=1", permanent: false },
+    ];
   },
   async rewrites() {
     return [

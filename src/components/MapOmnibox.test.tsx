@@ -55,7 +55,7 @@ const mockQuests: QuestModel[] = [
 ];
 
 describe('MapOmnibox', () => {
-  it('renders input field with placeholder', () => {
+  it('renders input field with national placeholder', () => {
     render(
       <MapOmnibox
         onSelectArea={vi.fn()}
@@ -67,7 +67,7 @@ describe('MapOmnibox', () => {
       />
     );
 
-    expect(screen.getByPlaceholderText(/search pangasinan, town, or spot/i)).toBeDefined();
+    expect(screen.getByPlaceholderText(/search area, town, spot, or quest/i)).toBeDefined();
   });
 
   it('displays quick popular areas when focused and query is empty', () => {
@@ -82,7 +82,7 @@ describe('MapOmnibox', () => {
       />
     );
 
-    const input = screen.getByPlaceholderText(/search pangasinan, town, or spot/i);
+    const input = screen.getByPlaceholderText(/search area, town, spot, or quest/i);
     fireEvent.focus(input);
 
     expect(screen.getByText(/explore wide geographic areas/i)).toBeDefined();
@@ -103,12 +103,12 @@ describe('MapOmnibox', () => {
       />
     );
 
-    const input = screen.getByPlaceholderText(/search pangasinan, town, or spot/i);
+    const input = screen.getByPlaceholderText(/search area, town, spot, or quest/i);
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'pangasinan' } });
 
     expect(screen.getByText(/areas & municipalities \(wide view\)/i)).toBeDefined();
-    const areaBtn = screen.getByRole('button', { name: /pangasinan province in ilocos region/i });
+    const areaBtn = screen.getByRole('option', { name: /pangasinan province in ilocos region/i });
     fireEvent.mouseDown(areaBtn);
 
     expect(handleSelectArea).toHaveBeenCalledWith(
@@ -116,7 +116,7 @@ describe('MapOmnibox', () => {
     );
   });
 
-  it('selects an area on form submit with Enter key', () => {
+  it('supports arrow key navigation and Enter selection', () => {
     const handleSelectArea = vi.fn();
     render(
       <MapOmnibox
@@ -129,13 +129,41 @@ describe('MapOmnibox', () => {
       />
     );
 
-    const input = screen.getByPlaceholderText(/search pangasinan, town, or spot/i);
+    const input = screen.getByPlaceholderText(/search area, town, spot, or quest/i);
+    fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'bolinao' } });
+
+    // Press ArrowDown to select first item
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.submit(input);
 
     expect(handleSelectArea).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'bolinao', name: 'Bolinao' })
     );
+  });
+
+  it('displays honest no-match message and does not force fallback', () => {
+    const handleSelectArea = vi.fn();
+    render(
+      <MapOmnibox
+        onSelectArea={handleSelectArea}
+        onSelectDestination={vi.fn()}
+        activeArea={null}
+        onClearActiveArea={vi.fn()}
+        spots={mockSpots}
+        quests={mockQuests}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(/search area, town, spot, or quest/i);
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'nonexistentplace123' } });
+
+    expect(screen.getByText(/no places or quests found/i)).toBeDefined();
+    fireEvent.submit(input);
+
+    // Should NOT call select area on nonexistent match
+    expect(handleSelectArea).not.toHaveBeenCalled();
   });
 
   it('selects a specific destination spot from autocomplete', () => {
@@ -151,12 +179,12 @@ describe('MapOmnibox', () => {
       />
     );
 
-    const input = screen.getByPlaceholderText(/search pangasinan, town, or spot/i);
+    const input = screen.getByPlaceholderText(/search area, town, spot, or quest/i);
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'islands' } });
 
     expect(screen.getByText('Hundred Islands National Park')).toBeDefined();
-    const spotBtn = screen.getByRole('button', { name: /hundred islands national park/i });
+    const spotBtn = screen.getByRole('option', { name: /hundred islands national park/i });
     fireEvent.mouseDown(spotBtn);
 
     expect(handleSelectDestination).toHaveBeenCalledWith(

@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Trophy,
   Clock,
-  MessageSquare,
   Bookmark,
   Share2,
   Sparkles,
@@ -30,6 +29,7 @@ import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel, isVideoMedia, createAuthorQuest, toggleSpotLike, getLocalLikedSpots } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { useAuth } from '@/lib/auth';
+import { COPY, formatPoints } from '@/lib/copy';
 import { SpotDetailSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DestinationMedia } from '@/components/DestinationMedia';
@@ -43,7 +43,8 @@ import { getSampleDestinationBadges, SAMPLE_USER_BADGES, getActiveNametagBadges 
 import { SpotPresenceController, SpotPresenceState, SPOT_CHROME_IDLE_MS } from '@/lib/spot-ui-presence';
 import { SpotGestureHandler } from '@/lib/spot-ui-gestures';
 import { getAvailableChapters, scrollToChapter } from '@/lib/spot-ui-chapters';
-
+import { SPOT_GOOD_FOR, SPOT_BEST_TIME } from '@/lib/spot-posting';
+import SignInSheet from '@/components/SignInSheet';
 
 function getAuthorBadges(spotId: string, authorName: string, currentUser?: { displayName?: string }) {
   if (currentUser?.displayName && authorName.toLowerCase() === currentUser.displayName.toLowerCase()) {
@@ -83,11 +84,19 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   // Gesture handler for hero stage (tap to toggle, double tap for gallery)
   const gestureHandlerRef = useRef<SpotGestureHandler | null>(null);
 
-  // Scroll cue retirement
+  // Scroll cue retirement & sticky condensed header state
   const [cueRetired, setCueRetired] = useState(false);
+  const [heroOutOfView, setHeroOutOfView] = useState(false);
+  const [questCardInView, setQuestCardInView] = useState(true);
+  const [signInPrompt, setSignInPrompt] = useState<{ open: boolean; actionLabel: string }>({
+    open: false,
+    actionLabel: 'continue',
+  });
 
   // Reading progress scrubber
   const scrubberRef = useRef<HTMLDivElement | null>(null);
+  const heroSectionRef = useRef<HTMLElement | null>(null);
+  const questCardRef = useRef<HTMLDivElement | null>(null);
   const [readingProgress, setReadingProgress] = useState(0);
 
   // Chapters & Scroll-spy
@@ -172,16 +181,21 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
       });
   }, [slug, router]);
 
-  // Clean slides collection (only actual destination photos, no forced placeholder)
-  const slides = useMemo(() => {
+  // Real photos list vs fallback backdrop
+  const realPhotos = useMemo(() => {
     if (!spot) return [];
     const collected = [
       spot.imageUrl,
       ...(spot.photos || []),
     ].filter(Boolean) as string[];
-    const unique = Array.from(new Set(collected));
-    return unique.length > 0 ? unique : ['/bg_landscape.png'];
+    return Array.from(new Set(collected));
   }, [spot]);
+
+  const hasRealPhoto = realPhotos.length > 0;
+
+  const slides = useMemo(() => {
+    return realPhotos.length > 0 ? realPhotos : ['/bg_landscape.png'];
+  }, [realPhotos]);
 
   const currentSlideUrl = slides[activeSlide] || slides[0] || '';
 
@@ -189,10 +203,10 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   // Gallery navigation never replaces the page background mid-read; a video
   // lead gets a still poster plus an explicit play affordance instead of autoplay.
   const backdropStillUrl = useMemo(
-    () => slides.find((url) => !isVideoMedia(url)) || '/bg_landscape.png',
-    [slides]
+    () => realPhotos.find((url) => !isVideoMedia(url)) || '/bg_landscape.png',
+    [realPhotos]
   );
-  const leadIsVideo = isVideoMedia(slides[0] || '');
+  const leadIsVideo = isVideoMedia(realPhotos[0] || '');
 
   // Keyboard navigation for carousel & lightbox
   useEffect(() => {
@@ -234,10 +248,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     const distance = touchStartX - touchEndX;
     const minSwipeDistance = 45;
     if (distance > minSwipeDistance && slides.length > 1) {
-      // Swiped left -> next
       setActiveSlide((prev) => (prev + 1) % slides.length);
     } else if (distance < -minSwipeDistance && slides.length > 1) {
-      // Swiped right -> prev
       setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length);
     }
     setTouchStartX(null);
@@ -246,6 +258,13 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
 
   const handleToggleLike = async () => {
     if (!spot) return;
+    if (!user?.id) {
+      setSignInPrompt({
+        open: true,
+        actionLabel: `like ${spot.name}`,
+      });
+      return;
+    }
     const nextState = !isLiked;
     setIsLiked(nextState);
     await toggleSpotLike(spot.id, nextState);
@@ -295,14 +314,15 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   }, []);
 
-  // Initialize Stage Presence and Gestures
+  // Initialize Stage Presence and Gestures.
+  // S2 fix: Do NOT call wake() on initial mount so utility chrome stays visible on first load;
+  // only start the 3s auto-hide timer after the first pointermove or scroll.
   useEffect(() => {
     const heroController = new SpotPresenceController({
       idleMs: SPOT_CHROME_IDLE_MS,
       onStateChange: setHeroPresence,
     });
     heroPresenceRef.current = heroController;
-    heroController.wake();
 
     gestureHandlerRef.current = new SpotGestureHandler({
       onSingleTap: () => heroPresenceRef.current?.toggle(),
@@ -314,6 +334,41 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
       gestureHandlerRef.current?.cancel();
     };
   }, []);
+
+  // Observe hero stage and quest card for condensed sticky header (`z4`) and mobile sticky bottom CTA
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+    const heroEl = heroSectionRef.current;
+    const questEl = questCardRef.current;
+
+    const observers: IntersectionObserver[] = [];
+
+    if (heroEl) {
+      const heroObs = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (entry) setHeroOutOfView(!entry.isIntersecting);
+        },
+        { threshold: 0.12 }
+      );
+      heroObs.observe(heroEl);
+      observers.push(heroObs);
+    }
+
+    if (questEl) {
+      const questObs = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (entry) setQuestCardInView(entry.isIntersecting);
+        },
+        { threshold: 0.15 }
+      );
+      questObs.observe(questEl);
+      observers.push(questObs);
+    }
+
+    return () => observers.forEach((obs) => obs.disconnect());
+  }, [spot?.id]);
 
   // Lightbox Presence Lifecycle
   useEffect(() => {
@@ -426,13 +481,56 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     );
   }
 
+  const questHref = spot.questId
+    ? appRoutes.quest(spot.questId)
+    : `/quests?spot=${encodeURIComponent(spot.id)}`;
+
+  const renderEcoQuestCard = (variant: 'mobile' | 'desktop') => (
+    <div
+      ref={variant === 'desktop' ? questCardRef : undefined}
+      data-testid={`spot-eco-quest-card-${variant}`}
+      className="bg-[#FAF8F4] p-5 sm:p-6 rounded-2xl border border-[#C9E2D0] shadow-xs space-y-3.5"
+    >
+      <div className="flex items-center justify-between pb-2 border-b border-[#E2DDD3]">
+        <div className="flex items-center gap-2">
+          <Award className="w-4 h-4 text-[#1B4332]" />
+          <h3 className="text-xs font-black text-[#141C16] uppercase tracking-wider">
+            {spot.questId ? `Active ${COPY.quest.singular}` : `On-Site ${COPY.quest.singular}`}
+          </h3>
+        </div>
+        <span className="px-2.5 py-0.5 rounded-full bg-[#1B4332] text-white text-[11px] font-extrabold">
+          {formatPoints(100, { signed: true })}
+        </span>
+      </div>
+
+      <p className="text-xs text-[#526056] leading-relaxed">
+        Verify your physical visit within the 100m GPS radius at {spot.name} to earn {COPY.points.plural} and {COPY.xp.label}.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[#526056]">
+        <span className="px-2.5 py-1 rounded-lg bg-white border border-[#E2DDD3]">
+          2 steps · ~15 mins
+        </span>
+        <span className="px-2.5 py-1 rounded-lg bg-white border border-[#E2DDD3]">
+          GPS ≤ 100m or Photo
+        </span>
+      </div>
+
+      <Link
+        href={questHref}
+        className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-[#1B4332] hover:bg-[#143325] text-white text-xs font-bold transition shadow-xs cursor-pointer min-h-[44px]"
+      >
+        <span>{spot.questId ? 'Explore Eco-Quest Checkpoint' : COPY.quest.playCta}</span>
+        <ExternalLink className="w-3.5 h-3.5" />
+      </Link>
+    </div>
+  );
+
   return (
     <Navigation theater>
       <ErrorBoundary fallbackTitle="Unable to load Destination Spot">
         <div className="relative w-full flex flex-col">
-          {/* One stationary destination photo spans the entire story. It never
-              pans, scales or parallaxes; the story panels scroll over it and it
-              ends at the page/footer boundary with an intentional fade. */}
+          {/* z0: One stationary destination photo spans the entire story (0 gradients, 0 masks). */}
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none bg-[#0A141E] select-none">
             <div className="sticky top-0 h-[100dvh] w-full">
               <img
@@ -449,552 +547,642 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                     image.src = '/bg_landscape.png';
                     return;
                   }
-                  // Even the branded fallback failed: keep the deliberate dark
-                  // brand backdrop and drop the broken-image artifact.
                   image.style.visibility = 'hidden';
                 }}
               />
             </div>
           </div>
 
-          <div className="relative z-10 flex flex-col w-full">
-          {/* 1. HERO — photo-led first viewport with presence system */}
-          <section
-            aria-label={`Destination showcase for ${spot.name}`}
-            data-spot-presence={heroPresence}
-            className="relative w-full min-h-[calc(100dvh-3.5rem)] lg:min-h-dvh flex flex-col justify-end select-none spot-stage-cursor-hide"
-            onPointerMove={() => heroPresenceRef.current?.wake()}
-            onPointerDown={() => heroPresenceRef.current?.wake()}
-            onTouchStart={() => heroPresenceRef.current?.wake()}
-            onFocus={() => heroPresenceRef.current?.wake()}
-            onClick={(e) => {
-              gestureHandlerRef.current?.handleTap(e.target);
-            }}
-          >
-            {/* Video lead: explicit play affordance instead of a silent frame behind text */}
-            {leadIsVideo && (
-              <button
-                data-spot-chrome
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsLightboxOpen(true);
-                }}
-                className="absolute inset-0 m-auto z-20 w-16 h-16 rounded-full bg-black/65 hover:bg-black/85 backdrop-blur-md border border-white/30 text-white flex items-center justify-center transition cursor-pointer active:scale-95"
-                aria-label="Play destination video in gallery"
-                title="Play video"
-              >
-                <Film className="w-7 h-7 text-[#FFB703]" />
-              </button>
-            )}
-
-            {/* Top Floating Control Bar */}
+          {/* z4: Condensed Sticky Header when hero scrolls out of view */}
+          {heroOutOfView && (
             <div
-              data-spot-chrome
-              className="absolute top-4 sm:top-6 left-4 sm:left-8 right-4 sm:right-8 z-20 flex items-center justify-between pointer-events-none"
-              onMouseEnter={() => heroPresenceRef.current?.suspend()}
-              onMouseLeave={() => heroPresenceRef.current?.resume()}
+              data-testid="spot-condensed-header"
+              className="fixed top-0 left-0 right-0 z-40 border-b border-[#E2DDD3] bg-white/95 backdrop-blur-md shadow-xs transition-transform duration-200"
             >
-              {/* Back Button */}
-              <Link
-                href="/explore"
-                className="chip-live inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white font-bold text-xs transition shadow-lg pointer-events-auto cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4 text-[#FFB703]" />
-                <span className="hidden sm:inline">Back to Explore</span>
-                <span className="sm:hidden">Explore</span>
-              </Link>
-
-              {/* Center Breadcrumb (Desktop) */}
-              <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/15 text-white/95 text-xs font-semibold shadow-md pointer-events-auto">
-                <MapPin className="w-3.5 h-3.5 text-emerald-300" />
-                <span>{spot.municipality}</span>
-                <span>•</span>
-                <span className="capitalize">{spot.subcategory.replace('_', ' ')}</span>
-              </div>
-
-              {/* Top Right: explicit Gallery entry (no large floating arrows) */}
-              <button
-                type="button"
-                onClick={() => setIsLightboxOpen(true)}
-                className="chip-live inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-black/55 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition shadow-lg pointer-events-auto cursor-pointer min-h-[44px]"
-                aria-label="Open fullscreen photo gallery"
-              >
-                <Camera className="w-4 h-4 text-[#FFB703]" />
-                <span>Gallery</span>
-                {slides.length > 1 && (
-                  <span className="font-mono text-white/80">{activeSlide + 1}/{slides.length}</span>
-                )}
-              </button>
-            </div>
-
-            {/* Compact hero block: title, truthful locality, teaser, high-value actions */}
-            <div
-              data-spot-chrome
-              className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 pb-24 lg:pb-20 space-y-3 pointer-events-auto"
-              onMouseEnter={() => heroPresenceRef.current?.suspend()}
-              onMouseLeave={() => heroPresenceRef.current?.resume()}
-            >
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                {spot.name}
-              </h1>
-              <p className="text-sm sm:text-base text-white flex items-center gap-1.5 font-semibold drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                <MapPin className="w-4 h-4 text-[#FFB703]" />
-                <span>{spot.municipality}</span>
-              </p>
-              {spot.description && (
-                <p className="max-w-2xl text-xs sm:text-sm text-white font-medium line-clamp-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                  {spot.description}
-                </p>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                {spot.questId && (
+              <div className="mx-auto flex max-w-[1160px] items-center justify-between gap-3 px-4 py-2 sm:px-6">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <Link
-                    href={appRoutes.quest(spot.questId)}
-                    className="chip-live btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
+                    href="/explore"
+                    aria-label="Back to Explore"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#E2DDD3] text-[#141C16] hover:bg-[#F3EFE6] transition-colors"
                   >
-                    <Trophy className="w-4 h-4 text-[#582F0E]" />
-                    <span>Play Eco-Quest</span>
+                    <ArrowLeft className="w-4 h-4" />
                   </Link>
-                )}
-
+                  <img
+                    src={backdropStillUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-9 w-9 shrink-0 rounded-lg object-cover border border-[#E2DDD3]"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-xs sm:text-sm font-extrabold text-[#141C16]">{spot.name}</p>
+                    <p className="truncate text-[11px] text-[#526056]">{spot.municipality}</p>
+                  </div>
+                </div>
                 <Link
-                  href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                  className="chip-live btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-black/55 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md text-xs sm:text-sm font-bold transition cursor-pointer min-h-[44px]"
+                  href={questHref}
+                  className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#1B4332] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#143325] transition-colors"
                 >
-                  <MapPin className="w-4 h-4 text-[#FFB703]" />
-                  <span>View on Map</span>
+                  <span>{COPY.quest.playCta}</span>
                 </Link>
               </div>
             </div>
+          )}
 
-            {/* Subtle floating scroll caret */}
-            {!cueRetired && (
-              <button
-                data-spot-chrome
-                type="button"
-                onClick={scrollToSpotInfo}
-                className="absolute bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer group active:scale-90"
-                aria-label="Scroll to explore the destination story"
-              >
-                <ChevronDown className="hero-cue-icon w-5 h-5 text-white/70 group-hover:text-white transition-colors drop-shadow-md" aria-hidden="true" />
-              </button>
-            )}
-
-            {/* Story-progress line (scrubber analog) */}
-            <div
-              data-spot-chrome
-              ref={scrubberRef}
-              onClick={handleSeekProgress}
-              className="absolute bottom-0 left-0 right-0 z-30 h-3 flex items-end cursor-pointer group pointer-events-auto"
-              aria-label="Story reading progress scrubber, click to seek"
-              role="progressbar"
-              aria-valuenow={Math.round(readingProgress)}
-              aria-valuemin={0}
-              aria-valuemax={100}
+          <div className="relative z-10 flex flex-col w-full">
+            {/* 1. HERO — full-viewport photo first (100dvh); the white overlay sheet is only revealed on scroll */}
+            <section
+              ref={heroSectionRef}
+              aria-label={`Destination showcase for ${spot.name}`}
+              data-spot-presence={heroPresence}
+              className="relative w-full flex flex-col justify-end select-none spot-stage-cursor-hide min-h-[100dvh]"
+              onPointerMove={() => heroPresenceRef.current?.wake()}
+              onPointerDown={() => heroPresenceRef.current?.wake()}
+              onTouchStart={() => heroPresenceRef.current?.wake()}
+              onFocus={() => heroPresenceRef.current?.wake()}
+              onClick={(e) => {
+                gestureHandlerRef.current?.handleTap(e.target);
+              }}
             >
-              <div className="w-full h-[3px] bg-white/20 group-hover:h-[5px] transition-all">
-                <div className="spot-reading-progress h-full bg-[#FFB703]" />
-              </div>
-            </div>
-          </section>
+              {/* Video lead: explicit play affordance instead of a silent frame behind text */}
+              {leadIsVideo && (
+                <button
+                  data-spot-chrome
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLightboxOpen(true);
+                  }}
+                  className="absolute inset-0 m-auto z-20 w-16 h-16 rounded-full bg-black/65 hover:bg-black/85 backdrop-blur-md border border-white/30 text-white flex items-center justify-center transition cursor-pointer active:scale-95"
+                  aria-label="Play destination video in gallery"
+                  title="Play video"
+                >
+                  <Film className="w-7 h-7 text-[#FFB703]" />
+                </button>
+              )}
 
-          {/* 2. STORY INTRO — white panel scrolling over the photo */}
-          <div
-            id="spot-info"
-            className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 scroll-mt-16 lg:scroll-mt-4"
-          >
-            <header className="panel-enter bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-[#E3DFD5] shadow-xs space-y-5">
-                    {/* Chapter Navigation Bar (YouTube chapters analog) */}
-                    <nav aria-label="Story chapters" className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 border-b border-[#E8E5DE]/50">
-                      <span className="text-[11px] font-bold text-[#837560] uppercase tracking-wider mr-1 hidden sm:inline">
-                        Chapters:
-                      </span>
-                      {chapters.map((chapter) => {
-                        const isActive = activeChapter === chapter.id;
-                        return (
-                          <button
-                            key={chapter.id}
-                            type="button"
-                            onClick={() => scrollToChapter(chapter.id)}
-                            aria-current={isActive ? 'true' : undefined}
-                            className={`chip-live px-3.5 py-1.5 rounded-full text-xs font-bold transition min-h-[44px] inline-flex items-center cursor-pointer shrink-0 ${
-                              isActive
-                                ? 'bg-[#2D6A4F] text-white shadow-xs'
-                                : 'bg-[#FAF9F5] hover:bg-white text-[#582F0E] border border-[#E3DFD5]'
-                            }`}
-                          >
-                            {chapter.label}
-                          </button>
-                        );
-                      })}
-                    </nav>
+              {/* z2: Top Floating Utility Bar (auto-hides after 3s idle following pointermove) */}
+              <div
+                data-spot-chrome
+                className="absolute top-4 sm:top-6 left-4 sm:left-8 right-4 sm:right-8 z-20 flex items-center justify-between pointer-events-none"
+                onMouseEnter={() => heroPresenceRef.current?.suspend()}
+                onMouseLeave={() => heroPresenceRef.current?.resume()}
+              >
+                {/* Back Button */}
+                <Link
+                  href="/explore"
+                  className="chip-live inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-full bg-white/95 hover:bg-white backdrop-blur-md border border-[#E2DDD3] text-[#141C16] font-bold text-xs transition shadow-md pointer-events-auto cursor-pointer min-h-[44px]"
+                >
+                  <ArrowLeft className="w-4 h-4 text-[#1B4332]" />
+                  <span className="hidden sm:inline">Back to Explore</span>
+                  <span className="sm:hidden">Explore</span>
+                </Link>
 
-                    {/* Status & category chips */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#D8F3DC] text-[#2D6A4F] text-xs font-black uppercase tracking-wider">
-                        <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
-                        <span>{spot.category.replace('_', ' ')}</span>
-                      </span>
-
-                      {spot.trustLevel === 'lgu_verified' && (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-                          <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                          <span>LGU Verified Landmark</span>
-                        </span>
-                      )}
-
-                      {spot.questId && (
-                        <Link
-                          href={appRoutes.quest(spot.questId)}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-[#B45309] text-xs font-black border border-amber-200 hover:bg-amber-100 transition"
-                        >
-                          <Trophy className="w-3.5 h-3.5 text-[#FFB703]" />
-                          <span>Linked Quest Trail</span>
-                        </Link>
-                      )}
-
-                      {spot.isTest && (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300">
-                          Fictional alpha post
-                        </span>
-                      )}
-
-                      {spot.crowdStatus === 'estimated_busy' ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#FFF3E8] border border-[#FFD8B8] text-xs font-bold text-[#D95D00]">
-                          <AlertTriangle className="w-3.5 h-3.5 text-[#D95D00]" />
-                          <span>Peak Hours</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#2D6A4F]">
-                          <ShieldCheck className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                          <span>Low Crowd</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <DestinationBadgeList
-                      badges={getSampleDestinationBadges(spot.id, spot.category)}
-                      maxDisplay={5}
-                      size="sm"
-                    />
-
-                    {/* Truthful place context and real attribution */}
-                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#837560]">
-                      <span className="flex items-center gap-1 font-semibold text-[#2D6A4F]">
-                        <MapPin className="w-4 h-4" />
-                        <span>{spot.address || spot.municipality}</span>
-                      </span>
+                {/* Center Breadcrumb (Desktop) */}
+                <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-[#E2DDD3] text-[#141C16] text-xs font-semibold shadow-sm pointer-events-auto">
+                  <MapPin className="w-3.5 h-3.5 text-[#1B4332]" />
+                  <span>{spot.municipality}</span>
+                  <span>•</span>
+                  <span className="capitalize">{spot.subcategory.replace('_', ' ')}</span>
+                  {!hasRealPhoto && (
+                    <>
                       <span>•</span>
-                      {spot.sourceName.startsWith('Photo:') && spot.sourceUrl ? (
-                        <a
-                          href={spot.sourceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline underline-offset-2"
-                        >
-                          {spot.sourceName.replace(/^Photo:\s*/, '')}
-                        </a>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 flex-wrap">
-                          <span>Shared by</span>
-                          <UserNametag
-                            displayName={spot.sourceName}
-                            badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
-                            size="sm"
-                          />
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Practical actions */}
-                    <div className="pt-4 border-t border-[#E8E5DE]/40 flex flex-wrap items-center gap-2.5">
-                      {spot.questId && (
-                        <Link
-                          href={appRoutes.quest(spot.questId)}
-                          className="btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
-                        >
-                          <Trophy className="w-4 h-4 text-[#582F0E]" />
-                          <span>Play Eco-Quest</span>
-                        </Link>
-                      )}
-
-                      <Link
-                        href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white text-[#582F0E] border border-[#E3DFD5] text-xs font-bold transition cursor-pointer min-h-[44px]"
-                      >
-                        <MapPin className="w-4 h-4 text-[#2D6A4F]" />
-                        <span>View on Map</span>
-                      </Link>
-
-                      <button
-                        type="button"
-                        onClick={handleShare}
-                        className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] text-[#582F0E] text-xs font-bold transition cursor-pointer min-h-[44px]"
-                        aria-label="Share Destination"
-                      >
-                        {shareCopied ? <Check className="w-4 h-4 text-[#2D6A4F]" /> : <Share2 className="w-4 h-4" />}
-                        <span>{shareCopied ? 'Link copied' : 'Share'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleToggleLike}
-                        className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
-                          isLiked
-                            ? 'bg-rose-50 border-rose-200 shadow-2xs'
-                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-rose-300'
-                        }`}
-                        aria-label={isLiked ? 'Liked destination' : 'Like destination'}
-                        aria-pressed={isLiked}
-                        title={isLiked ? 'Liked' : 'Like'}
-                      >
-                        <PixelHeart isLiked={isLiked} size="md" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleToggleSave}
-                        className={`btn-tactile flex items-center justify-center p-2.5 rounded-xl border transition cursor-pointer min-h-[44px] min-w-[44px] ${
-                          isSaved
-                            ? 'bg-amber-100 border-amber-300 shadow-2xs'
-                            : 'bg-[#FAF9F5] border-[#E3DFD5] hover:border-amber-300'
-                        }`}
-                        aria-label={isSaved ? 'Saved' : 'Save'}
-                        aria-pressed={isSaved}
-                        title={isSaved ? 'Saved' : 'Save'}
-                      >
-                        <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-400'}`} />
-                      </button>
-                    </div>
-                  </header>
-          </div>
-
-          {/* 3. STORY MODULES — dark-tinted panels with the photo visible between them */}
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14 space-y-6 sm:space-y-8">
-            {/* Two-Column Maximized Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* Left/Main Column (lg:col-span-8) */}
-              <div className="lg:col-span-8 space-y-6">
-                {/* About Narrative */}
-                <section
-                  id="spot-about"
-                  className="panel-enter bg-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
-                >
-                  <h2 className="text-xl sm:text-2xl font-black text-[#582F0E]">
-                    About {spot.name}
-                  </h2>
-                  <p className="text-sm text-[#514532] leading-relaxed whitespace-pre-line">
-                    {spot.description}
-                  </p>
-
-                  {/* Amenities & Highlights */}
-                  {spot.amenities && spot.amenities.length > 0 && (
-                    <div className="pt-4 border-t border-[#E8E5DE] space-y-3">
-                      <h3 className="text-xs font-bold text-[#582F0E] uppercase tracking-wider">
-                        Amenities &amp; Features
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {spot.amenities.map((amenity, idx) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1.5 rounded-full bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-semibold text-[#582F0E] capitalize"
-                          >
-                            {amenity.replace('_', ' ')}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                      <span className="text-[#526056]">Illustration — no photo yet</span>
+                    </>
                   )}
-                </section>
+                </div>
 
-                {/* Community Traveler Notes & Tips Forum */}
-                <section
-                  id="spot-comments"
-                  className="panel-enter bg-white rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs p-4 sm:p-6 scroll-mt-16 lg:scroll-mt-8"
+                {/* Top Right: explicit Gallery entry with thumbnail stack */}
+                <button
+                  type="button"
+                  onClick={() => setIsLightboxOpen(true)}
+                  className="chip-live inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-full bg-white/95 hover:bg-white backdrop-blur-md border border-[#E2DDD3] text-[#141C16] text-xs font-bold transition shadow-md pointer-events-auto cursor-pointer min-h-[44px]"
+                  aria-label="Open fullscreen photo gallery"
                 >
-                  <SpotCommentSection spotId={spot.id} spotName={spot.name} />
-                </section>
+                  <Camera className="w-4 h-4 text-[#1B4332]" />
+                  <span>Gallery</span>
+                  {slides.length > 1 && (
+                    <span className="font-mono text-[#526056]">{activeSlide + 1}/{slides.length}</span>
+                  )}
+                </button>
               </div>
 
-              {/* Right/Sidebar Column (lg:col-span-4) */}
-              <div className="lg:col-span-4 space-y-6">
-                {/* Author Control Center Card */}
-                {isAuthor && (
-                  <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] text-white p-6 rounded-2xl sm:rounded-3xl shadow-lg border border-emerald-400/40 space-y-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-[#FFB703]" />
-                      </div>
-                      <div>
-                        <span className="text-[11px] font-black uppercase tracking-wider text-amber-200 block">
-                          Destination Author
-                        </span>
-                        <span className="text-xs text-emerald-100 font-semibold">You posted this spot</span>
-                      </div>
-                    </div>
+              {/* z1: Permanent Identity Block — Minimal title + municipality so the photo stays unobstructed */}
+              <div
+                className="relative z-20 w-full max-w-[1160px] mx-auto px-4 sm:px-8 pb-16 lg:pb-14 space-y-1.5 pointer-events-auto"
+                onMouseEnter={() => heroPresenceRef.current?.suspend()}
+                onMouseLeave={() => heroPresenceRef.current?.resume()}
+              >
+                <h1 className="spot-choreo-title text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight tracking-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.68),0_1px_3px_rgba(0,0,0,0.85)]">
+                  {spot.name}
+                </h1>
+                <p className="text-sm sm:text-base text-white flex items-center gap-1.5 font-semibold [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+                  <MapPin className="w-4 h-4 text-[#FFB703]" />
+                  <span>{spot.municipality}</span>
+                </p>
+              </div>
 
-                    <p className="text-xs text-emerald-100/90 leading-relaxed">
-                      As the creator of this destination, you can attach an official quest checkpoint for travelers to discover on their mobile app and earn $mJDQ rewards.
-                    </p>
+              {/* Subtle floating scroll caret */}
+              {!cueRetired && (
+                <button
+                  data-spot-chrome
+                  type="button"
+                  onClick={scrollToSpotInfo}
+                  className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center gap-1 min-h-[44px] min-w-[44px] cursor-pointer group active:scale-90"
+                  aria-label="Scroll to explore the destination story"
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+                    Scroll for details
+                  </span>
+                  <ChevronDown className="hero-cue-icon w-5 h-5 text-white/90 group-hover:text-white transition-colors drop-shadow-md" aria-hidden="true" />
+                </button>
+              )}
+
+              {/* Story-progress line (scrubber analog) */}
+              <div
+                data-spot-chrome
+                ref={scrubberRef}
+                onClick={handleSeekProgress}
+                className="absolute bottom-0 left-0 right-0 z-30 h-3 flex items-end cursor-pointer group pointer-events-auto"
+                aria-label="Story reading progress scrubber, click to seek"
+                role="progressbar"
+                aria-valuenow={Math.round(readingProgress)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div className="w-full h-[3px] bg-white/25 group-hover:h-[5px] transition-all">
+                  <div className="spot-reading-progress h-full bg-[#FFB703]" />
+                </div>
+              </div>
+            </section>
+
+            {/* 2. ONE CONTINUOUS WHITE READING SHEET (<article>, U2) */}
+            <article
+              id="spot-info"
+              data-testid="spot-reading-sheet"
+              className="spot-choreo-sheet relative z-20 w-full rounded-t-[28px] bg-white text-[#141C16] shadow-[0_-8px_30px_rgb(0_0_0_/_0.12)] border-t border-[#E2DDD3] scroll-mt-16 lg:scroll-mt-4"
+            >
+              {/* Subtle drag-handle affordance */}
+              <div className="pt-3 pb-1 flex justify-center" aria-hidden="true">
+                <span className="h-1.5 w-11 rounded-full bg-[#E2DDD3]" />
+              </div>
+
+              {/* Sticky Chapter Bar */}
+              <div
+                className={`sticky z-30 border-b border-[#EDE9E0] bg-white/95 backdrop-blur-md transition-[top] duration-200 ${
+                  heroOutOfView ? 'top-[53px]' : 'top-0'
+                }`}
+              >
+                <div className="max-w-[1160px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+                  <nav aria-label="Story chapters" className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <span className="text-[11px] font-bold text-[#526056] uppercase tracking-wider mr-1 hidden sm:inline">
+                      Chapters:
+                    </span>
+                    {chapters.map((chapter) => {
+                      const isActive = activeChapter === chapter.id;
+                      return (
+                        <button
+                          key={chapter.id}
+                          type="button"
+                          onClick={() => scrollToChapter(chapter.id)}
+                          aria-current={isActive ? 'true' : undefined}
+                          className={`chip-live px-3.5 py-1.5 rounded-full text-xs font-bold transition min-h-[40px] inline-flex items-center cursor-pointer shrink-0 ${
+                            isActive
+                              ? 'bg-[#1B4332] text-white shadow-xs'
+                              : 'bg-[#FAF8F4] hover:bg-[#F3EFE6] text-[#141C16] border border-[#E2DDD3]'
+                          }`}
+                        >
+                          {chapter.label}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+              </div>
+
+              {/* Sheet Intro Header: Status chips, attribution, and ONLY Save/Like/Share (no duplicate Play/Map buttons per U3) */}
+              <header className="max-w-[1160px] mx-auto px-4 sm:px-6 lg:px-8 py-6 border-b border-[#EDE9E0] space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  {/* Status & category chips */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#E9F3EC] text-[#1B4332] text-xs font-black uppercase tracking-wider">
+                      <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
+                      <span>{spot.category.replace('_', ' ')}</span>
+                    </span>
+
+                    {spot.trustLevel === 'lgu_verified' && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
+                        <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                        <span>LGU Verified Landmark</span>
+                      </span>
+                    )}
+
+                    {spot.isTest && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300">
+                        Fictional alpha post
+                      </span>
+                    )}
+
+                    {spot.crowdStatus === 'estimated_busy' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF3E8] border border-[#FFD8B8] text-xs font-bold text-[#D95D00]">
+                        <span className="h-2 w-2 rounded-full bg-[#D95D00] spot-crowd-pulse" />
+                        <span>Peak Hours</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E9F3EC] border border-[#C9E2D0] text-xs font-bold text-[#1B4332]">
+                        <span className="h-2 w-2 rounded-full bg-emerald-600 spot-crowd-pulse" />
+                        <span>Low Crowd</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Secondary utility actions only: Share, Like, Save */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-[#FAF8F4] hover:bg-[#F3EFE6] border border-[#E2DDD3] text-[#141C16] text-xs font-bold transition cursor-pointer min-h-[44px]"
+                      aria-label="Share Destination"
+                    >
+                      {shareCopied ? <Check className="w-4 h-4 text-[#1B4332]" /> : <Share2 className="w-4 h-4" />}
+                      <span>{shareCopied ? 'Link copied' : 'Share'}</span>
+                    </button>
 
                     <button
                       type="button"
-                      onClick={() => {
-                        setQuestTitle(`Explore ${spot.name}`);
-                        setQuestDescription(`Visit ${spot.name}, explore the grounds, and verify your coordinates within the geofence.`);
-                        setIsQuestModalOpen(true);
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black shadow-md transition active:scale-98 cursor-pointer"
+                      onClick={handleToggleLike}
+                      className={`btn-tactile flex items-center justify-center p-2.5 rounded-full border transition cursor-pointer min-h-[44px] min-w-[44px] ${
+                        isLiked
+                          ? 'bg-rose-50 border-rose-200 shadow-2xs'
+                          : 'bg-[#FAF8F4] border-[#E2DDD3] hover:border-rose-300'
+                      }`}
+                      aria-label={isLiked ? 'Liked destination' : 'Like destination'}
+                      aria-pressed={isLiked}
+                      title={isLiked ? 'Liked' : 'Like'}
                     >
-                      <PlusCircle className="w-4 h-4" />
-                      <span>{spot.questId ? 'Add Another Eco-Quest' : 'Create Eco-Quest for this Spot'}</span>
+                      <PixelHeart isLiked={isLiked} size="md" />
                     </button>
-                  </div>
-                )}
 
-                {/* Active Quest on this Destination */}
-                {spot.questId && (
-                  <div className="bg-white p-6 rounded-2xl sm:rounded-3xl border border-amber-200/90 shadow-xs space-y-3.5">
-                    <div className="flex items-center justify-between pb-2 border-b border-amber-100">
-                      <div className="flex items-center gap-2">
-                        <Award className="w-4 h-4 text-[#FFB703]" />
-                        <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
-                          Active Eco-Quest
-                        </h3>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                        Earn Tokens
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-[#514532] leading-relaxed">
-                      This destination has an active Eco-Quest checkpoint. Travelers can verify their physical visit on-site to earn $mJDQ tokens and Explorer XP.
-                    </p>
-
-                    <Link
-                      href={appRoutes.quest(spot.questId)}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-xs cursor-pointer active:scale-98"
+                    <button
+                      type="button"
+                      onClick={handleToggleSave}
+                      className={`btn-tactile flex items-center justify-center p-2.5 rounded-full border transition cursor-pointer min-h-[44px] min-w-[44px] ${
+                        isSaved
+                          ? 'bg-amber-100 border-amber-300 shadow-2xs'
+                          : 'bg-[#FAF8F4] border-[#E2DDD3] hover:border-amber-300'
+                      }`}
+                      aria-label={isSaved ? 'Saved' : 'Save'}
+                      aria-pressed={isSaved}
+                      title={isSaved ? 'Saved' : 'Save'}
                     >
-                      <span>Explore Eco-Quest Checkpoint</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                )}
-
-                {/* Venue Summary Facts */}
-                <div
-                  id="spot-venue"
-                  className="panel-enter bg-white p-6 rounded-2xl sm:rounded-3xl border border-[#E3DFD5] shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
-                >
-                  <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider pb-2 border-b border-[#E8E5DE]">
-                    Venue Details
-                  </h3>
-
-                  <div className="space-y-3.5 text-xs sm:text-sm">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-[#582F0E]">{spot.municipality}</p>
-                        <p className="text-xs text-[#837560]">{spot.address || spot.municipality || 'Location not recorded'}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Clock className="w-4 h-4 text-[#7D5800] shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-[#582F0E]">Operating Hours</p>
-                        <p className="text-xs text-[#837560]">
-                          {spot.hours?.daily || (spot.trustLevel === 'open_data' ? 'Hours not confirmed' : 'Open to visitors daily')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-[#582F0E]">Verification</p>
-                        <p className="text-xs text-[#837560]">
-                          {spot.trustLevel === 'lgu_verified'
-                            ? 'LGU Verified Landmark'
-                            : spot.trustLevel === 'open_data'
-                              ? 'Open-data source; not LGU-verified'
-                              : 'Community Sourced'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-[#E8E5DE] space-y-2.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-[#582F0E]">Location Map</span>
-                        <Link
-                          href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
-                          className="text-[#2D6A4F] hover:underline font-bold text-xs flex items-center gap-1"
-                        >
-                          <span>Full Map</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
-                      </div>
-                      <MiniMapPreview
-                        lat={spot.gpsLat}
-                        lng={spot.gpsLng}
-                        name={spot.name}
-                        address={spot.address}
-                        municipality={spot.municipality}
-                        spotId={spot.id}
-                        pinType="spot"
-                        height="h-44"
-                      />
-                    </div>
+                      <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-[#B45309]' : 'text-gray-500'}`} />
+                    </button>
                   </div>
                 </div>
 
-                {/* Smart Diversion: Quieter Alternatives */}
-                {alternatives.length > 0 && (
-                  <div
-                    id="spot-alternatives"
-                    className="panel-enter bg-white p-6 rounded-2xl sm:rounded-3xl border border-emerald-200/90 shadow-xs space-y-4 scroll-mt-16 lg:scroll-mt-8"
-                  >
-                    <div className="flex items-center justify-between pb-2 border-b border-emerald-100">
-                      <h3 className="text-xs font-black text-[#2D6A4F] uppercase tracking-wider flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
-                        <span>Nearby Alternatives</span>
-                      </h3>
+                <DestinationBadgeList
+                  badges={getSampleDestinationBadges(spot.id, spot.category)}
+                  maxDisplay={5}
+                  size="sm"
+                />
+
+                {/* Truthful place context and real attribution */}
+                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#526056]">
+                  <span className="flex items-center gap-1 font-semibold text-[#1B4332]">
+                    <MapPin className="w-4 h-4" />
+                    <span>{spot.address || spot.municipality}</span>
+                  </span>
+                  <span>•</span>
+                  {spot.sourceName.startsWith('Photo:') && spot.sourceUrl ? (
+                    <a
+                      href={spot.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2 text-[#1B4332]"
+                    >
+                      {spot.sourceName.replace(/^Photo:\s*/, '')}
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 flex-wrap">
+                      <span>Shared by</span>
+                      <UserNametag
+                        displayName={spot.sourceName}
+                        badges={getAuthorBadges(spot.id, spot.sourceName, user ?? undefined)}
+                        size="sm"
+                      />
+                    </span>
+                  )}
+                </div>
+              </header>
+
+              {/* Sheet Body: 12-Column Grid (7 cols left narrative, 5 cols sticky right rail) */}
+              <div className="max-w-[1160px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+                  {/* Left/Main Column (lg:col-span-7) divided by hairline borders */}
+                  <div className="lg:col-span-7 divide-y divide-[#EDE9E0]">
+                    {/* Mobile Quest-First Placement: First section after intro on <1024px viewports (U3) */}
+                    <div className="pb-8 lg:hidden">
+                      {renderEcoQuestCard('mobile')}
                     </div>
 
-                    <div className="space-y-3">
-                      {alternatives.slice(0, 3).map((alt) => (
+                    {/* About Narrative */}
+                    <section
+                      id="spot-about"
+                      className="pb-8 pt-2 lg:pt-0 space-y-4 scroll-mt-24"
+                    >
+                      <h2 className="text-xl sm:text-2xl font-black text-[#141C16]">
+                        About {spot.name}
+                      </h2>
+                      <p className="text-sm sm:text-base text-[#141C16] leading-relaxed whitespace-pre-line max-w-[65ch]">
+                        {spot.description}
+                      </p>
+
+                      {/* Primary Action Buttons inside Description section */}
+                      <div className="spot-choreo-cta flex flex-wrap items-center gap-2.5 pt-2">
+                        {spot.questId ? (
+                          <Link
+                            href={appRoutes.quest(spot.questId)}
+                            className="chip-live btn-tactile btn-sheen inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-[#1B4332] hover:bg-[#143325] text-white text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
+                          >
+                            <Trophy className="w-4 h-4 text-[#FFB703]" />
+                            <span>{COPY.quest.playCta}</span>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/quests?spot=${encodeURIComponent(spot.id)}`}
+                            className="chip-live btn-tactile inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-[#1B4332] hover:bg-[#143325] text-white text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer min-h-[44px]"
+                          >
+                            <Trophy className="w-4 h-4 text-[#FFB703]" />
+                            <span>{COPY.quest.playCta}</span>
+                          </Link>
+                        )}
+
                         <Link
-                          key={alt.id}
-                          href={appRoutes.spot(alt.id)}
-                          className="flex gap-3 p-3 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-white transition group"
+                          href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
+                          className="chip-live btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-full bg-[#FAF8F4] hover:bg-[#F3EFE6] text-[#141C16] border border-[#E2DDD3] text-xs sm:text-sm font-bold transition shadow-xs cursor-pointer min-h-[44px]"
                         >
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
-                            <DestinationMedia
-                              src={alt.imageUrl}
-                              alt={alt.name}
-                              destinationName={alt.name}
-                              municipality={alt.municipality}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1 space-y-0.5">
-                            <h4 className="text-xs font-bold text-[#582F0E] group-hover:text-[#2D6A4F] transition truncate">
-                              {alt.name}
-                            </h4>
-                            <p className="text-[11px] text-[#7D5800]">{alt.municipality}</p>
-                            <p className="text-[10px] text-[#837560] line-clamp-1">{alt.description}</p>
-                          </div>
+                          <MapPin className="w-4 h-4 text-[#1B4332]" />
+                          <span>View on Map</span>
                         </Link>
-                      ))}
-                    </div>
+                      </div>
+
+                      {/* Amenities & Highlights */}
+                      {spot.amenities && spot.amenities.length > 0 && (
+                        <div className="pt-4 space-y-3">
+                          <h3 className="text-xs font-bold text-[#526056] uppercase tracking-wider">
+                            Amenities &amp; Features
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {spot.amenities.map((amenity, idx) => (
+                              <span
+                                key={idx}
+                                className="px-3 py-1.5 rounded-full bg-[#FAF8F4] border border-[#E2DDD3] text-xs font-semibold text-[#141C16] capitalize"
+                              >
+                                {amenity.replace('_', ' ')}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </section>
+
+                    {/* Community Traveler Notes & Tips Forum */}
+                    <section
+                      id="spot-comments"
+                      className="py-8 scroll-mt-24"
+                    >
+                      <SpotCommentSection
+                        spotId={spot.id}
+                        spotName={spot.name}
+                        onRequireSignIn={() =>
+                          setSignInPrompt({
+                            open: true,
+                            actionLabel: `comment on ${spot.name}`,
+                          })
+                        }
+                      />
+                    </section>
                   </div>
-                )}
+
+                  {/* Right/Sidebar Column (lg:col-span-5 sticky) — Eco-Quest Card FIRST (U3) */}
+                  <aside className="lg:col-span-5 lg:sticky lg:top-20 space-y-6">
+                    {/* 1. Eco-Quest Card FIRST */}
+                    <div className="hidden lg:block">
+                      {renderEcoQuestCard('desktop')}
+                    </div>
+
+                    {/* Author Control Center Card */}
+                    {isAuthor && (
+                      <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] text-white p-6 rounded-2xl shadow-md border border-emerald-400/40 space-y-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center">
+                            <Sparkles className="w-5 h-5 text-[#FFB703]" />
+                          </div>
+                          <div>
+                            <span className="text-[11px] font-black uppercase tracking-wider text-amber-200 block">
+                              Destination Author
+                            </span>
+                            <span className="text-xs text-emerald-100 font-semibold">You posted this spot</span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-emerald-100/90 leading-relaxed">
+                          As the creator of this destination, you can attach an official {COPY.quest.singular} checkpoint for travelers to discover and earn {COPY.points.plural} and {COPY.xp.label}.
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuestTitle(`Explore ${spot.name}`);
+                            setQuestDescription(`Visit ${spot.name}, explore the grounds, and verify your coordinates within the geofence.`);
+                            setIsQuestModalOpen(true);
+                          }}
+                          className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black shadow-md transition active:scale-98 cursor-pointer"
+                        >
+                          <PlusCircle className="w-4 h-4" />
+                          <span>{spot.questId ? 'Add Another Eco-Quest' : 'Create Eco-Quest for this Spot'}</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* 2. Venue Summary Facts & Mini-Map */}
+                    <div
+                      id="spot-venue"
+                      className="bg-[#FAF8F4] p-5 sm:p-6 rounded-2xl border border-[#E2DDD3] space-y-4 scroll-mt-24"
+                    >
+                      <h3 className="text-xs font-black text-[#141C16] uppercase tracking-wider pb-2 border-b border-[#E2DDD3]">
+                        Venue Details &amp; Location
+                      </h3>
+
+                      <div className="space-y-3.5 text-xs sm:text-sm">
+                        <div className="flex items-start gap-3">
+                          <MapPin className="w-4 h-4 text-[#1B4332] shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold text-[#141C16]">{spot.municipality}</p>
+                            <p className="text-xs text-[#526056]">{spot.address || spot.municipality || 'Location not recorded'}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <Clock className="w-4 h-4 text-[#7D5800] shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold text-[#141C16]">Operating Hours</p>
+                            <p className="text-xs text-[#526056]">
+                              {spot.hours?.daily || (spot.trustLevel === 'open_data' ? 'Hours not confirmed' : 'Open to visitors daily')}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold text-[#141C16]">Verification</p>
+                            <p className="text-xs text-[#526056]">
+                              {spot.trustLevel === 'lgu_verified'
+                                ? 'LGU Verified Landmark'
+                                : spot.trustLevel === 'open_data'
+                                  ? 'Open-data source; not LGU-verified'
+                                  : 'Community Sourced'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {spot.goodFor && spot.goodFor.length > 0 && (
+                          <div className="pt-2 border-t border-[#E2DDD3]/60 space-y-1.5">
+                            <p className="font-bold text-[#141C16]">Good for</p>
+                            <div className="flex flex-wrap gap-1">
+                              {spot.goodFor.map((id) => (
+                                <span
+                                  key={id}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-[#1B4332] text-[11px] font-semibold border border-emerald-200"
+                                >
+                                  {SPOT_GOOD_FOR.find((g) => g.id === id)?.label ?? id}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {spot.bestTime && spot.bestTime.length > 0 && (
+                          <div className="pt-2 border-t border-[#E2DDD3]/60 space-y-1.5">
+                            <p className="font-bold text-[#141C16]">Best time to visit</p>
+                            <div className="flex flex-wrap gap-1">
+                              {spot.bestTime.map((id) => (
+                                <span
+                                  key={id}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-[#582F0E] text-[11px] font-semibold border border-amber-200"
+                                >
+                                  {SPOT_BEST_TIME.find((b) => b.id === id)?.label ?? id}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-3 border-t border-[#E2DDD3] space-y-2.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-[#141C16]">Location Map</span>
+                            <Link
+                              href={`/map?lat=${spot.gpsLat}&lng=${spot.gpsLng}&name=${encodeURIComponent(spot.name)}&spot=${spot.id}`}
+                              className="text-[#1B4332] hover:underline font-bold text-xs flex items-center gap-1"
+                            >
+                              <span>Full Map</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </div>
+                          <MiniMapPreview
+                            lat={spot.gpsLat}
+                            lng={spot.gpsLng}
+                            name={spot.name}
+                            address={spot.address}
+                            municipality={spot.municipality}
+                            spotId={spot.id}
+                            pinType="spot"
+                            height="h-44"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. Smart Diversion: Quieter Alternatives */}
+                    {alternatives.length > 0 && (
+                      <div
+                        id="spot-alternatives"
+                        className="bg-[#FAF8F4] p-5 sm:p-6 rounded-2xl border border-[#E2DDD3] space-y-4 scroll-mt-24"
+                      >
+                        <div className="flex items-center justify-between pb-2 border-b border-[#E2DDD3]">
+                          <h3 className="text-xs font-black text-[#1B4332] uppercase tracking-wider flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-[#FFB703]" />
+                            <span>Nearby Alternatives</span>
+                          </h3>
+                        </div>
+
+                        <div className="space-y-3">
+                          {alternatives.slice(0, 3).map((alt) => (
+                            <Link
+                              key={alt.id}
+                              href={appRoutes.spot(alt.id)}
+                              className="flex gap-3 p-3 rounded-xl bg-white border border-[#E2DDD3] hover:border-[#1B4332] transition group"
+                            >
+                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
+                                <DestinationMedia
+                                  src={alt.imageUrl}
+                                  alt={alt.name}
+                                  destinationName={alt.name}
+                                  municipality={alt.municipality}
+                                  category={alt.category}
+                                  variant="thumb"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1 space-y-0.5">
+                                <h4 className="text-xs font-bold text-[#141C16] group-hover:text-[#1B4332] transition truncate">
+                                  {alt.name}
+                                </h4>
+                                <p className="text-[11px] text-[#526056]">{alt.municipality}</p>
+                                <p className="text-[10px] text-[#526056] line-clamp-1">{alt.description}</p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </aside>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          {/* Mobile Sticky Bottom Action Bar when hero & quest card scroll out of view */}
+          {heroOutOfView && !questCardInView && (
+            <div
+              data-testid="spot-mobile-sticky-cta"
+              className="fixed bottom-16 left-0 right-0 z-40 border-t border-[#E2DDD3] bg-white/95 px-4 py-2.5 shadow-[0_-4px_20px_rgb(0_0_0_/_0.08)] backdrop-blur-md lg:hidden"
+            >
+              <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-extrabold text-[#141C16]">{spot.name}</p>
+                  <p className="truncate text-[11px] font-semibold text-[#1B4332]">
+                    On-site {COPY.quest.singular} · {formatPoints(100, { signed: true })}
+                  </p>
+                </div>
+                <Link
+                  href={questHref}
+                  className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#1B4332] px-4 py-2 text-xs font-bold text-white shadow-xs"
+                >
+                  <span>{COPY.quest.playCta}</span>
+                </Link>
               </div>
             </div>
-          </div>
-          </div>
+          )}
+
+          {/* SignInSheet for logged-out interactions on public spot page */}
+          <SignInSheet
+            open={signInPrompt.open}
+            onClose={() => setSignInPrompt({ open: false, actionLabel: 'continue' })}
+            actionLabel={signInPrompt.actionLabel}
+          />
+
           {/* Author Quest Creation In-Page Modal */}
           {isQuestModalOpen && (
             <div
@@ -1011,7 +1199,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       <Sparkles className="w-5 h-5 text-[#2D6A4F]" />
                     </div>
                     <div>
-                      <h3 className="text-base font-black text-[#582F0E]">Create Destination Quest</h3>
+                      <h3 className="text-base font-black text-[#582F0E]">Create Destination {COPY.quest.singular}</h3>
                       <p className="text-xs text-[#837560]">{spot.name}</p>
                     </div>
                   </div>
@@ -1042,7 +1230,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                 <form onSubmit={handleCreateQuest} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-[#582F0E] mb-1.5">
-                      Quest Title <span className="text-red-500">*</span>
+                      {COPY.quest.singular} Title <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1051,7 +1239,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       maxLength={100}
                       value={questTitle}
                       onChange={(e) => setQuestTitle(e.target.value)}
-                      placeholder="e.g. Sunset Lighthouse Viewpoint Trail"
+                      placeholder="e.g. Sunset Lighthouse Viewpoint Quest"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs sm:text-sm text-[#2C221E] outline-none focus:border-[#2D6A4F]"
                     />
                   </div>
@@ -1101,7 +1289,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#582F0E] mb-1.5">Token Reward Bounty</label>
+                    <label className="block text-xs font-bold text-[#582F0E] mb-1.5">Point Reward</label>
                     <div className="grid grid-cols-3 gap-2.5">
                       {[50, 75, 100].map((val) => (
                         <button
@@ -1115,7 +1303,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                           }`}
                         >
                           <span className="font-black text-sm">+{val}</span>
-                          <span className="text-[10px] text-stone-500">mJDQ Tokens</span>
+                          <span className="text-[10px] text-stone-500">{COPY.points.label}</span>
                         </button>
                       ))}
                     </div>
@@ -1138,12 +1326,12 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       {creatingQuest ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Publishing Quest...</span>
+                          <span>Publishing {COPY.quest.singular}...</span>
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4" />
-                          <span>Publish Quest Checkpoint</span>
+                          <span>Publish {COPY.quest.singular} Checkpoint</span>
                         </>
                       )}
                     </button>
@@ -1339,3 +1527,5 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
     </Navigation>
   );
 };
+
+export default SpotDetailClient;

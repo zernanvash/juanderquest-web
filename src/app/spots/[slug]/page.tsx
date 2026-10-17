@@ -15,6 +15,9 @@ interface PublicSpot {
   name: string;
   description: string;
   municipality: string;
+  category?: string;
+  gps_lat?: number;
+  gps_lng?: number;
   image_url?: string | null;
   is_test?: boolean;
 }
@@ -23,18 +26,22 @@ export const dynamic = 'force-dynamic';
 
 const loadPublicSpot = cache(async (identifier: string): Promise<PublicSpot | null> => {
   if (!isResourceId(identifier)) return null;
-  const response = await fetch(`${getServerApiBaseUrl()}/spots/${encodeURIComponent(identifier)}`, {
-    cache: 'no-store',
-    signal: AbortSignal.timeout(6000),
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`Destination lookup failed (HTTP ${response.status})`);
-  const body = await response.json();
-  const spot = body?.data as PublicSpot | undefined;
-  if (!body?.success || !spot?.id || !spot?.slug || !isResourceId(spot.id)) {
-    throw new Error('Destination lookup returned an invalid response');
+  try {
+    const response = await fetch(`${getServerApiBaseUrl()}/spots/${encodeURIComponent(identifier)}`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(6000),
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) return null;
+    const body = await response.json();
+    const spot = body?.data as PublicSpot | undefined;
+    if (!body?.success || !spot?.id || !spot?.slug || !isResourceId(spot.id)) {
+      return null;
+    }
+    return spot;
+  } catch {
+    return null;
   }
-  return spot;
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -69,7 +76,42 @@ export default async function SpotDetailPage({ params }: Props) {
   if (!isResourceId(slug)) notFound();
   const spot = await loadPublicSpot(slug);
   if (spot && slug !== spot.id) permanentRedirect(appRoutes.spot(spot.id));
+
+  const jsonLd = spot
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'TouristAttraction',
+        name: spot.name,
+        description: spot.description,
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: spot.municipality,
+          addressRegion: 'Pangasinan',
+          addressCountry: 'PH',
+        },
+        geo:
+          typeof spot.gps_lat === 'number' && typeof spot.gps_lng === 'number'
+            ? {
+                '@type': 'GeoCoordinates',
+                latitude: spot.gps_lat,
+                longitude: spot.gps_lng,
+              }
+            : undefined,
+        image: spot.image_url || undefined,
+      }
+    : null;
+
   // The API session cookie is host-scoped to api.juanderquest.app. Browser lookup
   // must remain possible for wallet-only alpha records invisible to this server.
-  return <SpotDetailClient slug={spot?.id ?? slug} />;
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <SpotDetailClient slug={spot?.id ?? slug} />
+    </>
+  );
 }

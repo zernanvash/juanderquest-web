@@ -5,7 +5,7 @@ const UPSTREAM_TILE_ROOT = 'https://tile.openstreetmap.org';
 
 export async function GET(
   _request: Request,
-  context: RouteContext<'/map-tiles/[z]/[x]/[y]'>,
+  context: { params: Promise<{ z: string; x: string; y: string }> },
 ) {
   const params = await context.params;
   const z = parseTileCoordinate(params.z);

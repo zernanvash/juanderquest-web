@@ -49,8 +49,6 @@ export interface MapWorkspacePanelProps {
   peekContent?: React.ReactNode;
   // Slot for floating tools rendered on top-right of map
   floatingTools?: React.ReactNode;
-  // Optional search bar slot for Google Maps-style omnibox
-  searchBar?: React.ReactNode;
   // Tab panels content
   children: React.ReactNode;
 }
@@ -70,7 +68,6 @@ export function MapWorkspacePanel({
   onMobileSnapChange,
   peekContent,
   floatingTools,
-  searchBar,
   children,
 }: MapWorkspacePanelProps) {
   const touchStartY = useRef<number | null>(null);
@@ -139,9 +136,8 @@ export function MapWorkspacePanel({
       {/* 2. DESKTOP WORKSPACE PANEL (lg & up) */}
       <div className="hidden lg:block pointer-events-none">
         {isDesktopCollapsed ? (
-          /* Desktop Collapsed Floating Controls (Search Bar + Mini-Pill) */
-          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 pointer-events-auto animate-in fade-in slide-in-from-left-2 duration-200">
-            {searchBar && <div className="w-72 sm:w-80 shrink-0">{searchBar}</div>}
+          /* Desktop Collapsed Floating Mini-Pill (below search overlay) */
+          <div className="absolute top-[76px] left-4 z-20 flex items-center gap-2 pointer-events-auto animate-in fade-in slide-in-from-left-2 duration-200">
             <button
               type="button"
               onClick={() => onDesktopCollapseChange(false)}
@@ -169,8 +165,8 @@ export function MapWorkspacePanel({
             </button>
           </div>
         ) : (
-          /* Desktop Expanded Docked Left Sidebar */
-          <div className="absolute top-4 left-4 bottom-4 z-20 w-[380px] xl:w-[420px] flex flex-col pointer-events-none animate-in fade-in slide-in-from-left-3 duration-200">
+          /* Desktop Expanded Docked Left Sidebar (below search overlay) */
+          <div className="absolute top-[76px] left-4 bottom-4 z-20 w-[380px] xl:w-[420px] flex flex-col pointer-events-none animate-in fade-in slide-in-from-left-3 duration-200">
             <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-3xl border border-[#E3DFD5] shadow-2xl flex flex-col h-full overflow-hidden">
               {/* Header */}
               <div className="p-4 pb-3 border-b border-[#E3DFD5]/80 space-y-2.5 shrink-0 bg-white/50">
@@ -269,13 +265,6 @@ export function MapWorkspacePanel({
                 )}
               </div>
 
-              {/* Optional Search Bar Docked in Sidebar */}
-              {searchBar && (
-                <div className="px-3.5 py-2 border-b border-[#E3DFD5]/60 bg-[#FAF9F5]/60 shrink-0">
-                  {searchBar}
-                </div>
-              )}
-
               {/* Scrollable Children Body */}
               <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 custom-scrollbar">
                 {children}
@@ -284,13 +273,6 @@ export function MapWorkspacePanel({
           </div>
         )}
       </div>
-
-      {/* 3. MOBILE FLOATING TOP SEARCH BAR */}
-      {searchBar && (
-        <div className="lg:hidden absolute top-3 left-3 right-16 z-20 pointer-events-auto animate-in fade-in duration-200">
-          {searchBar}
-        </div>
-      )}
 
       {/* 4. MOBILE WORKSPACE PANEL (Bottom Sheet < lg) */}
       <div

@@ -23,12 +23,13 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { MiniMapPreview } from '@/components/MiniMapPreview';
+import { COPY, formatPoints } from '@/lib/copy';
 
 export default function QuestDetailClient() {
   const params = useParams();
   const router = useRouter();
   const questId = params.id as string;
-  const { isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   const [quest, setQuest] = useState<QuestModel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +65,7 @@ export default function QuestDetailClient() {
 
   return (
     <Navigation>
-      <ErrorBoundary fallbackTitle="Unable to display Quest Details">
+      <ErrorBoundary fallbackTitle="Unable to display Eco-Quest Details">
         <div className="space-y-6">
           {/* Breadcrumbs */}
           <div className="flex items-center justify-between">
@@ -73,7 +74,7 @@ export default function QuestDetailClient() {
               className="inline-flex items-center gap-2 text-xs font-black text-[#7D5800] hover:text-[#582F0E] transition"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Quest Trails</span>
+              <span>Back to {COPY.quest.titlePlural}</span>
             </Link>
 
             {quest && (
@@ -82,7 +83,7 @@ export default function QuestDetailClient() {
                 className="inline-flex items-center gap-2 text-xs font-black text-[#2D6A4F] hover:underline"
               >
                 <NavIcon className="w-3.5 h-3.5" />
-                <span>Navigate to Trailhead</span>
+                <span>Directions to Checkpoint</span>
               </Link>
             )}
           </div>
@@ -98,7 +99,7 @@ export default function QuestDetailClient() {
             </div>
           ) : error || !quest ? (
             <div className="bg-white p-8 rounded-3xl border border-red-200 text-center text-xs text-[#BC4749] space-y-4 shadow-xs">
-              <p className="font-bold">{error || 'Quest details not found.'}</p>
+              <p className="font-bold">{error || 'Eco-Quest details not found.'}</p>
               <button
                 onClick={() => fetchQuestDetail(true)}
                 className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-extrabold cursor-pointer active:scale-95"
@@ -107,7 +108,7 @@ export default function QuestDetailClient() {
               </button>
             </div>
           ) : (
-            /* Expansive 2-Column Quest Layout with Strict Mobile-Only Verification */
+            /* Expansive 2-Column Quest Layout */
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left Column: Quest Identity, Landmark Imagery, Description (7 cols) */}
               <div className="lg:col-span-7 space-y-6">
@@ -125,11 +126,11 @@ export default function QuestDetailClient() {
 
                   <div className="absolute top-4 left-4 flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full bg-[#FFB703] text-[#582F0E] text-xs font-black uppercase tracking-wider shadow-md">
-                      {quest.category.replace('_', ' ')} Trail
+                      {quest.category.replace('_', ' ')} {COPY.quest.singular}
                     </span>
                     {quest.isTest && (
                       <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold shadow-xs">
-                        Fictional alpha quest
+                        Practice quest
                       </span>
                     )}
                   </div>
@@ -145,15 +146,38 @@ export default function QuestDetailClient() {
 
                 {/* Quest Overview & Objectives */}
                 <div className="bg-white rounded-2xl p-6 sm:p-7 border border-[#E3DFD5] space-y-4 shadow-xs">
+                  {user?.id === quest.authorId && (
+                    <Link href={`/funding?quest_id=${encodeURIComponent(quest.id)}`} className="inline-flex rounded-xl bg-[#1B4332] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#2D6A4F]">
+                      Manage Eco-Quest funding
+                    </Link>
+                  )}
                   <h2 className="text-sm font-bold text-[#582F0E] uppercase tracking-wider">Mission Objectives:</h2>
                   <p className="text-xs sm:text-sm text-[#514532] leading-relaxed">
                     {quest.description}
                   </p>
 
+                  {quest.funding && (
+                    <aside aria-label="Quest reward funding" className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 sm:p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-[.14em] text-emerald-800">Funded Eco-Quest</p>
+                          <p className="mt-1 text-sm font-semibold text-[#24382D]">A reserved, simulated-points reward pool</p>
+                        </div>
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-950">{quest.funding.reward_points} points per completion</span>
+                      </div>
+                      <p className="mt-3 text-xs text-[#514532]">About {quest.funding.completions_left_estimate} funded reward{quest.funding.completions_left_estimate === 1 ? '' : 's'} remain. Round closes {new Date(quest.funding.ends_at).toLocaleDateString()}.</p>
+                      {quest.funding.sponsors.length > 0 && <p className="mt-2 text-xs text-[#514532]">Supported by {quest.funding.sponsors.map(sponsor => sponsor.name).join(', ')}.</p>}
+                      {quest.funding.perk && quest.funding.perk.remaining > 0 && <p className="mt-2 rounded-lg bg-white/80 px-3 py-2 text-xs font-semibold text-emerald-900">Optional sponsor perk: {quest.funding.perk.title} · {quest.funding.perk.remaining} available</p>}
+                      <p className="mt-3 text-[11px] text-[#66736A]">Prototype reward points are simulated and have no cash or blockchain value.</p>
+                    </aside>
+                  )}
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                     <div className="card-alive p-3 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5]">
                       <span className="text-[10px] text-gray-400 font-medium block">Reward Bounty</span>
-                      <span className="text-xs font-bold text-emerald-700">+{quest.rewardPoints} mJDQ</span>
+                      <span className="text-xs font-bold text-emerald-700">
+                        {formatPoints(quest.rewardPoints, { signed: true })}
+                      </span>
                     </div>
 
                     <div className="card-alive p-3 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5]">
@@ -204,7 +228,7 @@ export default function QuestDetailClient() {
                 </div>
               </div>
 
-              {/* Right Column: Native Mobile App Handoff Card (5 cols) */}
+              {/* Right Column: Play Eco-Quest / Mobile App Handoff Card (5 cols) */}
               <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-20">
                 <div className="bg-[#0D1B2A] text-white rounded-2xl p-6 sm:p-7 border border-white/20 shadow-xl space-y-6">
                   {/* Card Header */}
@@ -215,24 +239,21 @@ export default function QuestDetailClient() {
                       </div>
                       <div>
                         <span className="text-xs font-black text-amber-200 uppercase tracking-wider block">
-                          Physical Check-in Required
+                          Start {COPY.quest.singular}
                         </span>
-                        <span className="text-[11px] text-gray-400 font-medium">Native Mobile App Verification</span>
+                        <span className="text-[11px] text-gray-400 font-medium">Web &amp; Mobile Checkpoint Flow</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Physical Hardware Explanation */}
+                  {/* Explanation */}
                   <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
                     <div className="flex items-start gap-2.5 text-xs text-gray-200 leading-relaxed">
                       <ScanLine className="w-4 h-4 text-[#FFB703] shrink-0 mt-0.5" />
                       <span>
-                        AR 3D Viewfinder, QR checkpoint scanning, and live camera photo proof require native device sensor fusion (tilt-compensated compass, gyroscope, accelerometer) and hardware camera integration.
+                        Accept this Eco-Quest on the web to review steps and complete knowledge tasks, or open the JuanDerQuest Android app on-site for AR 3D Viewfinder, QR scanning, and camera proof.
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400 leading-relaxed pl-6">
-                      For location integrity and geofence verification, quests must be validated on-site using the JuanDerQuest Android mobile app.
-                    </p>
                   </div>
 
                   {/* Checkpoint Telemetry Specs */}
@@ -260,15 +281,15 @@ export default function QuestDetailClient() {
                     </div>
                   </div>
 
-                  {/* Mobile Actions: Deep Link & APK Download */}
+                  {/* Actions */}
                   <div className="space-y-3 pt-2">
-                    <a
-                      href={`juanderquest://quests/${quest.id}`}
+                    <Link
+                      href={`/quests/${quest.id}/play`}
                       className="btn-tactile btn-sheen w-full inline-flex items-center justify-center gap-2 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black py-3.5 px-5 rounded-xl shadow-md text-xs sm:text-sm transition cursor-pointer"
                     >
-                      <Smartphone className="w-4 h-4" />
-                      <span>Open in JuanDerQuest App</span>
-                    </a>
+                      <Compass className="w-4 h-4" />
+                      <span>{COPY.quest.playCta}</span>
+                    </Link>
 
                     <a
                       href="https://github.com/zernanvash/juanderquest-mobile/releases/latest/download/juanderquest-latest.apk"
@@ -285,7 +306,7 @@ export default function QuestDetailClient() {
                       className="btn-tactile w-full inline-flex items-center justify-center gap-2 text-xs font-bold text-gray-300 hover:text-white py-2 transition"
                     >
                       <NavIcon className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                      <span>Get Sovereign Turn-by-Turn Route</span>
+                      <span>Get Turn-by-Turn Route</span>
                     </Link>
                   </div>
 
@@ -293,7 +314,7 @@ export default function QuestDetailClient() {
                   <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-200 flex items-start gap-2.5">
                     <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Cross-Device Live Sync:</strong> Once verified on your Android device, return to this tab — your earned tokens (+{quest.rewardPoints} mJDQ) and badges will sync automatically!
+                      <strong>Cross-Device Live Sync:</strong> Once verified, your earned points ({formatPoints(quest.rewardPoints, { signed: true })}) and badges sync automatically across web and mobile!
                     </span>
                   </div>
                 </div>

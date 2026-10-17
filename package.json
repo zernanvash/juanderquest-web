@@ -7,6 +7,7 @@
     "build": "next build",
     "build:presentation": "node scripts/build-presentation.mjs",
     "start": "next start",
+    "start:local": "next start --hostname 127.0.0.1 --port 3100",
     "start:presentation": "node scripts/start-presentation.mjs",
     "check:presentation": "node scripts/build-presentation.mjs --check && node scripts/start-presentation.mjs --check",
     "lint": "eslint",

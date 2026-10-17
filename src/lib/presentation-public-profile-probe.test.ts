@@ -76,7 +76,7 @@ describe('JuanChoice Presentation Web Crawler & Configuration Probe', () => {
         {
           userAgent: '*',
           allow: '/',
-          disallow: ['/profile', '/history', '/login', '/spots/new'],
+          disallow: ['/profile', '/history', '/login'],
         },
       ]);
       expect(robotsResult.sitemap).toBe('https://juanderquest.app/sitemap.xml');

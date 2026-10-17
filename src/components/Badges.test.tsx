@@ -35,7 +35,7 @@ describe('Badges System & Components', () => {
       expect(pioneerNft).toBeDefined();
       expect(pioneerNft?.isNft).toBe(true);
       expect(pioneerNft?.tokenId).toBe('#0042');
-      expect(pioneerNft?.network).toBe('Base L2');
+      expect(pioneerNft?.network).toBe('Verified');
     });
 
     it('provides a varied catalog of sample destination badges across categories', () => {
@@ -89,12 +89,12 @@ describe('Badges System & Components', () => {
       expect(screen.queryByText('NFT')).toBeNull();
     });
 
-    it('renders Soulbound NFT badge with NFT tag and glint container', () => {
+    it('renders Soulbound NFT badge with Verified tag and glint container', () => {
       const nftBadge = SAMPLE_USER_BADGES.find((b) => b.id === 'nft-hundred-islands-pioneer')!;
       render(<UserBadgeChip badge={nftBadge} showDetails />);
 
       expect(screen.getByText('Hundred Islands Pioneer')).toBeDefined();
-      expect(screen.getByText('NFT')).toBeDefined();
+      expect(screen.getByText('Verified')).toBeDefined();
       expect(screen.getByText('#0042')).toBeDefined();
     });
 
@@ -207,7 +207,7 @@ describe('Badges System & Components', () => {
       // Verify modal dialog is accessible
       expect(screen.getByRole('dialog', { name: `${nftBadge.name} details` })).toBeDefined();
       expect(screen.getByText(nftBadge.name)).toBeDefined();
-      expect(screen.getByText('Soulbound')).toBeDefined();
+      expect(screen.getAllByText('Verified').length).toBeGreaterThan(0);
       expect(screen.getByText(nftBadge.description)).toBeDefined();
       expect(screen.getByText('Achievement Criteria')).toBeDefined();
       if (nftBadge.howToEarn) {

@@ -38,6 +38,7 @@ import {
   UserBadge,
 } from '@/lib/badges';
 import { UserBadgeChip, UserNametag } from '@/components/Badges';
+import { BaseSepoliaReadiness } from '@/components/BaseSepoliaReadiness';
 
 export default function SettingsPage() {
   const { user, wallet, logout } = useAuth();
@@ -405,7 +406,7 @@ export default function SettingsPage() {
                             Share Achievement Badges Publicly
                           </span>
                           <span className="text-[11px] text-[var(--color-text-muted)]">
-                            Display your verified destination badges and Soulbound tokens on your public card.
+                            Display your verified destination badges and Eco-Quest achievements on your public card.
                           </span>
                         </div>
                         <input
@@ -442,18 +443,18 @@ export default function SettingsPage() {
                     Traveler Sign-In Required
                   </h2>
                   <p className="text-xs text-[var(--color-text-muted)] max-w-md mx-auto mt-1 mb-4">
-                    Connect your wallet or login to synchronize your Pangasinan explorer profile, preferences, and mJDQ governance wallet.
+                    Sign in to synchronize your Pangasinan explorer profile, preferences, and reward points.
                   </p>
                   <Link
                     href="/login"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-brand-primary)] text-white text-xs font-extrabold hover:bg-[var(--color-brand-primary-hover)] transition"
                   >
-                    <span>Connect Wallet / Login</span>
+                    <span>Sign In</span>
                   </Link>
                 </section>
               )}
 
-              {/* Nametag Badges & Soulbound Showcase */}
+              {/* Nametag Badges Showcase */}
               <section className="bg-white rounded-2xl border border-[var(--color-border-default)] p-5 sm:p-6 shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
                   <div className="flex items-center gap-2.5">
@@ -462,13 +463,13 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)] flex items-center gap-1.5 flex-wrap">
-                        <span>Nametag Badges & Soulbound Showcase</span>
+                        <span>Nametag Badges</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
                           {activeBadgeIds.length}/3 Active
                         </span>
                       </h2>
                       <p className="text-[11px] text-[var(--color-text-muted)]">
-                        Select up to 3 badges or Soulbound NFTs to display alongside your username across posts, comments, and rankings.
+                        Select up to 3 badges to display alongside your username across posts, comments, and rankings.
                       </p>
                     </div>
                   </div>
@@ -515,7 +516,7 @@ export default function SettingsPage() {
                         showHandle
                       />
                       <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5 truncate">
-                        {statusText || 'Exploring Pangasinan Coastal Trails 🌊'}
+                        {statusText || 'Exploring Pangasinan Coastal Destinations 🌊'}
                       </div>
                     </div>
                   </div>
@@ -544,7 +545,7 @@ export default function SettingsPage() {
                     }`}
                   >
                     <Gem className="w-3 h-3" />
-                    <span>Soulbound NFTs ({SAMPLE_USER_BADGES.filter((b) => b.isNft).length})</span>
+                    <span>Featured Badges ({SAMPLE_USER_BADGES.filter((b) => b.isNft).length})</span>
                   </button>
                   <button
                     type="button"
@@ -613,7 +614,7 @@ export default function SettingsPage() {
                             </span>
                             {badge.isNft && (
                               <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-900 border border-amber-400/40">
-                                Soulbound {badge.tokenId}
+                                Verified {badge.tokenId}
                               </span>
                             )}
                           </div>
@@ -642,10 +643,10 @@ export default function SettingsPage() {
                   <label className="flex items-center justify-between cursor-pointer p-2.5 rounded-xl hover:bg-[var(--color-bg-subtle)] transition">
                     <div>
                       <span className="text-xs font-bold text-[var(--color-brand-brown)] block">
-                        Quest & Trail Bounties
+                        Eco-Quests &amp; Reward Bounties
                       </span>
                       <span className="text-[11px] text-[var(--color-text-muted)]">
-                        Alerts for newly published Pangasinan quests and limited-time mJDQ bounties.
+                        Alerts for newly published Pangasinan Eco-Quests and bonus point bounties.
                       </span>
                     </div>
                     <input
@@ -659,7 +660,7 @@ export default function SettingsPage() {
                   <label className="flex items-center justify-between cursor-pointer p-2.5 rounded-xl hover:bg-[var(--color-bg-subtle)] transition">
                     <div>
                       <span className="text-xs font-bold text-[var(--color-brand-brown)] block">
-                        DAO Governance & Proposals
+                        JuanChoice Community Proposals
                       </span>
                       <span className="text-[11px] text-[var(--color-text-muted)]">
                         Notifications when new community proposals enter active voting rounds.
@@ -676,7 +677,7 @@ export default function SettingsPage() {
                   <label className="flex items-center justify-between cursor-pointer p-2.5 rounded-xl hover:bg-[var(--color-bg-subtle)] transition">
                     <div>
                       <span className="text-xs font-bold text-[var(--color-brand-brown)] block">
-                        Merchant Voucher & Reward Perks
+                        Merchant Voucher &amp; Reward Perks
                       </span>
                       <span className="text-[11px] text-[var(--color-text-muted)]">
                         Updates when Pangasinan merchant vouchers or tier discounts become available.
@@ -698,7 +699,7 @@ export default function SettingsPage() {
                   <MapPin className="w-5 h-5 text-[var(--color-brand-primary)]" />
                   <div>
                     <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
-                      Map & Audio Experience
+                      Map &amp; Audio Experience
                     </h2>
                     <p className="text-[11px] text-[var(--color-text-muted)]">
                       Configure your navigation raster layer and auditory feedback.
@@ -739,7 +740,7 @@ export default function SettingsPage() {
                           High-Contrast Map Routing
                         </span>
                         <span className="text-[11px] text-[var(--color-text-muted)]">
-                          Enhance waypoint visibility on sovereign OpenStreetMap raster tiles.
+                          Enhance waypoint visibility on OpenStreetMap raster tiles.
                         </span>
                       </div>
                     </div>
@@ -759,7 +760,7 @@ export default function SettingsPage() {
                   <Shield className="w-5 h-5 text-[var(--color-brand-primary)]" />
                   <div>
                     <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
-                      Storage & Session Management
+                      Storage &amp; Session Management
                     </h2>
                     <p className="text-[11px] text-[var(--color-text-muted)]">
                       Manage client-side cache and authentication session.
@@ -794,7 +795,7 @@ export default function SettingsPage() {
                           Explorer Sign Out
                         </span>
                         <span className="text-[11px] text-red-700/80">
-                          Securely disconnect your wallet session on this device.
+                          Securely disconnect your session on this device.
                         </span>
                       </div>
                       <button
@@ -809,6 +810,27 @@ export default function SettingsPage() {
                   )}
                 </div>
               </section>
+
+              {/* Collapsible Advanced / Developer Telemetry */}
+              <details className="bg-white rounded-2xl border border-[var(--color-border-default)] p-5 sm:p-6 shadow-xs group">
+                <summary className="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-black text-[var(--color-brand-brown)]">
+                  <span>Advanced &amp; Verification Telemetry</span>
+                  <span className="text-xs font-bold text-[var(--color-brand-primary)]">Show / Hide</span>
+                </summary>
+                <div className="mt-4 pt-4 border-t border-[var(--color-border-default)] space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center justify-between">
+                      <span className="text-[var(--color-text-muted)]">GPS Validation Engine</span>
+                      <span className="font-bold text-[var(--color-text-primary)]">Haversine &le; 100m</span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center justify-between">
+                      <span className="text-[var(--color-text-muted)]">Active Nametag Badges</span>
+                      <span className="font-bold text-[var(--color-brand-primary)]">{activeBadgeIds.length} / 3 Selected</span>
+                    </div>
+                  </div>
+                  <BaseSepoliaReadiness signedInSeedId={user?.seedId} />
+                </div>
+              </details>
             </div>
           )}
         </div>

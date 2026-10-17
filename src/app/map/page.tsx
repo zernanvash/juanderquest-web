@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer as LeafletTileLayer, Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
+import { useAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SpotPostingWizard } from '@/components/SpotPostingWizard';
@@ -19,7 +20,10 @@ import { MAP_TILE_ATTRIBUTION, MAP_TILE_MAX_ZOOM, MAP_TILE_URL } from '@/lib/map
 import { clampMapZoom, isValidLatitude, isValidLongitude } from '@/lib/map-url';
 import { appRoutes } from '@/lib/routes';
 import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePanel';
+import { MapSearchOverlay } from '@/components/MapSearchOverlay';
+import SignInSheet from '@/components/SignInSheet';
 import { AreaDefinition, findAreaByIdOrName, KNOWN_AREAS } from '@/lib/areas';
+import { formatPoints } from '@/lib/copy';
 
 import {
   MapPin,
@@ -135,12 +139,14 @@ function MapUrlSync({
 }
 
 export default function QuestMapPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
   const [quests, setQuests] = useState<QuestModel[]>([]);
   const [spots, setSpots] = useState<SpotModel[]>([]);
   const [selectedItem, setSelectedItem] = useState<{ type: 'quest' | 'spot'; data: QuestModel | SpotModel } | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'quests' | 'spots' | 'saved'>('all');
-  const [currentZoom, setCurrentZoom] = useState<number>(INITIAL_MACRO_ZOOM);
+  const [currentZoom, setCurrentZoom] = useState<number>(REGIONAL_ZOOM);
   const [mapViewportNonce, setMapViewportNonce] = useState(0);
   const isZoomedIn = currentZoom >= DESTINATIONS_MIN_ZOOM;
 
@@ -148,6 +154,11 @@ export default function QuestMapPage() {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
   const [mobileSnap, setMobileSnap] = useState<MobileSnapState>('peek');
   const [activeArea, setActiveArea] = useState<AreaDefinition | null>(null);
+
+  const [signInPrompt, setSignInPrompt] = useState<{ open: boolean; actionLabel: string }>({
+    open: false,
+    actionLabel: 'Pin a destination',
+  });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -280,6 +291,32 @@ export default function QuestMapPage() {
     fetchData();
   }, [fetchData]);
 
+  // Check ?add=1 query param to arm pin mode (redirects to login if signed out)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('add') === '1') {
+      if (!user) {
+        setSignInPrompt({ open: true, actionLabel: 'Pin a destination' });
+      } else {
+        setPinPlacementActive(true);
+      }
+      router.replace('/map');
+    }
+  }, [user, router]);
+
+  // Escape key cancels pin placement mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && pinPlacementActive) {
+        setPinPlacementActive(false);
+        if (wizardOpen) setWizardMinimized(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pinPlacementActive, wizardOpen]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const filterParam = new URLSearchParams(window.location.search).get('filter');
@@ -362,7 +399,7 @@ export default function QuestMapPage() {
           container.replaceChildren(retainedHost);
           mapInstanceRef.current = retainedMap;
           if (typeof window !== 'undefined' && !window.location.search && !fittedRef.current) {
-            retainedMap.setView(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM, { animate: false });
+            retainedMap.setView(PANGASINAN_CENTER, REGIONAL_ZOOM, { animate: false });
           }
           setCurrentZoom(retainedMap.getZoom());
 
@@ -380,8 +417,8 @@ export default function QuestMapPage() {
           container.replaceChildren(host);
 
           const map = L.map(host, {
-            center: PHILIPPINES_CENTER,
-            zoom: INITIAL_MACRO_ZOOM,
+            center: PANGASINAN_CENTER,
+            zoom: REGIONAL_ZOOM,
             zoomControl: false,
           });
 
@@ -396,7 +433,7 @@ export default function QuestMapPage() {
           mapInstanceRef.current = map;
           retainedMap = map;
           retainedHost = host;
-          setCurrentZoom(INITIAL_MACRO_ZOOM);
+          setCurrentZoom(REGIONAL_ZOOM);
         }
 
         retainedTileLayer?.on('tileerror', onTileError);
@@ -456,17 +493,10 @@ export default function QuestMapPage() {
             }
           };
 
-          const onContextMenu = (e: any) => {
-            if (e?.originalEvent?.preventDefault) e.originalEvent.preventDefault();
-            if (!e?.latlng) return;
-            pinPlacementCommitRef.current?.(e.latlng.lat, e.latlng.lng);
-          };
-
           activeMap.on('zoom', onZoomUpdate);
           activeMap.on('zoomend', onViewportEnd);
           activeMap.on('moveend', onViewportEnd);
           activeMap.on('click', onMapClick);
-          activeMap.on('contextmenu', onContextMenu);
 
           // A manual pan cancels any automatic follow after locating.
           const onDragStart = () => {
@@ -479,7 +509,6 @@ export default function QuestMapPage() {
             activeMap.off('zoomend', onViewportEnd);
             activeMap.off('moveend', onViewportEnd);
             activeMap.off('click', onMapClick);
-            activeMap.off('contextmenu', onContextMenu);
             activeMap.off('dragstart', onDragStart);
           };
 
@@ -573,6 +602,13 @@ export default function QuestMapPage() {
     setPinPlacementActive(false);
   }, []);
 
+  const handlePlaceAtCenter = useCallback(() => {
+    const map = mapInstanceRef.current || retainedMap;
+    if (!map) return;
+    const center = map.getCenter();
+    handlePlaceDestinationPin(center.lat, center.lng);
+  }, [handlePlaceDestinationPin]);
+
   useEffect(() => {
     pinPlacementCommitRef.current = handlePlaceDestinationPin;
   }, [handlePlaceDestinationPin]);
@@ -603,10 +639,10 @@ export default function QuestMapPage() {
         draggable: true,
         keyboard: false,
         icon: L.divIcon({
-          className: 'leaflet-custom-marker',
+          className: 'leaflet-custom-marker jdq-draft-pin',
           html: '<div style="position:relative;width:38px;height:38px"><div style="position:absolute;inset:0;border:3px dashed #FFB703;border-radius:9999px;background:rgba(255,183,3,0.12);box-shadow:0 0 0 3px rgba(255,183,3,0.2)"></div><div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;line-height:1">📍</div></div>',
           iconSize: [38, 38],
-          iconAnchor: [19, 19],
+          iconAnchor: [19, 32],
         }),
       }).addTo(map);
       marker.on('dragend', () => {
@@ -871,16 +907,16 @@ export default function QuestMapPage() {
     }
   }, []);
 
-  // Clear area filter and return to full archipelago view
+  // Clear area filter and return to Pangasinan regional view
   const handleClearActiveArea = useCallback(() => {
     setActiveArea(null);
     const map = mapInstanceRef.current || retainedMap;
     if (map) {
       try {
         if ((map as any)._loaded) {
-          map.flyTo(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM, { duration: 1.0 });
+          map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
         } else {
-          map.setView(PHILIPPINES_CENTER, INITIAL_MACRO_ZOOM);
+          map.setView(PANGASINAN_CENTER, REGIONAL_ZOOM);
         }
       } catch (e) {
         console.warn('Map camera flight deferred:', e);
@@ -922,8 +958,19 @@ export default function QuestMapPage() {
         </Suspense>
 
         <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
+          <h1 className="sr-only">Destination map</h1>
           {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
-          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
+          <div ref={mapContainerRef} className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`} />
+
+          {/* STANDALONE FLOATING SEARCH OVERLAY */}
+          <MapSearchOverlay
+            onSelectArea={handleSelectArea}
+            onSelectDestination={handleSelectItem}
+            activeArea={activeArea}
+            onClearActiveArea={handleClearActiveArea}
+            spots={spots}
+            quests={quests}
+          />
 
           {/* UNIFIED RESPONSIVE MAP WORKSPACE PANEL */}
           <MapWorkspacePanel
@@ -939,12 +986,12 @@ export default function QuestMapPage() {
                 ? ('locationName' in selectedItem.data ? selectedItem.data.locationName : selectedItem.data.municipality)
                 : activeArea
                 ? activeArea.subtitle
-                : `${quests.length} Quests • ${spots.length} Spots`
+                : `${quests.length} Eco-Quests • ${spots.length} Spots`
             }
             badge={
               selectedItem
                 ? selectedItem.type === 'quest'
-                  ? { label: 'Quest', variant: 'amber' }
+                  ? { label: 'Eco-Quest', variant: 'amber' }
                   : { label: 'Spot', variant: 'emerald' }
                 : activeArea
                 ? { label: activeArea.type, variant: 'emerald' }
@@ -972,13 +1019,14 @@ export default function QuestMapPage() {
                   title={pinPlacementActive ? 'Cancel pin placement' : 'Pin a destination on the map'}
                   aria-label={pinPlacementActive ? 'Cancel pin placement' : 'Pin a new destination on the map'}
                   aria-pressed={pinPlacementActive}
-                  className={`w-10 h-10 rounded-2xl border shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer ${
+                  className={`h-10 px-3 rounded-2xl border shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer ${
                     pinPlacementActive
                       ? 'bg-[#FFB703] border-amber-400 text-[#582F0E] animate-pulse'
                       : 'bg-white/95 backdrop-blur-md border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white'
                   }`}
                 >
-                  <PlusCircle className="w-4 h-4" />
+                  <PlusCircle className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline">{pinPlacementActive ? 'Cancel' : 'Add spot'}</span>
                 </button>
 
                 <button
@@ -987,9 +1035,10 @@ export default function QuestMapPage() {
                   title="How destination pinning works"
                   aria-label="How destination pinning works"
                   aria-expanded={pinHelpOpen}
-                  className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+                  className="h-10 px-2.5 sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
                 >
-                  <HelpCircle className="w-4 h-4" />
+                  <HelpCircle className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline">Help</span>
                 </button>
 
                 <button
@@ -998,20 +1047,21 @@ export default function QuestMapPage() {
                   disabled={locating}
                   title="Use my location"
                   aria-label="Use my location"
-                  className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer disabled:opacity-60"
+                  className="h-10 px-2.5 sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer disabled:opacity-60"
                 >
                   {locating ? (
-                    <RotateCw className="w-4 h-4 animate-spin text-[#2D6A4F]" />
+                    <RotateCw className="w-4 h-4 animate-spin text-[#2D6A4F] shrink-0" />
                   ) : (
-                    <LocateFixed className="w-4 h-4" />
+                    <LocateFixed className="w-4 h-4 shrink-0" />
                   )}
+                  <span className="hidden sm:inline">Locate</span>
                 </button>
 
                 {activeArea && (
                   <button
                     type="button"
                     onClick={handleClearActiveArea}
-                    title={`Clear ${activeArea.name} (Reset to whole country)`}
+                    title={`Clear ${activeArea.name} (Reset to Pangasinan)`}
                     aria-label="Clear area filter"
                     className="w-10 h-10 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-[#2D6A4F] shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
                   >
@@ -1024,9 +1074,10 @@ export default function QuestMapPage() {
                   onClick={handleFitBounds}
                   title="Fit All Coordinates"
                   aria-label="Fit all markers in view"
-                  className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+                  className="h-10 px-2.5 sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
                 >
-                  <Compass className="w-4 h-4" />
+                  <Compass className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline">Fit all</span>
                 </button>
 
                 <button
@@ -1038,15 +1089,6 @@ export default function QuestMapPage() {
                 >
                   <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#2D6A4F]' : ''}`} />
                 </button>
-
-                <Link
-                  href="/search"
-                  title="Search Destinations"
-                  aria-label="Search spots and destinations"
-                  className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95"
-                >
-                  <Search className="w-4 h-4" />
-                </Link>
               </>
             }
             // Mobile Peek Bar Slot (compact summary)
@@ -1130,12 +1172,12 @@ export default function QuestMapPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E3DFD5] text-[#582F0E]">
-                      {selectedItem.type === 'quest' ? '🏆 Quest Trail' : '📍 Destination Spot'}
+                      {selectedItem.type === 'quest' ? '🏆 Eco-Quest' : '📍 Destination Spot'}
                     </span>
                     {selectedItem.type === 'quest' && (
                       <div className="flex items-center gap-1 text-[#7D5800] text-[11px] font-black bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                         <Award className="w-3 h-3 text-[#FFB703]" />
-                        <span>+{(selectedItem.data as QuestModel).rewardPoints} mJDQ</span>
+                        <span>{formatPoints((selectedItem.data as QuestModel).rewardPoints, { signed: true })}</span>
                       </div>
                     )}
                   </div>
@@ -1372,7 +1414,7 @@ export default function QuestMapPage() {
           {pinPlacementActive && (
             <div
               role="status"
-              className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex max-w-[92vw] items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/95 backdrop-blur-md px-4 py-2.5 text-xs font-bold text-[#7D5800] shadow-md"
+              className="absolute top-[64px] lg:top-[76px] left-1/2 -translate-x-1/2 z-30 flex max-w-[92vw] items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/95 backdrop-blur-md px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold text-[#7D5800] shadow-md animate-in fade-in slide-in-from-top-2 duration-200"
             >
               <MapPin className="w-4 h-4 text-[#B45309] shrink-0" />
               <span className="min-w-0">
@@ -1380,6 +1422,13 @@ export default function QuestMapPage() {
                   ? 'Click the map to move the destination pin.'
                   : 'Click the map to place your destination pin.'}
               </span>
+              <button
+                type="button"
+                onClick={handlePlaceAtCenter}
+                className="shrink-0 rounded-lg border border-amber-300 bg-white px-2 py-1 text-[10px] font-black text-[#2D6A4F] transition hover:bg-emerald-50 cursor-pointer"
+              >
+                Place at map center
+              </button>
               <button
                 type="button"
                 onClick={handleCancelPinPlacement}
@@ -1393,7 +1442,7 @@ export default function QuestMapPage() {
           {pinHelpOpen && (
             <div className="absolute right-4 top-16 z-30 w-72 max-w-[calc(100vw-2rem)] space-y-2.5 rounded-2xl border border-[#E3DFD5] bg-white/97 backdrop-blur-md p-4 text-xs leading-relaxed text-[#514532] shadow-xl">
               <div className="flex items-center justify-between">
-                <span className="font-black text-[#582F0E]">Pin a destination</span>
+                <span className="font-black text-[#582F0E]">Add a spot</span>
                 <button
                   type="button"
                   onClick={() => setPinHelpOpen(false)}
@@ -1404,26 +1453,17 @@ export default function QuestMapPage() {
                 </button>
               </div>
               <p>
-                <strong className="text-[#582F0E]">Desktop:</strong> right-click anywhere on the map, or press the
-                pin button and then click the map.
+                Press <strong className="text-[#582F0E]">Add spot</strong>. Your cursor turns into a pin, so click where the place is (or use <em>Place at map center</em>). Drag the pin to fine-tune it. We&apos;ll fill in the address for you.
               </p>
               <p>
-                <strong className="text-[#582F0E]">Touch:</strong> press the pin button, then tap the map. Drag the
-                draft pin to adjust it.
-              </p>
-              <p>
-                Nothing is published until you review the answers and press Publish. Prefer a full page?{' '}
-                <Link href="/spots/new" className="font-bold text-[#2D6A4F] hover:underline">
-                  Use the classic submission form
-                </Link>
-                .
+                Nothing is published until you review and press <strong className="text-[#582F0E]">Publish</strong>.
               </p>
             </div>
           )}
 
           {/* Loading Indicator Toast */}
           {loading && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-[#E3DFD5] shadow-md flex items-center gap-2 text-xs font-bold text-[#582F0E]">
+            <div className="absolute top-[124px] left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-[#E3DFD5] shadow-md flex items-center gap-2 text-xs font-bold text-[#582F0E]">
               <RotateCw className="w-3.5 h-3.5 animate-spin text-[#2D6A4F]" />
               <span>Loading destination markers...</span>
             </div>
@@ -1431,7 +1471,7 @@ export default function QuestMapPage() {
 
           {/* Error Toast */}
           {error && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-amber-50/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-200 shadow-md flex items-center gap-2 text-xs font-bold text-[#7D5800]">
+            <div className="absolute top-[124px] left-1/2 -translate-x-1/2 z-20 bg-amber-50/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-200 shadow-md flex items-center gap-2 text-xs font-bold text-[#7D5800]">
               <AlertTriangle className="w-4 h-4 text-[#B45309] shrink-0" />
               <span>{error}</span>
               <button
@@ -1480,6 +1520,12 @@ export default function QuestMapPage() {
               }}
             />
           )}
+
+          <SignInSheet
+            open={signInPrompt.open}
+            onClose={() => setSignInPrompt({ open: false, actionLabel: 'Pin a destination' })}
+            actionLabel={signInPrompt.actionLabel}
+          />
         </div>
       </ErrorBoundary>
     </Navigation>
