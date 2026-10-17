@@ -21,6 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/explore`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
     { url: `${base}/map`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${base}/quests`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${base}/plaza`, lastModified: now, changeFrequency: 'daily', priority: 0.85 },
     { url: `${base}/search`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
     { url: `${base}/saved`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${base}/campaigns`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },

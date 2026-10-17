@@ -120,7 +120,7 @@ export const Navigation: React.FC<{
         time: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.created_at)),
         href: item.href,
         read: item.read,
-        type: item.kind === 'sponsorship' ? 'sponsorship' : 'funding',
+        type: item.kind === 'sponsorship' ? 'sponsorship' : item.kind === 'cheer' || item.kind === 'comment' || item.kind === 'follow' || item.kind === 'overtaken' || item.kind === 'weekly_champion' ? 'social' : 'funding',
         durable: true,
       })));
     } catch {
@@ -393,7 +393,7 @@ export const Navigation: React.FC<{
       label: 'Community',
       items: [
         { label: 'Shop', href: '/shop', icon: ShoppingBag },
-        { label: 'Leaderboard', href: '/leaderboard', icon: Award },
+        { label: 'Plaza', href: '/plaza', icon: Users },
         hasMerchantOwnership
           ? { label: 'Merchant Dashboard', href: '/merchant', icon: Store }
           : { label: 'Merchant Hub', href: '/affiliate', icon: Store },

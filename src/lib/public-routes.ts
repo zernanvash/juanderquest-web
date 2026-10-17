@@ -16,6 +16,7 @@ const EXACT_PUBLIC_PATHS = new Set([
   '/explore',
   '/map',
   '/quests',
+  '/plaza',
   '/leaderboard',
   '/choice',
   '/trail',
