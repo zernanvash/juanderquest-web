@@ -7,6 +7,7 @@ describe('isPublicPage', () => {
     expect(isPublicPage('/explore')).toBe(true);
     expect(isPublicPage('/map')).toBe(true);
     expect(isPublicPage('/quests')).toBe(true);
+    expect(isPublicPage('/plaza')).toBe(true);
     expect(isPublicPage('/leaderboard')).toBe(true);
     expect(isPublicPage('/choice')).toBe(true);
     expect(isPublicPage('/trail')).toBe(true);
