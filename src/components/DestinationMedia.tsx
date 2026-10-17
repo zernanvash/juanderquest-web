@@ -5,16 +5,35 @@ import Link from 'next/link';
 import { MapPin, Film, AlertCircle, RefreshCw } from 'lucide-react';
 import { isVideoMedia } from '@/lib/api';
 
-interface DestinationMediaProps {
+export interface DestinationMediaProps {
   src?: string;
   alt: string;
   destinationName?: string;
   municipality?: string;
+  category?: string;
   aspectRatio?: 'video' | 'card' | 'banner';
+  variant?: 'card' | 'thumb' | 'illustration';
   priority?: boolean;
   className?: string;
   hideUnavailable?: boolean;
   href?: string;
+}
+
+export function getCategoryIllustrationUrl(category?: string): string {
+  const normalized = (category || '').toLowerCase();
+  if (normalized.includes('histor') || normalized.includes('church') || normalized.includes('museum') || normalized.includes('heritage') || normalized.includes('cultural')) {
+    return '/illustrations/heritage-church.svg';
+  }
+  if (normalized.includes('food') || normalized.includes('culinary') || normalized.includes('market') || normalized.includes('dining')) {
+    return '/illustrations/food-market.svg';
+  }
+  if (normalized.includes('activit') || normalized.includes('park') || normalized.includes('trail') || normalized.includes('adventure')) {
+    return '/illustrations/activities.svg';
+  }
+  if (normalized.includes('wellness') || normalized.includes('resort') || normalized.includes('spring') || normalized.includes('retreat')) {
+    return '/illustrations/wellness.svg';
+  }
+  return '/illustrations/nature-coast.svg';
 }
 
 export const DestinationMedia: React.FC<DestinationMediaProps> = ({
@@ -22,7 +41,9 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
   alt,
   destinationName,
   municipality,
+  category,
   aspectRatio = 'card',
+  variant = 'card',
   priority = false,
   className = '',
   hideUnavailable = false,
@@ -35,7 +56,9 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
   const isVideo = isVideoMedia(src);
 
   const aspectClass =
-    aspectRatio === 'video'
+    variant === 'thumb'
+      ? 'w-full h-full'
+      : aspectRatio === 'video'
       ? 'aspect-[16/9]'
       : aspectRatio === 'banner'
       ? 'aspect-[21/9]'
@@ -80,14 +103,61 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
 
   // Failed state or no source URL provided
   if (!src || loadError) {
+    const illustrationSrc = getCategoryIllustrationUrl(category);
+
+    // Compact thumbnail variant: renders category icon/illustration tile without text labels that clip at <=80px
+    if (variant === 'thumb') {
+      return (
+        <div
+          className={`relative w-full h-full bg-[#1B4332] flex items-center justify-center select-none overflow-hidden ${className}`}
+          role="img"
+          aria-label={`${alt} (Category thumbnail)`}
+        >
+          <img
+            src={illustrationSrc}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover opacity-85"
+          />
+          <MapPin className="relative z-10 w-4 h-4 text-white drop-shadow-sm" aria-hidden="true" />
+        </div>
+      );
+    }
+
+    // Category illustration strip variant (used on no-photo cards so grid rhythm stays aligned)
+    if (variant === 'illustration') {
+      return (
+        <div
+          className={`relative w-full ${aspectClass} bg-[#133A2B] select-none overflow-hidden ${className}`}
+          role="img"
+          aria-label={`${alt} (Category illustration)`}
+        >
+          <img
+            src={illustrationSrc}
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover"
+          />
+          <span className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-white/95">
+            <span>Illustration — no photo yet</span>
+          </span>
+        </div>
+      );
+    }
+
     const placeholderContent = (
       <div
         className={`relative w-full ${aspectClass} bg-gradient-to-br from-[#FAF9F5] via-[#F2EFE9] to-[#E3DFD5] border-y border-[#E3DFD5] flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden ${className}`}
         role="img"
         aria-label={`${alt} (Photo placeholder)`}
       >
-        {/* Subtle patterned background accent */}
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#2D6A4F_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+        {/* Subtle category illustration accent */}
+        <img
+          src={illustrationSrc}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover opacity-15 pointer-events-none"
+        />
 
         <div className="relative z-10 flex flex-col items-center max-w-xs space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-white border border-[#D5C4AC] shadow-xs flex items-center justify-center text-[#2D6A4F]">
@@ -122,7 +192,7 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
                 )}
               </>
             ) : (
-              <span>Destination preview</span>
+              <span>Illustration — no photo yet</span>
             )}
           </div>
         </div>
@@ -185,3 +255,5 @@ export const DestinationMedia: React.FC<DestinationMediaProps> = ({
 
   return imageCard;
 };
+
+export default DestinationMedia;

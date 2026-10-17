@@ -173,26 +173,8 @@ describe('MapWorkspacePanel', () => {
     expect(screen.getByTestId('test-floating-tool')).toBeDefined();
   });
 
-  it('renders searchBar slot when collapsed and expanded', () => {
-    const { rerender } = render(
-      <MapWorkspacePanel
-        title="Test Map Workspace"
-        tabs={mockTabs}
-        activeTab="explore"
-        onTabChange={vi.fn()}
-        isDesktopCollapsed={true}
-        onDesktopCollapseChange={vi.fn()}
-        mobileSnap="peek"
-        onMobileSnapChange={vi.fn()}
-        searchBar={<input data-testid="test-search-bar" placeholder="Search..." />}
-      >
-        <div>Content</div>
-      </MapWorkspacePanel>
-    );
-
-    expect(screen.getAllByTestId('test-search-bar').length).toBeGreaterThan(0);
-
-    rerender(
+  it('renders children content without searchBar slot', () => {
+    render(
       <MapWorkspacePanel
         title="Test Map Workspace"
         tabs={mockTabs}
@@ -202,12 +184,12 @@ describe('MapWorkspacePanel', () => {
         onDesktopCollapseChange={vi.fn()}
         mobileSnap="half"
         onMobileSnapChange={vi.fn()}
-        searchBar={<input data-testid="test-search-bar" placeholder="Search..." />}
       >
-        <div>Content</div>
+        <div data-testid="workspace-content">Content</div>
       </MapWorkspacePanel>
     );
 
-    expect(screen.getAllByTestId('test-search-bar').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('workspace-content').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('search')).toBeNull();
   });
 });

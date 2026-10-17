@@ -19,8 +19,8 @@ import {
 } from '@/lib/search';
 import { FollowButton } from '@/components/FollowButton';
 import { FollowListModal } from '@/components/FollowListModal';
-import { BaseSepoliaReadiness } from '@/components/BaseSepoliaReadiness';
 import { fetchMyEngagement, type EngagementSummary } from '@/lib/engagement';
+import { COPY, formatPoints, formatXp } from '@/lib/copy';
 import {
   Award,
   Compass,
@@ -485,18 +485,18 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
                   </div>
 
-                  {/* Interactive Soulbound Badges & NFT Trophy Showcase */}
+                  {/* Interactive Badges Showcase */}
                   <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
                       <div>
                         <div className="flex items-center gap-2">
                           <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
                           <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
-                            Soulbound Badges &amp; NFT Showcase
+                            {COPY.badge.titlePlural}
                           </h2>
                         </div>
                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          Base L2 Soulbound achievements and gamified expedition tokens. Click any badge to inspect.
+                          Verified destination achievements and Eco-Quest milestones. Click any badge to inspect.
                         </p>
                       </div>
 
@@ -513,7 +513,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                                 : 'text-[#837560] hover:text-[#2C221E]'
                             }`}
                           >
-                            {tab === 'all' ? 'All' : tab === 'nft' ? 'NFTs' : tab === 'civic' ? 'Civic' : 'Quests'}
+                            {tab === 'all' ? 'All' : tab === 'nft' ? 'Featured' : tab === 'civic' ? 'Civic' : 'Eco-Quests'}
                           </button>
                         ))}
                       </div>
@@ -546,11 +546,6 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                               }`}>
                                 {badge.rarity}
                               </span>
-                              {badge.isNft && (
-                                <span className="text-[9px] font-mono font-bold text-amber-700">
-                                  {badge.tokenId}
-                                </span>
-                              )}
                             </div>
                           </div>
 
@@ -564,7 +559,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                           </div>
 
                           <div className="mt-3 pt-2.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] font-bold text-[#2D6A4F]">
-                            <span>{badge.network || 'Off-chain'}</span>
+                            <span>{badge.network || 'Verified'}</span>
                             <span className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
                               Inspect <ChevronRight className="w-3 h-3" />
                             </span>
@@ -580,11 +575,11 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-[var(--color-brand-primary)]" />
                         <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
-                          Verified Quest Accomplishments
+                          Verified Eco-Quest Accomplishments
                         </h2>
                       </div>
                       <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">
-                        Civic Trail History
+                        Check-in History
                       </span>
                     </div>
 
@@ -602,7 +597,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                             </div>
                             <div className="min-w-0">
                               <div className="text-xs font-black text-emerald-950 truncate">{b.name}</div>
-                              <div className="text-[10px] text-emerald-700 capitalize">{b.category} Quest</div>
+                              <div className="text-[10px] text-emerald-700 capitalize">{b.category} Eco-Quest</div>
                             </div>
                           </div>
                         ))}
@@ -638,7 +633,9 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
           {/* ======================================================== */}
           {!authLoading && isMine && user && (() => {
             const displayName = myProfile?.display_name?.trim() || user.displayName?.trim() || 'Explorer';
-            const handleText = myProfile?.handle?.trim() || user.seedId?.trim() || 'traveler';
+            const rawHandle = myProfile?.handle?.trim() || user.handle?.trim() || user.seedId?.trim() || 'traveler';
+            const isAutoGuestHandle = /^(guest|traveler)-[0-9a-f-]{8,}/i.test(rawHandle);
+            const cleanHandleText = isAutoGuestHandle ? 'guest' : rawHandle.replace(/^@/, '');
             const initials = displayName
               .split(' ')
               .filter(Boolean)
@@ -646,10 +643,15 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
               .map((w) => w[0]?.toUpperCase() || '')
               .join('') || 'ME';
             const joinedYear = myProfile?.created_at ? new Date(myProfile.created_at).getFullYear() : 2026;
-            const currentPoints = user.points ?? 0;
-            const currentLevel = Math.floor(currentPoints / 50) + 1;
-            const pointsInLevel = currentPoints % 50;
-            const nextLevelProgress = Math.min(100, Math.round((pointsInLevel / 50) * 100));
+            const currentXp = user.points ?? 0;
+            const currentLevel = Math.floor(currentXp / 50) + 1;
+            const xpInLevel = currentXp % 50;
+            const nextLevelProgress = Math.min(100, Math.round((xpInLevel / 50) * 100));
+            const earnedBadgeSet = new Set<string>(
+              submissions.filter((s) => s.status === 'approved').length > 0 || currentXp > 0
+                ? activeBadgeIds
+                : []
+            );
 
             return (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -683,7 +685,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)] text-xs font-extrabold text-[var(--color-brand-brown)] shadow-xs transition cursor-pointer hover:bg-[var(--color-bg-subtle)]"
                           >
                             <Settings className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                            <span>Edit in Settings</span>
+                            <span>Edit Profile</span>
                           </Link>
                         </div>
                       </div>
@@ -699,11 +701,16 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
 
                         <div className="flex items-center gap-2 flex-wrap text-xs">
                           <span className="font-bold text-[var(--color-brand-primary)]">
-                            @{handleText}
+                            @{cleanHandleText}
                           </span>
-                          <span className="shrink-0 rounded-full bg-[var(--color-brand-primary)]/10 border border-[var(--color-brand-primary)]/20 px-2 py-0.2 text-[9px] font-black uppercase text-[var(--color-brand-primary)]">
-                            {user.role === 'admin' ? 'ADMINISTRATOR' : 'YOU (OWNER)'}
-                          </span>
+                          {isAutoGuestHandle && (
+                            <Link
+                              href="/settings"
+                              className="text-[11px] font-bold text-[#B45309] hover:underline"
+                            >
+                              Set your username →
+                            </Link>
+                          )}
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.2 text-[9px] font-black uppercase border ${
                               myProfile?.is_public
@@ -748,7 +755,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                             <span>Level {currentLevel} Explorer</span>
                           </span>
                           <span className="text-[11px] text-[#2D6A4F] font-black">
-                            {currentPoints} PTS ({nextLevelProgress}% to Lv. {currentLevel + 1})
+                            {formatXp(currentXp)} ({nextLevelProgress}% to Lv. {currentLevel + 1})
                           </span>
                         </div>
                         <div className="w-full bg-[#E3DFD5]/70 h-2 rounded-full overflow-hidden">
@@ -758,7 +765,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                           />
                         </div>
                         <p className="text-[10px] text-[#837560]">
-                          Earn XP by verifying visits via Haversine GPS (&le;100m) and completing trails.
+                          Earn XP by verifying destination visits and completing Eco-Quests.
                         </p>
                       </div>
 
@@ -786,99 +793,66 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                           </button>
                         </div>
                       )}
-                    </div>
-                  </section>
 
-                  {/* Sovereign Credentials Card */}
-                  <div className="theme-card p-4 space-y-3">
-                    <div className="flex items-center justify-between text-xs font-bold text-[#582F0E] uppercase tracking-wider">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
-                        <span>Sovereign Credentials</span>
-                      </div>
-                      <Link href="/settings" className="text-[10px] text-[#2D6A4F] font-bold hover:underline">
-                        Manage
-                      </Link>
-                    </div>
-                    <div className="divide-y divide-[#F2EFE9] text-xs">
-                      <div className="py-2 flex items-center justify-between">
-                        <span className="text-[#837560]">Active Nametag Badges</span>
-                        <span className="font-bold text-[#2D6A4F]">
-                          {activeBadgeIds.length} / 3 Selected
-                        </span>
-                      </div>
-                      <div className="py-2 flex items-center justify-between">
-                        <span className="text-[#837560]">GPS Validation Engine</span>
-                        <span className="font-bold text-[#2C221E]">Haversine &le; 100m</span>
-                      </div>
-                      <div className="py-2 flex items-center justify-between">
-                        <span className="text-[#837560]">Network Ledger</span>
-                        <span className="font-bold text-purple-900 bg-purple-50 px-2 py-0.5 rounded-full text-[10px]">
-                          Base Sepolia Ready
-                        </span>
-                      </div>
-                      {adminDashboardUrl && (
-                        <div className="py-2.5 flex items-center justify-between">
-                          <span className="text-[#837560]">Tourism Moderation</span>
+                      {/* Quick Settings & Sign Out Row */}
+                      <div className="mt-4 pt-3.5 border-t border-[#F2EFE9] flex items-center justify-between gap-2">
+                        <Link
+                          href="/settings"
+                          className="text-xs font-bold text-[var(--color-brand-brown)] hover:text-[var(--color-brand-primary)] flex items-center gap-1.5 transition"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          <span>Account Settings</span>
+                        </Link>
+                        {adminDashboardUrl && (
                           <a
                             href={adminDashboardUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-amber-900 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 transition shadow-2xs"
+                            className="text-xs font-bold text-amber-800 hover:underline"
                           >
-                            <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
-                            <span>Admin Control Room ↗</span>
+                            Admin ↗
                           </a>
-                        </div>
-                      )}
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void logout()}
+                          className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="pt-2 border-t border-[#F2EFE9] flex items-center justify-between gap-2">
-                      <Link
-                        href="/settings"
-                        className="text-xs font-bold text-[var(--color-brand-brown)] hover:text-[var(--color-brand-primary)] flex items-center gap-1.5 transition"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                        <span>Settings</span>
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => void logout()}
-                        className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition cursor-pointer"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  </div>
+                  </section>
                 </div>
 
                 {/* Right Column: Passport Showcase, Badges & Activity (8 cols) */}
                 <div className="lg:col-span-8 space-y-6">
-                  {/* Top 4 Metrics Ribbon */}
+                  {/* Top 4 Metrics Ribbon: Points · XP · Streak · Destinations */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                    {/* Wallet Balances */}
+                    {/* Points Balance */}
                     <div className="theme-card p-4 text-center">
                       <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
                         <Wallet className="w-4 h-4" />
                       </div>
                       <div className="text-xl font-black text-[#2D6A4F]">
-                        {wallet ? `${wallet.balanceMjdq.toLocaleString()}` : 'Unavailable'}
+                        {wallet ? formatPoints(wallet.balanceMjdq) : formatPoints(0)}
                       </div>
                       <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        mJDQ Balance
+                        {COPY.points.balanceLabel}
                       </div>
                     </div>
 
-                    {/* XP Points */}
+                    {/* XP */}
                     <div className="theme-card p-4 text-center">
                       <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
                         <Award className="w-4 h-4" />
                       </div>
                       <div className="text-xl font-black text-[#582F0E]">
-                        {currentPoints} PTS
+                        {formatXp(currentXp)}
                       </div>
                       <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Expedition XP
+                        {COPY.xp.unit} · Lv. {currentLevel}
                       </div>
                     </div>
 
@@ -888,10 +862,10 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                         <Flame className="w-4 h-4 text-orange-600" />
                       </div>
                       <div className="text-xl font-black text-orange-950">
-                        {engagement?.streak.current ?? 1} Days
+                        {engagement?.streak.current ?? 0} Days
                       </div>
                       <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Current Streak
+                        Streak
                       </div>
                     </div>
 
@@ -901,7 +875,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                         <Compass className="w-4 h-4 text-purple-700" />
                       </div>
                       <div className="text-xl font-black text-purple-950">
-                        {engagement?.impact.unique_destinations ?? approvedCategories.size ?? 3}
+                        {engagement?.impact.unique_destinations ?? approvedCategories.size}
                       </div>
                       <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
                         Destinations
@@ -909,18 +883,23 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
                   </div>
 
-                  {/* Interactive Soulbound Badges & NFT Trophy Showcase */}
+                  {/* Interactive Badges Showcase (Earned vs Locked) */}
                   <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
                           <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
-                            Soulbound Badges &amp; NFT Showcase
+                            {COPY.badge.titlePlural}
                           </h2>
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200">
+                            Earned ({earnedBadgeSet.size}) · Locked ({SAMPLE_USER_BADGES.length - earnedBadgeSet.size})
+                          </span>
                         </div>
                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          Tap any badge to inspect metadata, contract details, and pin to your username nametag.
+                          {earnedBadgeSet.size === 0
+                            ? 'Complete your first Eco-Quest or destination check-in to unlock your first badge.'
+                            : 'Tap any badge to inspect achievement requirements and pin up to 3 badges to your nametag.'}
                         </p>
                       </div>
 
@@ -937,7 +916,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                                 : 'text-[#837560] hover:text-[#2C221E]'
                             }`}
                           >
-                            {tab === 'all' ? 'All' : tab === 'nft' ? 'NFTs' : tab === 'civic' ? 'Civic' : 'Quests'}
+                            {tab === 'all' ? 'All' : tab === 'nft' ? 'Featured' : tab === 'civic' ? 'Civic' : 'Eco-Quests'}
                           </button>
                         ))}
                       </div>
@@ -947,6 +926,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
                       {filteredBadges.map((badge) => {
                         const isPinned = activeBadgeIds.includes(badge.id);
+                        const isUnlocked = earnedBadgeSet.has(badge.id);
                         return (
                           <div
                             key={badge.id}
@@ -954,14 +934,13 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                             className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 relative overflow-hidden group ${
                               isPinned
                                 ? 'bg-amber-50/40 border-amber-300 ring-1 ring-amber-400/30'
-                                : 'bg-white border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-[#FAF9F5]/70'
+                                : isUnlocked
+                                ? 'bg-white border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-[#FAF9F5]/70'
+                                : 'bg-stone-50/75 border-[#E3DFD5] opacity-80 hover:opacity-100'
                             }`}
                           >
-                            {badge.isNft && (
-                              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[badge-glint_2s_ease-in-out_infinite] pointer-events-none" />
-                            )}
                             <div className="flex items-start justify-between gap-2">
-                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs`}>
+                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs ${!isUnlocked ? 'grayscale' : ''}`}>
                                 <span>{badge.icon}</span>
                               </div>
                               <div className="flex flex-col items-end gap-1">
@@ -976,9 +955,9 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                                 }`}>
                                   {badge.rarity}
                                 </span>
-                                {badge.isNft && (
-                                  <span className="text-[9px] font-mono font-bold text-amber-700">
-                                    {badge.tokenId}
+                                {!isUnlocked && (
+                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-stone-500">
+                                    <Lock className="w-2.5 h-2.5" /> Locked
                                   </span>
                                 )}
                               </div>
@@ -989,7 +968,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                                 {badge.name}
                               </h4>
                               <p className="text-[11px] text-[#837560] line-clamp-2 mt-1 leading-relaxed">
-                                {badge.description}
+                                {isUnlocked ? badge.description : badge.howToEarn || badge.description}
                               </p>
                             </div>
 
@@ -999,7 +978,9 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                                   <Check className="w-3 h-3 text-emerald-600" /> Active on Nametag
                                 </span>
                               ) : (
-                                <span className="text-[#837560]">Tap to inspect &amp; pin</span>
+                                <span className="text-[#837560]">
+                                  {isUnlocked ? 'Tap to pin' : 'How to unlock'}
+                                </span>
                               )}
                               <span className="text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
                                 Details <ChevronRight className="w-3 h-3" />
@@ -1135,9 +1116,6 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       </div>
                     )}
                   </section>
-
-                  {/* Base Sepolia Readiness Widget */}
-                  <BaseSepoliaReadiness signedInSeedId={user.seedId} />
                 </div>
 
                 {/* Follow List Modal */}
@@ -1191,29 +1169,22 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       <h3 className="text-lg font-black text-[#2C221E]">{selectedBadgeModal.name}</h3>
                       {selectedBadgeModal.isNft && (
                         <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-500/30">
-                          Soulbound NFT
+                          Verified Badge
                         </span>
                       )}
                     </div>
                     <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mt-0.5">
-                      {selectedBadgeModal.rarity} Rarity {selectedBadgeModal.network ? `• ${selectedBadgeModal.network}` : ''}
+                      {selectedBadgeModal.rarity} Rarity
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-[#FAF9F5] p-3.5 rounded-2xl border border-[#E3DFD5] space-y-2 text-xs text-[#582F0E]">
                   <p className="leading-relaxed">{selectedBadgeModal.description}</p>
-                  {selectedBadgeModal.tokenId && (
-                    <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[#E3DFD5]/70 text-[#837560]">
-                      <span>Token Identifier</span>
-                      <span className="font-mono font-bold text-[#2D6A4F]">{selectedBadgeModal.tokenId}</span>
-                    </div>
-                  )}
-                  {selectedBadgeModal.network && (
-                    <div className="flex items-center justify-between text-[11px] text-[#837560]">
-                      <span>Blockchain Ledger</span>
-                      <span className="font-semibold text-purple-900">{selectedBadgeModal.network}</span>
-                    </div>
+                  {selectedBadgeModal.howToEarn && (
+                    <p className="text-[11px] text-[#837560] pt-2 border-t border-[#E3DFD5]/70">
+                      <strong className="text-[#582F0E]">How to earn:</strong> {selectedBadgeModal.howToEarn}
+                    </p>
                   )}
                 </div>
 

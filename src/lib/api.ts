@@ -115,6 +115,16 @@ export interface QuestModel {
   difficultyFactor?: number;
   geoMultiplier?: number;
   rewardPoints: number;
+  funding?: {
+    mode: 'budget' | 'window';
+    status: 'active' | 'closing';
+    ends_at: string;
+    reward_points: number;
+    completions_left_estimate: number;
+    sponsors: Array<{ name: string; logo: string | null }>;
+    perk: { title: string; remaining: number } | null;
+    simulated: true;
+  } | null;
   markerCode?: string; // author/admin/test-only diagnostic field; travelers must use a challenge token
   markerImageUrl?: string;
   isTest?: boolean;
@@ -232,7 +242,9 @@ export interface SpotModel {
   address: string;
   gpsLat: number;
   gpsLng: number;
-  priceLevel: number;
+  priceLevel: number | null;
+  goodFor?: string[];
+  bestTime?: string[];
   hours: Record<string, string>;
   amenities: string[];
   imageUrl: string;
@@ -313,7 +325,9 @@ export function normalizeSpot(raw: any): SpotModel {
     address: raw.address,
     gpsLat: Number(raw.gps_lat),
     gpsLng: Number(raw.gps_lng),
-    priceLevel: Number(raw.price_level) || 0,
+    priceLevel: raw.price_level === null || raw.price_level === undefined ? null : Number(raw.price_level),
+    goodFor: Array.isArray(raw.good_for) ? raw.good_for : [],
+    bestTime: Array.isArray(raw.best_time) ? raw.best_time : [],
     hours: raw.hours || {},
     amenities: raw.amenities || [],
     imageUrl: raw.image_url || DEFAULT_SPOT_IMAGES[raw.slug] || '',
@@ -381,6 +395,7 @@ type BackendQuest = {
   difficulty_factor?: number;
   geo_multiplier?: number;
   reward_points: number;
+  funding?: QuestModel['funding'];
   marker_code?: string;
   marker_image_url?: string;
   is_test?: boolean;
@@ -413,6 +428,7 @@ export function normalizeQuest(raw: BackendQuest): QuestModel {
     difficultyFactor: raw.difficulty_factor ? Number(raw.difficulty_factor) : 1.0,
     geoMultiplier: raw.geo_multiplier ? Number(raw.geo_multiplier) : 2.0,
     rewardPoints: Number(raw.reward_points),
+    funding: raw.funding ?? null,
     markerCode: raw.marker_code,
     markerImageUrl: raw.marker_image_url || '',
     isTest: Boolean(raw.is_test),

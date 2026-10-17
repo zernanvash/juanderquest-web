@@ -11,6 +11,8 @@ import { QuestCardSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useSavedLibrary } from '@/lib/saved-library';
 import { appRoutes } from '@/lib/routes';
+import { COPY, formatPoints } from '@/lib/copy';
+import { DestinationMedia } from '@/components/DestinationMedia';
 import {
   Compass,
   MapPin,
@@ -30,6 +32,13 @@ import {
   ArrowUp,
   Loader2,
 } from 'lucide-react';
+
+function isUsableQuestImage(url?: string | null): boolean {
+  if (!url) return false;
+  // Filter out the generic interior furniture stock photo used in some seed records
+  if (url.includes('1513694203232-719a280e022f')) return false;
+  return true;
+}
 
 function calculateTimeRemaining(targetDate: string) {
   const diff = new Date(targetDate).getTime() - Date.now();
@@ -128,8 +137,8 @@ function QuestsContent() {
     router.replace(url, { scroll: false });
   };
 
-  const filteredQuests = useMemo(() => {
-    return quests.filter((q) => {
+  const { mainQuests, practiceQuests } = useMemo(() => {
+    const matching = quests.filter((q) => {
       const matchCat = activeTrailCategory === 'all' || q.category === activeTrailCategory;
       const matchSearch =
         searchQuery === '' ||
@@ -138,7 +147,19 @@ function QuestsContent() {
         q.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchCat && matchSearch;
     });
+    const main: QuestModel[] = [];
+    const practice: QuestModel[] = [];
+    for (const q of matching) {
+      if (q.isTest || /^SIM\s*[•·-]/i.test(q.title)) {
+        practice.push(q);
+      } else {
+        main.push(q);
+      }
+    }
+    return { mainQuests: main, practiceQuests: practice };
   }, [quests, activeTrailCategory, searchQuery]);
+
+  const filteredQuests = mainQuests;
 
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter((c) => {
@@ -191,7 +212,7 @@ function QuestsContent() {
   if (isLoading) return null;
 
   const trailCategories = [
-    { id: 'all', label: 'All Trails' },
+    { id: 'all', label: 'All Eco-Quests' },
     { id: 'eco', label: '🏖️ Eco-Tourism' },
     { id: 'cultural', label: '🏛️ Cultural Heritage' },
     { id: 'food_trade', label: '🍜 Culinary' },
@@ -205,9 +226,113 @@ function QuestsContent() {
     { id: 'food_trade', label: '🐟 Food & Agri-Trade' },
   ];
 
+  const renderQuestCard = (quest: QuestModel) => {
+    const hasPhoto = isUsableQuestImage(quest.markerImageUrl);
+    return (
+      <article
+        key={quest.id}
+        className="bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/50 p-4 sm:p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group"
+      >
+        <div className="space-y-3">
+          <div className="relative w-full h-36 rounded-xl overflow-hidden bg-stone-100 shrink-0">
+            {hasPhoto ? (
+              <img
+                src={quest.markerImageUrl!}
+                alt={quest.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/illustrations/nature-coast.svg';
+                }}
+              />
+            ) : (
+              <DestinationMedia
+                destinationName={quest.title}
+                alt={quest.title}
+                category={quest.category}
+                municipality={quest.locationName}
+                variant="illustration"
+                className="w-full h-full"
+              />
+            )}
+            <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+              <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-md bg-white/95 text-[var(--color-brand-primary)] border border-white/40 shadow-xs backdrop-blur-xs">
+                {quest.category.replace('_', ' ')}
+              </span>
+              {quest.isTest && (
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-amber-100/95 text-amber-900 border border-amber-300">
+                  Practice
+                </span>
+              )}
+            </div>
+            <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => toggleSaved('quests', quest.id)}
+                aria-label={isSaved('quests', quest.id) ? `Remove ${quest.title} from saved quests` : `Save ${quest.title}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all active:scale-95 cursor-pointer ${
+                  isSaved('quests', quest.id)
+                    ? 'border-amber-300 bg-amber-100/95 text-[#7D5800] shadow-2xs'
+                    : 'border-white/60 bg-white/90 text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)]'
+                }`}
+              >
+                <Bookmark className={`h-3.5 w-3.5 ${isSaved('quests', quest.id) ? 'fill-current text-[#B45309]' : ''}`} />
+              </button>
+              <div className="flex items-center gap-1 bg-[var(--color-brand-accent)] text-[var(--color-brand-brown)] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
+                <Award className="w-3.5 h-3.5" />
+                <span>{formatPoints(quest.rewardPoints, { signed: true })}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition line-clamp-2 leading-snug">
+              {quest.title.replace(/^SIM\s*[•·-]\s*/i, '')}
+            </h2>
+
+            <div className="flex items-center gap-1 text-[11px] text-[var(--color-brand-primary)] font-medium truncate pt-0.5">
+              <MapPin className="w-3 h-3 shrink-0" />
+              <span className="truncate">{quest.locationName}</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed line-clamp-2">
+            {quest.description}
+          </p>
+
+          <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)] font-medium pt-0.5">
+            <span className="px-2 py-0.5 rounded bg-[var(--color-bg-subtle)] border border-[var(--color-border-subtle)]">
+              {quest.radiusMeters}m geofence
+            </span>
+            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+              GPS Verified
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-[var(--color-border-subtle)] flex items-center justify-between gap-2">
+          <Link
+            href={`/navigate?name=${encodeURIComponent(quest.locationName)}&lat=${quest.gpsLat}&lng=${quest.gpsLng}&address=${encodeURIComponent(quest.locationName)}`}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] transition py-1"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Directions</span>
+          </Link>
+
+          <Link
+            href={appRoutes.quest(quest.id)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white text-xs font-bold shadow-xs group-hover:translate-x-0.5 transition active:scale-95"
+          >
+            <span>{COPY.quest.viewCta}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </article>
+    );
+  };
+
   return (
     <Navigation>
-      <ErrorBoundary fallbackTitle="Unable to display Quest Trails & Campaigns">
+      <ErrorBoundary fallbackTitle="Unable to display Eco-Quests & Campaigns">
         <div className="space-y-6 w-full">
           {/* Header Banner & Sub-Feature Tabs */}
           <div className="bg-white rounded-2xl border border-[var(--color-border-default)] p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
@@ -215,13 +340,13 @@ function QuestsContent() {
               <div className="space-y-1.5 max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-brand-primary)]/10 border border-[var(--color-brand-primary)]/20 text-[var(--color-brand-primary)] text-xs font-semibold">
                   <Sparkles className="w-3.5 h-3.5 text-[var(--color-brand-accent)]" />
-                  <span>Gamified Eco-Tourism &amp; Bounties Engine</span>
+                  <span>Location-Based Challenges &amp; Bounties</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-[var(--color-brand-brown)]">
-                  Eco-Quests &amp; Trails
+                  {COPY.quest.titlePlural}
                 </h1>
                 <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed max-w-xl">
-                  Explore location-based Eco-Quests, beginning in Pangasinan. Physical visits on-site unlock rewards, badges, and verified traveler progression.
+                  Explore location-based Eco-Quests across Pangasinan. Physical visits on-site unlock points, badges, and verified traveler progression.
                 </p>
               </div>
 
@@ -236,9 +361,9 @@ function QuestsContent() {
                   }`}
                 >
                   <Zap className="w-4 h-4 text-[var(--color-brand-accent)]" />
-                  <span>Ongoing Trails</span>
+                  <span>{COPY.quest.titlePlural}</span>
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === 'trails' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>
-                    {quests.length}
+                    {mainQuests.length}
                   </span>
                 </button>
 
@@ -318,13 +443,13 @@ function QuestsContent() {
             {/* Search Input & Item Count */}
             <div className="flex items-center gap-2.5 shrink-0">
               <span className="hidden md:inline text-xs font-semibold text-[var(--color-text-muted)]">
-                {totalFilteredCount} {activeTab === 'trails' ? 'trails' : 'campaigns'}
+                {totalFilteredCount} {activeTab === 'trails' ? 'Eco-Quests' : 'campaigns'}
               </span>
               <div className="relative min-w-[200px] sm:min-w-[240px] flex-1 sm:flex-none">
                 <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder={activeTab === 'trails' ? 'Search trails, town, tag...' : 'Search event or town...'}
+                  placeholder={activeTab === 'trails' ? 'Search Eco-Quests, town, tag...' : 'Search event or town...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-white border border-[#E3DFD5] rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#2C221E] focus:outline-none focus:border-[#2D6A4F] shadow-2xs"
@@ -351,116 +476,30 @@ function QuestsContent() {
               </button>
             </div>
           ) : activeTab === 'trails' ? (
-            /* Ongoing Quest Trails Grid - Responsive 3 Columns */
-            filteredQuests.length === 0 ? (
+            /* Ongoing Eco-Quests Grid - Responsive 3 Columns */
+            filteredQuests.length === 0 && practiceQuests.length === 0 ? (
               <div className="bg-white p-12 rounded-2xl border border-[#E3DFD5] text-center text-xs text-[#837560] shadow-xs">
-                No quest trails match your filter.
+                No Eco-Quests match your filter.
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                  {paginatedQuests.map((quest) => (
-                    <article
-                      key={quest.id}
-                      className="bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/50 p-4 sm:p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group"
-                    >
-                      <div className="space-y-3">
-                        {quest.markerImageUrl && (
-                          <div className="relative w-full h-36 rounded-xl overflow-hidden bg-stone-100 shrink-0">
-                            <img
-                              src={quest.markerImageUrl}
-                              alt={quest.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
-                              }}
-                            />
-                            <div className="absolute top-2.5 left-2.5">
-                              <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-md bg-white/95 text-[var(--color-brand-primary)] border border-white/40 shadow-xs backdrop-blur-xs">
-                                {quest.category.replace('_', ' ')}
-                              </span>
-                            </div>
-                          </div>
-                        )}
+                {paginatedQuests.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                    {paginatedQuests.map(renderQuestCard)}
+                  </div>
+                )}
 
-                        <div className="flex items-center justify-between gap-2">
-                          {!quest.markerImageUrl && (
-                            <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-md bg-[var(--color-bg-subtle)] text-[var(--color-brand-primary)] border border-[var(--color-border-default)]">
-                              {quest.category.replace('_', ' ')}
-                            </span>
-                          )}
-                          <div className="flex items-center gap-1.5 ml-auto">
-                            <button
-                              type="button"
-                              onClick={() => toggleSaved('quests', quest.id)}
-                              aria-label={isSaved('quests', quest.id) ? `Remove ${quest.title} from saved quests` : `Save ${quest.title}`}
-                              className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all active:scale-95 cursor-pointer ${
-                                isSaved('quests', quest.id)
-                                  ? 'border-amber-300 bg-amber-100/90 text-[#7D5800] shadow-2xs'
-                                  : 'border-[var(--color-border-default)] bg-white text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] hover:border-[var(--color-brand-primary)]/40'
-                              }`}
-                            >
-                              <Bookmark className={`h-3.5 w-3.5 ${isSaved('quests', quest.id) ? 'fill-current text-[#B45309]' : ''}`} />
-                            </button>
-                            <div className="flex items-center gap-1.5 bg-[var(--color-brand-accent)] text-[var(--color-brand-brown)] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
-                              <Award className="w-3.5 h-3.5" />
-                              <span>+{quest.rewardPoints} mJDQ</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-sm sm:text-base font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition line-clamp-2 leading-snug">
-                              {quest.title}
-                            </h2>
-                            {quest.isTest && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                Fictional alpha quest
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-1 text-[11px] text-[var(--color-brand-primary)] font-medium truncate pt-0.5">
-                            <MapPin className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{quest.locationName}</span>
-                          </div>
-                        </div>
-
-                        <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed line-clamp-2">
-                          {quest.description}
-                        </p>
-
-                        <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)] font-medium pt-0.5">
-                          <span className="px-2 py-0.5 rounded bg-[var(--color-bg-subtle)] border border-[var(--color-border-subtle)]">
-                            {quest.radiusMeters}m geofence
-                          </span>
-                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            GPS Verified
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-[var(--color-border-subtle)] flex items-center justify-between gap-2">
-                        <Link
-                          href={`/navigate?name=${encodeURIComponent(quest.locationName)}&lat=${quest.gpsLat}&lng=${quest.gpsLng}&address=${encodeURIComponent(quest.locationName)}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] transition py-1"
-                        >
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span>Directions</span>
-                        </Link>
-
-                        <Link
-                          href={appRoutes.quest(quest.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white text-xs font-bold shadow-xs group-hover:translate-x-0.5 transition active:scale-95"
-                        >
-                          <span>Explore Trailhead</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                {practiceQuests.length > 0 && (
+                  <details className="bg-white rounded-2xl border border-[#E3DFD5] p-4 sm:p-5 shadow-xs">
+                    <summary className="cursor-pointer list-none flex items-center justify-between gap-2 text-xs sm:text-sm font-bold text-[#582F0E]">
+                      <span>Practice &amp; Calibration Eco-Quests ({practiceQuests.length})</span>
+                      <span className="text-[11px] font-semibold text-[#2D6A4F]">Show / Hide</span>
+                    </summary>
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                      {practiceQuests.map(renderQuestCard)}
+                    </div>
+                  </details>
+                )}
 
                 {/* Adaptive Infinite Scroll Sentinel & Counter */}
                 <div
@@ -469,15 +508,15 @@ function QuestsContent() {
                 >
                   <div className="flex items-center gap-2 font-medium">
                     <span>
-                      Showing {currentVisibleCount} of {totalFilteredCount} quest trails
+                      Showing {currentVisibleCount} of {totalFilteredCount} Eco-Quests
                     </span>
                     {hasMoreToLoad ? (
                       <span className="inline-flex items-center gap-1 text-[var(--color-brand-primary)] font-bold">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Loading more trails as you scroll...</span>
+                        <span>Loading more Eco-Quests as you scroll...</span>
                       </span>
                     ) : (
-                      <span className="text-emerald-700 font-semibold">• All trails displayed</span>
+                      <span className="text-emerald-700 font-semibold">• All Eco-Quests displayed</span>
                     )}
                   </div>
 

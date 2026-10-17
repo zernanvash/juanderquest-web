@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { isPublicPage } from '@/lib/public-routes';
@@ -10,6 +10,7 @@ export function WalletAccessGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading, sessionUnavailable, retrySession } = useAuth();
+  const [toastDismissed, setToastDismissed] = useState(false);
   const publicPage = isPublicPage(pathname);
   const hasWallet = isTravelerSession(user);
 
@@ -19,6 +20,45 @@ export function WalletAccessGate({ children }: { children: React.ReactNode }) {
       router.replace(`/login?redirect=${encodeURIComponent(destination)}`);
     }
   }, [publicPage, isLoading, sessionUnavailable, hasWallet, router]);
+
+  if (publicPage) {
+    return (
+      <>
+        {children}
+        {sessionUnavailable && !toastDismissed && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-20 left-4 right-4 z-[85] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border border-[var(--color-border-subtle)] bg-white/95 px-4 py-3 text-xs font-medium text-[var(--color-text-primary)] shadow-lg backdrop-blur-md lg:bottom-6 lg:left-auto lg:right-6"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
+              <span className="truncate">
+                Browsing public preview — sign-in is temporarily unavailable.
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={retrySession}
+                className="rounded-lg bg-[#F3EFE6] px-2.5 py-1 text-[11px] font-bold text-[#1B4332] hover:bg-[#E7E1D3] transition-colors cursor-pointer"
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                onClick={() => setToastDismissed(true)}
+                aria-label="Dismiss offline notice"
+                className="rounded-lg p-1 text-[#526056] hover:bg-black/5 hover:text-[#141C16] transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   if (!publicPage && sessionUnavailable) {
     return <main id="main-content" className="grid min-h-[60vh] place-items-center p-6">
@@ -37,3 +77,5 @@ export function WalletAccessGate({ children }: { children: React.ReactNode }) {
   }
   return <>{children}</>;
 }
+
+export default WalletAccessGate;

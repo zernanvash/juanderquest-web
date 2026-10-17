@@ -195,9 +195,10 @@ h1, h2, h3, h4, h5, h6 {
 /* Stage Presence System (YouTube-Fullscreen-Inspired) */
 [data-spot-presence="hidden"] [data-spot-chrome] {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transform: translateY(6px);
-  transition: opacity 200ms ease, transform 200ms ease;
+  transition: opacity 200ms ease, transform 200ms ease, visibility 0ms linear 200ms;
 }
 
 [data-spot-presence="fading"] [data-spot-chrome] {
@@ -209,9 +210,36 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-spot-presence="visible"] [data-spot-chrome] {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
   transform: translateY(0);
   transition: opacity 100ms ease, transform 100ms ease;
+}
+
+@keyframes spotCrowdPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.45); opacity: 0.45; }
+}
+
+.spot-crowd-pulse {
+  animation: spotCrowdPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes spotStageFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.spot-choreo-title {
+  animation: spotStageFadeUp 220ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
+.spot-choreo-cta {
+  animation: spotStageFadeUp 220ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both;
+}
+
+.spot-choreo-sheet {
+  animation: spotStageFadeUp 260ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
 }
 
 /* Fine pointer idle cursor hiding over the hero stage */
@@ -225,12 +253,20 @@ h1, h2, h3, h4, h5, h6 {
 @media (prefers-reduced-motion: reduce) {
   [data-spot-presence] [data-spot-chrome] {
     opacity: 1 !important;
+    visibility: visible !important;
     transform: none !important;
     pointer-events: auto !important;
     transition: none !important;
   }
   .spot-stage-cursor-hide {
     cursor: default !important;
+  }
+  .spot-crowd-pulse,
+  .spot-choreo-title,
+  .spot-choreo-cta,
+  .spot-choreo-sheet {
+    animation: none !important;
+    transform: none !important;
   }
 }
 
@@ -844,4 +880,40 @@ img, video {
     scrollbar-gutter: stable;
     padding: 0 3px 16px;
   }
+}
+
+/* Armed destination-pin placement: pin cursor over the whole map canvas */
+.jdq-pin-mode,
+.jdq-pin-mode .leaflet-container,
+.jdq-pin-mode .leaflet-grab,
+.jdq-pin-mode .leaflet-interactive {
+  cursor: url('/cursors/pin.svg') 16 31, crosshair !important;
+  cursor: image-set(url('/cursors/pin.svg') 1x, url('/cursors/pin@2x.svg') 2x) 16 31, crosshair !important;
+}
+
+/* Keep normal feedback while the user pans in pin mode */
+.jdq-pin-mode .leaflet-dragging .leaflet-grab {
+  cursor: grabbing !important;
+}
+
+/* Existing markers must not steal the click while placing a pin */
+.jdq-pin-mode .leaflet-marker-pane .leaflet-marker-icon:not(.jdq-draft-pin) {
+  pointer-events: none;
+}
+
+/* Small center crosshair when pin mode is armed */
+.jdq-pin-mode::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 25;
+  background-image: radial-gradient(circle, #2D6A4F 2px, transparent 3px),
+    linear-gradient(to right, transparent 7px, #2D6A4F 7px, #2D6A4F 9px, transparent 9px),
+    linear-gradient(to bottom, transparent 7px, #2D6A4F 7px, #2D6A4F 9px, transparent 9px);
+  opacity: 0.8;
 }

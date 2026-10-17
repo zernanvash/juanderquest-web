@@ -187,7 +187,7 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
             </h3>
             {userBadge?.isNft && (
               <span className="px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-500/30">
-                Soulbound
+                Verified
               </span>
             )}
           </div>
@@ -233,10 +233,10 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
         )}
       </div>
 
-      {/* Blockchain / Verification Footnote */}
+      {/* Verification Footnote */}
       {userBadge?.tokenId && (
         <div className="pt-1.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] text-[#837560]">
-          <span>Token Identifier</span>
+          <span>Badge ID</span>
           <span className="font-mono font-bold text-[#2D6A4F]">{userBadge.tokenId}</span>
         </div>
       )}
@@ -330,7 +330,7 @@ export const UserBadgeChip: React.FC<UserBadgeChipProps> = ({
           badge.isNft ? 'relative overflow-hidden shadow-xs ring-1 ring-amber-400/30' : ''
         } ${className}`}
       >
-        {/* Glint effect for NFTs */}
+        {/* Glint effect for special badges */}
         {badge.isNft && (
           <span
             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[badge-glint_3s_ease-in-out_infinite] pointer-events-none"
@@ -346,10 +346,10 @@ export const UserBadgeChip: React.FC<UserBadgeChipProps> = ({
         {/* Badge Name */}
         <span className="truncate max-w-[140px] tracking-tight">{badge.name}</span>
 
-        {/* NFT indicator pill */}
+        {/* Verified indicator pill */}
         {badge.isNft && (
           <span className="shrink-0 px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-500/30">
-            NFT
+            Verified
           </span>
         )}
 

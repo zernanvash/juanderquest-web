@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Sparkles,
   Trophy,
-  PlusCircle,
   MessageSquare,
   Bookmark,
   Award,
@@ -44,6 +43,9 @@ import {
   getActiveNametagBadges,
 } from '@/lib/badges';
 
+import { SignInSheet } from '@/components/SignInSheet';
+import { getCategoryIllustrationUrl } from '@/components/DestinationMedia';
+
 function getAuthorBadges(spotId: string, authorName: string, currentUser?: { displayName?: string }) {
   if (currentUser?.displayName && authorName.toLowerCase() === currentUser.displayName.toLowerCase()) {
     return getActiveNametagBadges();
@@ -62,6 +64,9 @@ export default function ExplorePage() {
   const { spots, loading, loadingMore, error, hasMore, expired, sentinelRef, feedRef, loadSpots, handleLoadMore } = useRankedFeed(user?.id || 'guest');
   const [likes, setLikes] = useState<Record<string, { isLiked: boolean }>>({});
   const [reportingSpot, setReportingSpot] = useState<{ id: string; name: string } | null>(null);
+  const [signInReason, setSignInReason] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedMunicipality, setSelectedMunicipality] = useState<string>('ALL');
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
   const [scouts, setScouts] = useState<PublicTravelerSummary[]>([]);
   const [loadingScouts, setLoadingScouts] = useState(true);
@@ -126,6 +131,10 @@ export default function ExplorePage() {
   }, []);
 
   const handleToggleLike = async (spotId: string) => {
+    if (!user) {
+      setSignInReason('Sign in to like destinations and save your favorites across devices.');
+      return;
+    }
     const current = likes[spotId]?.isLiked ?? Boolean(spots.find((s) => s.id === spotId)?.liked);
     const nextLiked = !current;
     
@@ -147,14 +156,24 @@ export default function ExplorePage() {
 
   const savedSpotHighlights = spots.filter((s) => savedLibrary.spots.includes(s.id)).slice(0, 3);
 
-  const { spotlight: featuredChoice, ordinary: visibleSpots, insertionIndex: choiceInsertionIndex } = planJuanChoicePlacement(spots, juanChoiceSpotlight);
+  const { spotlight: featuredChoice, ordinary: allOrdinarySpots, insertionIndex: choiceInsertionIndex } = planJuanChoicePlacement(spots, juanChoiceSpotlight);
 
-  // Spotlight recommendations (distinct from top hero to avoid repetition)
-  const topHeroSpot = visibleSpots[0] || null;
+  const categories = Array.from(new Set(allOrdinarySpots.map((s) => s.category).filter((c): c is string => Boolean(c)))).slice(0, 5);
+  const municipalities = Array.from(new Set(allOrdinarySpots.map((s) => s.municipality).filter(Boolean))).slice(0, 5);
+
+  const visibleSpots = allOrdinarySpots.filter((s) => {
+    const matchesCat = selectedCategory === 'ALL' || s.category === selectedCategory;
+    const matchesMuni = selectedMunicipality === 'ALL' || s.municipality === selectedMunicipality;
+    return matchesCat && matchesMuni;
+  });
+
+  // Spotlight recommendations (only show photo hero when a photo exists)
+  const topHeroSpot = allOrdinarySpots.find((s) => Boolean(s.imageUrl && s.imageUrl.trim())) || null;
+  const trendingQuestSpots = allOrdinarySpots.filter((s) => Boolean(s.questId)).slice(0, 3);
 
   const exploreSidePanel = (
     <div className="space-y-4">
-      {/* Featured Destination Spotlight Card */}
+      {/* Featured Destination Spotlight Card (only when photo exists) */}
       {topHeroSpot && (
         <div className="p-3 space-y-2.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5]">
           <div className="flex items-center gap-1.5 text-xs font-black text-[#582F0E]">
@@ -304,21 +323,60 @@ export default function ExplorePage() {
             tabIndex={0}
             className="order-1 lg:order-1 explore-scroll space-y-4 min-w-0"
           >
-            {/* Quick Share / Post Bar */}
-            <div className="bg-white rounded-2xl p-4 border border-[var(--color-border-default)] shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[var(--color-brand-primary)] text-white font-bold flex items-center justify-center text-sm shrink-0">
-                {user ? user.displayName.charAt(0).toUpperCase() : 'U'}
+            {/* Header & Category / Municipality Filter Chips */}
+            <div className="bg-white rounded-2xl p-4 border border-[var(--color-border-default)] shadow-xs space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h1 className="text-lg sm:text-xl font-black text-[var(--color-brand-brown)] tracking-tight">
+                  Explore Pangasinan
+                </h1>
               </div>
-              <Link
-                href="/spots/new"
-                className="flex-1 min-w-0 bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border-default)] rounded-xl px-4 py-2.5 text-xs text-[var(--color-text-muted)] font-medium transition cursor-pointer flex items-center justify-between gap-2"
-              >
-                <span className="truncate">Share a photo, hidden beach, heritage shrine, or tip...</span>
-                <div className="flex items-center gap-1.5 text-[var(--color-brand-primary)] font-bold shrink-0">
-                  <PlusCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline text-xs">Add Spot</span>
+
+              {(categories.length > 0 || municipalities.length > 0) && (
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('ALL');
+                      setSelectedMunicipality('ALL');
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                      selectedCategory === 'ALL' && selectedMunicipality === 'ALL'
+                        ? 'bg-[var(--color-brand-primary)] text-white'
+                        : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)]'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={`cat-${cat}`}
+                      type="button"
+                      onClick={() => setSelectedCategory((prev) => (prev === cat ? 'ALL' : cat))}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                        selectedCategory === cat
+                          ? 'bg-[var(--color-brand-primary)] text-white'
+                          : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                  {municipalities.map((muni) => (
+                    <button
+                      key={`muni-${muni}`}
+                      type="button"
+                      onClick={() => setSelectedMunicipality((prev) => (prev === muni ? 'ALL' : muni))}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                        selectedMunicipality === muni
+                          ? 'bg-[var(--color-brand-brown)] text-white'
+                          : 'bg-[#FAF9F5] text-[#582F0E] border border-[#E3DFD5]'
+                      }`}
+                    >
+                      📍 {muni}
+                    </button>
+                  ))}
                 </div>
-              </Link>
+              )}
             </div>
 
             {/* Post Feed List */}
@@ -339,17 +397,21 @@ export default function ExplorePage() {
                   Retry Loading
                 </button>
               </div>
-            ) : spots.length === 0 && !featuredChoice ? (
+            ) : visibleSpots.length === 0 && !featuredChoice ? (
               <div className="bg-white rounded-3xl p-12 border border-[var(--color-border-default)] text-center space-y-3 shadow-xs">
                 <Compass className="w-10 h-10 text-[var(--color-border-default)] mx-auto" />
                 <h3 className="font-bold text-sm text-[var(--color-brand-brown)]">No destinations found in feed</h3>
-                <p className="text-xs text-[var(--color-text-muted)]">The community feed could not find active destinations.</p>
+                <p className="text-xs text-[var(--color-text-muted)]">The community feed could not find active destinations matching your filter.</p>
                 <button
                   type="button"
-                  onClick={() => loadSpots()}
+                  onClick={() => {
+                    setSelectedCategory('ALL');
+                    setSelectedMunicipality('ALL');
+                    loadSpots();
+                  }}
                   className="px-4 py-2 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] text-xs font-bold text-[var(--color-brand-brown)] hover:bg-white transition cursor-pointer"
                 >
-                  Refresh feed
+                  Reset &amp; refresh feed
                 </button>
               </div>
             ) : (
@@ -357,6 +419,7 @@ export default function ExplorePage() {
                 {visibleSpots.map((spot, index) => {
                   const likeState = likes[spot.id] ?? { isLiked: Boolean(spot.liked) };
                   const isFeaturedHero = index === 0;
+                  const hasPhoto = Boolean(spot.imageUrl && spot.imageUrl.trim());
 
                   // Extract concise icon tags for title (max 2)
                   const iconTags: string[] = [];
@@ -375,8 +438,10 @@ export default function ExplorePage() {
                   }
                   const displayIconTags = iconTags.slice(0, 2);
 
-                  // Temporary author display: show user's account "@zernan"
-                  const displayAuthorName = '@zernan';
+                  const displayAuthorName = spot.sourceName?.trim()
+                    ? spot.sourceName
+                    : 'Pangasinan Tourism';
+                  const topRecommendationReason = spot.recommendationReasons?.[0] ?? null;
 
                   return (<React.Fragment key={spot.id}>
                     {featuredChoice && choiceInsertionIndex === index && <JuanChoiceSpotlightCard spotlight={featuredChoice} />}
@@ -464,25 +529,54 @@ export default function ExplorePage() {
                           )}
                         </div>
 
+                        {/* Recommendation Reason (at most 1 truthful signal per card) */}
+                        {topRecommendationReason && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5" aria-label="Recommendation signals">
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FAF9F5] text-[10px] font-bold text-[#6C584C] border border-[#E8E5DE]"
+                            >
+                              <Sparkles className="w-2.5 h-2.5 text-[#D4A373] shrink-0" />
+                              <span>{topRecommendationReason}</span>
+                            </span>
+                          </div>
+                        )}
+
                         {/* Description Text */}
                         <p className="text-xs text-[#514532] leading-relaxed line-clamp-3">
                           {spot.description}
                         </p>
                       </div>
 
-                      {/* Destination Media */}
-                      <DestinationMedia
-                        key={spot.imageUrl || 'no-media'}
-                        src={spot.imageUrl}
-                        alt={spot.name}
-                        destinationName={spot.name}
-                        municipality={spot.municipality}
-                        priority={index === 0}
-                        aspectRatio="card"
-                        hideUnavailable
-                        href={appRoutes.spot(spot.id)}
-                        className="border-y border-[#E3DFD5]"
-                      />
+                      {/* Destination Media: full card when photo exists, 64px category illustration strip when no photo */}
+                      {hasPhoto ? (
+                        <DestinationMedia
+                          key={spot.imageUrl}
+                          src={spot.imageUrl}
+                          alt={spot.name}
+                          destinationName={spot.name}
+                          municipality={spot.municipality}
+                          priority={index === 0}
+                          aspectRatio="card"
+                          hideUnavailable
+                          href={appRoutes.spot(spot.id)}
+                          className="border-y border-[#E3DFD5]"
+                        />
+                      ) : (
+                        <Link
+                          href={appRoutes.spot(spot.id)}
+                          className="block relative h-16 w-full overflow-hidden border-y border-[#E3DFD5] bg-[#FAF9F5]"
+                        >
+                          <img
+                            src={getCategoryIllustrationUrl(spot.category)}
+                            alt=""
+                            aria-hidden="true"
+                            className="w-full h-full object-cover opacity-85"
+                          />
+                          <span className="absolute right-3 bottom-1.5 px-2 py-0.5 rounded-full bg-stone-950/65 text-white text-[10px] font-bold">
+                            {spot.category || 'Destination'} · Explore →
+                          </span>
+                        </Link>
+                      )}
 
                       {/* Interactive Engagement Action Row (Like, Bookmark, and Destination Badges aligned right) */}
                       <div className="px-3.5 py-2.5 sm:px-5 sm:py-3 bg-white flex items-center justify-between gap-2 border-t border-[#E8E5DE]/80">
@@ -559,13 +653,13 @@ export default function ExplorePage() {
             )}
           </div>
 
-          {/* Right Column: Featured Destination Spotlight */}
+          {/* Right Column: Featured Destination Spotlight, Trending Eco-Quests & JuanChoice */}
           <aside
             aria-label="Featured Destination"
             tabIndex={0}
             className="hidden lg:block lg:order-2 explore-scroll space-y-3"
           >
-            {topHeroSpot ? (
+            {topHeroSpot && (
               <div className="bg-white rounded-2xl border border-[var(--color-border-default)] p-4 shadow-xs space-y-3 min-w-0">
                 <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
                   <div className="flex items-center gap-1.5">
@@ -627,13 +721,60 @@ export default function ExplorePage() {
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-[var(--color-border-default)] p-6 text-center space-y-2 shadow-xs">
-                <Sparkles className="w-6 h-6 text-amber-400 mx-auto" />
-                <h4 className="text-xs font-bold text-[var(--color-brand-brown)]">Featured Destination</h4>
-                <p className="text-[11px] text-[var(--color-text-muted)]">Loading highlights...</p>
-              </div>
             )}
+
+            {/* Trending Eco-Quests Card */}
+            <div className="bg-white rounded-2xl border border-[var(--color-border-default)] p-4 shadow-xs space-y-3 min-w-0">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DE]">
+                <div className="flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-[#2D6A4F]" />
+                  <h3 className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
+                    Trending Eco-Quests
+                  </h3>
+                </div>
+                <Link href="/quests" className="text-[11px] font-bold text-[#2D6A4F] hover:underline">
+                  All →
+                </Link>
+              </div>
+              {trendingQuestSpots.length > 0 ? (
+                <div className="space-y-2">
+                  {trendingQuestSpots.map((qs) => (
+                    <Link
+                      key={qs.id}
+                      href={qs.questId ? appRoutes.quest(qs.questId) : appRoutes.spot(qs.id)}
+                      className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#FAF9F5] hover:bg-emerald-50/40 border border-[#E8E5DE] transition group"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#2C221E] group-hover:text-[#2D6A4F] truncate">
+                          {qs.name}
+                        </p>
+                        <p className="text-[10px] text-[#837560] truncate">
+                          {qs.municipality} · Play Eco-Quest
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900">
+                        +50 pts
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-[#6C584C]">
+                    Complete on-site Eco-Quests across Pangasinan to earn points and Explorer XP.
+                  </p>
+                  <Link
+                    href="/quests"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#2D6A4F] hover:underline"
+                  >
+                    <span>Browse Eco-Quests →</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* JuanChoice Spotlight in Rail */}
+            <JuanChoiceRail />
           </aside>
         </div>
       </div>
@@ -647,6 +788,12 @@ export default function ExplorePage() {
           onClose={() => setReportingSpot(null)}
         />
       )}
+
+      <SignInSheet
+        open={Boolean(signInReason)}
+        reason={signInReason ?? undefined}
+        onClose={() => setSignInReason(null)}
+      />
     </Navigation>
   );
 }

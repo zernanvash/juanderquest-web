@@ -22,7 +22,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/profile', '/history', '/login', '/spots/new'],
+        disallow: ['/profile', '/history', '/login'],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

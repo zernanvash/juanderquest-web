@@ -8,33 +8,35 @@ import {
   ArrowRight,
   Camera,
   Check,
-  CheckCircle2,
   Film,
   Loader2,
   MapPin,
   PartyPopper,
+  RotateCcw,
   Sparkles,
   Upload,
   X,
 } from 'lucide-react';
-import { api, normalizeSpot, uploadSpotMedia, isVideoMedia } from '@/lib/api';
+import { api, normalizeSpot, uploadSpotMedia } from '@/lib/api';
 import type { SpotModel } from '@/lib/api';
 import { invalidateCache } from '@/lib/cache';
 import { appRoutes } from '@/lib/routes';
+import { MiniMapPreview } from '@/components/MiniMapPreview';
 import {
+  SPOT_BEST_TIME,
+  SPOT_GOOD_FOR,
   SPOT_POSTING_AMENITIES,
   SPOT_POSTING_CATEGORIES,
-  SPOT_POSTING_PRICE_LEVELS,
   SPOT_POSTING_STEPS,
   buildSpotPayload,
   createSpotPostingDraft,
   firstInvalidPostingStep,
-  formatPinLabel,
   subcategoriesForCategory,
   validatePostingMediaFile,
   validatePostingStep,
 } from '@/lib/spot-posting';
 import type { SpotPostingDraft, SpotPostingPin, SpotPostingStepId } from '@/lib/spot-posting';
+import type { ReverseSuggestion } from '@/lib/reverse-geocode';
 
 export interface SpotPostingWizardProps {
   pin: SpotPostingPin | null;
@@ -42,6 +44,13 @@ export interface SpotPostingWizardProps {
   onClose: () => void;
   onRequestMovePin: () => void;
   onPublished: (spot: SpotModel) => void;
+}
+
+interface AutofillState {
+  municipality: boolean;
+  address: boolean;
+  source: 'map' | 'nearest-area' | null;
+  loading: boolean;
 }
 
 export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
@@ -58,6 +67,17 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [publishedSpot, setPublishedSpot] = useState<SpotModel | null>(null);
 
+  // Reverse geocoding autofill state
+  const [autofill, setAutofill] = useState<AutofillState>({
+    municipality: true,
+    address: true,
+    source: null,
+    loading: false,
+  });
+  const [latestSuggestion, setLatestSuggestion] = useState<ReverseSuggestion | null>(null);
+  const [reverseError, setReverseError] = useState<string | null>(null);
+  const [showAddressUpdatePrompt, setShowAddressUpdatePrompt] = useState(false);
+
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
   const [mediaAssetId, setMediaAssetId] = useState<string | null>(null);
@@ -71,11 +91,83 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
   const step = SPOT_POSTING_STEPS[stepIndex];
   const stepId: SpotPostingStepId = step.id;
 
+  const prevPinRef = useRef<SpotPostingPin | null>(null);
+
+  // Trigger reverse geocoding when pin is placed or changes (debounced by 600ms)
   useEffect(() => {
-    if (pin) {
-      setDraft((current) => ({ ...current, pin }));
-    }
-  }, [pin]);
+    if (!pin) return;
+    const pinChanged =
+      !prevPinRef.current ||
+      prevPinRef.current.lat !== pin.lat ||
+      prevPinRef.current.lng !== pin.lng;
+
+    if (!pinChanged) return;
+    prevPinRef.current = pin;
+
+    setDraft((current) => ({ ...current, pin }));
+
+    const controller = new AbortController();
+    setAutofill((cur) => ({ ...cur, loading: true }));
+    setReverseError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/osm/reverse?lat=${encodeURIComponent(pin.lat)}&lng=${encodeURIComponent(pin.lng)}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) {
+          throw new Error('Reverse lookup failed');
+        }
+        const data = await res.json();
+        const suggestion: ReverseSuggestion | null = data.suggestion ?? null;
+
+        if (suggestion) {
+          setLatestSuggestion(suggestion);
+          setDraft((cur) => {
+            const next = { ...cur };
+            let updated = false;
+
+            // If user hasn't edited municipality
+            if (autofill.municipality && suggestion.municipality) {
+              next.municipality = suggestion.municipality;
+              updated = true;
+            }
+            // If user hasn't edited address
+            if (autofill.address && suggestion.address) {
+              next.address = suggestion.address;
+              updated = true;
+            }
+
+            return updated ? next : cur;
+          });
+
+          // If user previously manually edited either field, prompt them to update or keep
+          if (!autofill.municipality || !autofill.address) {
+            setShowAddressUpdatePrompt(true);
+          }
+
+          setAutofill((cur) => ({
+            ...cur,
+            source: suggestion.outsidePangasinan ? 'map' : 'map',
+            loading: false,
+          }));
+        } else {
+          setAutofill((cur) => ({ ...cur, loading: false }));
+          setReverseError("We couldn't find the address. Please type it in.");
+        }
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setAutofill((cur) => ({ ...cur, loading: false }));
+        setReverseError("We couldn't find the address. Please type it in.");
+      }
+    }, 600);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [pin, autofill.municipality, autofill.address]);
 
   useEffect(() => {
     return () => {
@@ -96,6 +188,16 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
 
   const setField = useCallback(<K extends keyof SpotPostingDraft>(key: K, value: SpotPostingDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
+
+    // If user edited municipality or address manually, mark autofill flag as false
+    if (key === 'municipality') {
+      setAutofill((cur) => ({ ...cur, municipality: false }));
+      setShowAddressUpdatePrompt(false);
+    } else if (key === 'address') {
+      setAutofill((cur) => ({ ...cur, address: false }));
+      setShowAddressUpdatePrompt(false);
+    }
+
     setFieldErrors((current) => {
       if (!(key in current)) return current;
       const next = { ...current };
@@ -239,7 +341,7 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
     if (stepId === 'basics') return ['name', 'category', 'subcategory'];
     if (stepId === 'story') return ['description'];
     if (stepId === 'place') return ['municipality', 'address', 'pin'];
-    if (stepId === 'details') return ['priceLevel', 'dailyHours', 'amenities'];
+    if (stepId === 'details') return ['goodFor', 'bestTime', 'dailyHours', 'amenities'];
     return [];
   }, [stepId]);
 
@@ -340,6 +442,18 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
                       maxLength={200}
                       className="w-full rounded-xl border border-[#E3DFD5] bg-[#FAF9F5] px-3.5 py-2.5 text-sm text-[#2C221E] outline-none focus:border-[#2D6A4F]"
                     />
+                    {latestSuggestion?.placeName && !draft.name.trim() && (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setField('name', latestSuggestion.placeName!)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-[#2D6A4F] transition hover:bg-emerald-100"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          <span>Use &ldquo;{latestSuggestion.placeName}&rdquo; as name</span>
+                        </button>
+                      </div>
+                    )}
                     {fieldErrors.name && <p className="text-[11px] font-bold text-red-600">{fieldErrors.name}</p>}
                   </div>
 
@@ -417,11 +531,27 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
 
               {stepId === 'place' && (
                 <>
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs">
-                    <div className="flex items-center justify-between gap-2">
+                  <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-xs">
+                    {draft.pin && (
+                      <div className="h-[120px] w-full overflow-hidden">
+                        <MiniMapPreview
+                          lat={draft.pin.lat}
+                          lng={draft.pin.lng}
+                          name={draft.name || draft.address || 'Selected location'}
+                          height="h-[120px]"
+                          hideBadge
+                          interactive={false}
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2 border-t border-emerald-100 bg-emerald-50/70 p-3 text-xs">
                       <div className="flex min-w-0 items-center gap-1.5 font-bold text-[#2D6A4F]">
                         <MapPin className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate font-mono text-[11px]">{formatPinLabel(draft.pin)}</span>
+                        <span className="truncate">
+                          {autofill.loading
+                            ? 'Finding the address…'
+                            : draft.address || draft.municipality || 'Pinned on map'}
+                        </span>
                       </div>
                       <button
                         type="button"
@@ -431,15 +561,63 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
                         Move pin
                       </button>
                     </div>
-                    {fieldErrors.pin && (
-                      <p className="mt-1.5 text-[11px] font-bold text-red-600">{fieldErrors.pin}</p>
-                    )}
                   </div>
 
+                  {showAddressUpdatePrompt && latestSuggestion && (
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                      <span>Pin moved — update address to new location?</span>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (latestSuggestion.municipality) {
+                              setDraft((cur) => ({ ...cur, municipality: latestSuggestion.municipality }));
+                              setAutofill((cur) => ({ ...cur, municipality: true }));
+                            }
+                            if (latestSuggestion.address) {
+                              setDraft((cur) => ({ ...cur, address: latestSuggestion.address }));
+                              setAutofill((cur) => ({ ...cur, address: true }));
+                            }
+                            setShowAddressUpdatePrompt(false);
+                          }}
+                          className="rounded-md bg-amber-600 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-amber-700"
+                        >
+                          Update
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddressUpdatePrompt(false)}
+                          className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[10px] font-bold text-amber-800 transition hover:bg-amber-100"
+                        >
+                          Keep mine
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {latestSuggestion?.outsidePangasinan && (
+                    <div className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-[11px] font-bold text-amber-800">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>This pin is outside Pangasinan. Double-check the location.</span>
+                    </div>
+                  )}
+
+                  {reverseError && (
+                    <div className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 p-2.5 text-[11px] text-stone-600">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{reverseError}</span>
+                    </div>
+                  )}
+
                   <div className="space-y-1.5">
-                    <label htmlFor="posting-municipality" className="block text-xs font-bold text-[#582F0E]">
-                      Municipality / city <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="posting-municipality" className="block text-xs font-bold text-[#582F0E]">
+                        Municipality / city <span className="text-red-500">*</span>
+                      </label>
+                      {autofill.municipality && draft.municipality && (
+                        <span className="text-[10px] font-semibold text-[#2D6A4F]">✨ Auto-filled from map</span>
+                      )}
+                    </div>
                     <input
                       id="posting-municipality"
                       data-step-autofocus
@@ -456,9 +634,29 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label htmlFor="posting-address" className="block text-xs font-bold text-[#582F0E]">
-                      Address / landmark <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="posting-address" className="block text-xs font-bold text-[#582F0E]">
+                        Address / landmark <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {autofill.address && draft.address && (
+                          <span className="text-[10px] font-semibold text-[#2D6A4F]">✨ Auto-filled from map</span>
+                        )}
+                        {!autofill.address && latestSuggestion?.address && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDraft((cur) => ({ ...cur, address: latestSuggestion.address }));
+                              setAutofill((cur) => ({ ...cur, address: true }));
+                            }}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-[#2D6A4F] hover:underline"
+                          >
+                            <RotateCcw className="h-2.5 w-2.5" />
+                            <span>Reset</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <input
                       id="posting-address"
                       type="text"
@@ -477,6 +675,84 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
 
               {stepId === 'details' && (
                 <>
+                  <p className="text-[11px] text-[#837560]">
+                    Help travelers decide if this place fits their trip.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <span className="block text-xs font-bold text-[#582F0E]">
+                      Good for <span className="font-normal text-[#837560]">(optional, max 5)</span>
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SPOT_GOOD_FOR.map((item) => {
+                        const selected = draft.goodFor.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              if (selected) {
+                                setField(
+                                  'goodFor',
+                                  draft.goodFor.filter((id) => id !== item.id)
+                                );
+                              } else if (draft.goodFor.length < 5) {
+                                setField('goodFor', [...draft.goodFor, item.id]);
+                              }
+                            }}
+                            className={`rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                              selected
+                                ? 'border-[#2D6A4F] bg-emerald-50 text-[#2D6A4F]'
+                                : 'border-[#E3DFD5] bg-[#FAF9F5] text-stone-600 hover:bg-stone-50'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {fieldErrors.goodFor && (
+                      <p className="text-[11px] font-bold text-red-600">{fieldErrors.goodFor}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="block text-xs font-bold text-[#582F0E]">
+                      Best time to visit <span className="font-normal text-[#837560]">(optional, max 4)</span>
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SPOT_BEST_TIME.map((item) => {
+                        const selected = draft.bestTime.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              if (selected) {
+                                setField(
+                                  'bestTime',
+                                  draft.bestTime.filter((id) => id !== item.id)
+                                );
+                              } else if (draft.bestTime.length < 4) {
+                                setField('bestTime', [...draft.bestTime, item.id]);
+                              }
+                            }}
+                            className={`rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                              selected
+                                ? 'border-[#2D6A4F] bg-emerald-50 text-[#2D6A4F]'
+                                : 'border-[#E3DFD5] bg-[#FAF9F5] text-stone-600 hover:bg-stone-50'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {fieldErrors.bestTime && (
+                      <p className="text-[11px] font-bold text-red-600">{fieldErrors.bestTime}</p>
+                    )}
+                  </div>
+
                   <div className="space-y-1.5">
                     <label htmlFor="posting-hours" className="block text-xs font-bold text-[#582F0E]">
                       Operating hours <span className="font-normal text-[#837560]">(optional)</span>
@@ -494,26 +770,6 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
                     {fieldErrors.dailyHours && (
                       <p className="text-[11px] font-bold text-red-600">{fieldErrors.dailyHours}</p>
                     )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="block text-xs font-bold text-[#582F0E]">Price level</span>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {SPOT_POSTING_PRICE_LEVELS.map((level) => (
-                        <button
-                          key={level.value}
-                          type="button"
-                          onClick={() => setField('priceLevel', level.value)}
-                          className={`rounded-xl border px-3 py-2 text-[11px] font-bold transition ${
-                            draft.priceLevel === level.value
-                              ? 'border-[#2D6A4F] bg-emerald-50 text-[#2D6A4F]'
-                              : 'border-[#E3DFD5] bg-[#FAF9F5] text-stone-600 hover:bg-stone-50'
-                          }`}
-                        >
-                          {level.label}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
                   <div className="space-y-1.5">
@@ -638,29 +894,55 @@ export const SpotPostingWizard: React.FC<SpotPostingWizardProps> = ({
 
               {stepId === 'review' && (
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5] p-3.5 text-xs">
-                    <p className="font-black text-[#582F0E]">{draft.name || 'Untitled destination'}</p>
-                    <p className="mt-1 line-clamp-3 text-[#514532]">{draft.description}</p>
-                    <div className="mt-2 space-y-0.5 text-[11px] text-[#837560]">
-                      <p>
-                        {SPOT_POSTING_CATEGORIES.find((c) => c.id === draft.category)?.label ?? draft.category} ·{' '}
-                        {draft.subcategory.replace(/_/g, ' ')}
-                      </p>
-                      <p>
-                        {draft.municipality} — {draft.address}
-                      </p>
-                      <p className="font-mono">{formatPinLabel(draft.pin)}</p>
-                      <p>
-                        {draft.dailyHours ? `Hours: ${draft.dailyHours}` : 'Hours not provided'} ·{' '}
-                        {SPOT_POSTING_PRICE_LEVELS.find((l) => l.value === draft.priceLevel)?.label}
-                      </p>
-                      <p>
-                        {mediaAssetId
-                          ? 'Photo attached'
-                          : mediaFile
-                            ? 'Photo pending upload'
-                            : 'No photo (optional)'}
-                      </p>
+                  <div className="overflow-hidden rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5] text-xs">
+                    {draft.pin && (
+                      <div className="h-[120px] w-full overflow-hidden">
+                        <MiniMapPreview
+                          lat={draft.pin.lat}
+                          lng={draft.pin.lng}
+                          name={draft.name || draft.address || 'Selected location'}
+                          height="h-[120px]"
+                          hideBadge
+                          interactive={false}
+                        />
+                      </div>
+                    )}
+                    <div className="p-3.5">
+                      <p className="font-black text-[#582F0E]">{draft.name || 'Untitled destination'}</p>
+                      <p className="mt-1 line-clamp-3 text-[#514532]">{draft.description}</p>
+                      <div className="mt-2 space-y-1 text-[11px] text-[#837560]">
+                        <p>
+                          {SPOT_POSTING_CATEGORIES.find((c) => c.id === draft.category)?.label ?? draft.category} ·{' '}
+                          {draft.subcategory.replace(/_/g, ' ')}
+                        </p>
+                        <p>
+                          {draft.municipality} — {draft.address}
+                        </p>
+                        {draft.goodFor.length > 0 && (
+                          <p>
+                            <span className="font-bold text-[#582F0E]">Good for: </span>
+                            {draft.goodFor
+                              .map((id) => SPOT_GOOD_FOR.find((g) => g.id === id)?.label ?? id)
+                              .join(', ')}
+                          </p>
+                        )}
+                        {draft.bestTime.length > 0 && (
+                          <p>
+                            <span className="font-bold text-[#582F0E]">Best time: </span>
+                            {draft.bestTime
+                              .map((id) => SPOT_BEST_TIME.find((b) => b.id === id)?.label ?? id)
+                              .join(', ')}
+                          </p>
+                        )}
+                        {draft.dailyHours && <p>Hours: {draft.dailyHours}</p>}
+                        <p>
+                          {mediaAssetId
+                            ? 'Photo attached'
+                            : mediaFile
+                              ? 'Photo pending upload'
+                              : 'No photo (optional)'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <button

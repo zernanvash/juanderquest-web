@@ -136,6 +136,33 @@ export async function fetchSearchResults(
   return res.data;
 }
 
+/**
+ * Searches public travelers across the JuanDerQuest public directory.
+ * Privacy rule: Only public profiles are returned; private users are excluded server-side.
+ */
+export async function searchPublicTravelers(
+  query: string,
+  cursor?: string,
+  limit = 20,
+  signal?: AbortSignal
+): Promise<{
+  items: PersonResultItem[];
+  cursor: string | null;
+  hasMore: boolean;
+  totalMatches?: number;
+}> {
+  const res = await fetchSearchResults(query, 'people', cursor, limit, signal);
+  const items = (res.data.items || []).filter(
+    (item): item is PersonResultItem => 'display_name' in item
+  );
+  return {
+    items,
+    cursor: res.data.cursor || null,
+    hasMore: Boolean(res.data.has_more),
+    totalMatches: res.data.total_matches,
+  };
+}
+
 export interface PublicUserProfile {
   id: string;
   display_name: string;

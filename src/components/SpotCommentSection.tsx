@@ -46,6 +46,7 @@ export interface SpotComment {
 interface SpotCommentSectionProps {
   spotId: string;
   spotName: string;
+  onRequireSignIn?: () => void;
 }
 
 // Popular emojis for travelers & reactions
@@ -104,7 +105,7 @@ function saveLocalComments(spotId: string, items: SpotComment[]): void {
   } catch {}
 }
 
-export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps) {
+export function SpotCommentSection({ spotId, spotName, onRequireSignIn }: SpotCommentSectionProps) {
   const { user } = useAuth();
   const [comments, setComments] = useState<SpotComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,6 +216,10 @@ export function SpotCommentSection({ spotId, spotName }: SpotCommentSectionProps
   // Submit new comment
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user && onRequireSignIn) {
+      onRequireSignIn();
+      return;
+    }
     const text = content.trim();
     if (!text && !attachedImage) return;
 

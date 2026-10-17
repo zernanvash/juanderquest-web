@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Building2,
+  Coins,
   Store,
   CheckCircle2,
   Clock,
@@ -301,6 +302,9 @@ export function MerchantClient() {
 
           {/* Publication Toggle Button */}
           <div className="flex items-center gap-3">
+            <Link href="/merchant/funding" className="inline-flex items-center gap-2 rounded-xl border border-[#D5C4AC] bg-white px-3 py-2 text-xs font-bold text-[#1B4332] hover:bg-[#FAF9F5]">
+              <Coins size={14} /> Points &amp; sponsorships
+            </Link>
             <div className="text-right">
               <span className="text-[11px] text-[#777] block font-medium">Showcase Status</span>
               <span className={`text-xs font-bold ${merchant.is_published ? 'text-[#166534]' : 'text-[#854D0E]'}`}>

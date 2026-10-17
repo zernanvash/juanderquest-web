@@ -30,14 +30,10 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { SearchSuggestionsDropdown } from '@/components/SearchSuggestionsDropdown';
-import { useSearchPreview } from '@/lib/use-search-preview';
-import { normalizeSearchQuery, isProcessableQuery } from '@/lib/search';
-import { findAreaByIdOrName, areaToHref } from '@/lib/areas';
 import { CelebrationEffects, triggerCelebration } from '@/components/CelebrationEffects';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
-import { PixelSearchIcon } from '@/components/PixelIcons';
-import { fetchMerchantMe, fetchMyAffiliateApplication } from '@/lib/api';
+import { fetchMerchantMe } from '@/lib/api';
+import { getNotifications, markAllNotificationsRead, markNotificationRead, type DurableNotification } from '@/lib/notifications-api';
 
 export interface NavigationNotification {
   id: string;
@@ -46,10 +42,39 @@ export interface NavigationNotification {
   time: string;
   href: string;
   read: boolean;
-  type: 'quest' | 'dao' | 'system';
+  type: 'quest' | 'dao' | 'system' | 'funding' | 'sponsorship';
+  durable?: boolean;
 }
 
-const INITIAL_NOTIFICATIONS: NavigationNotification[] = [];
+const INITIAL_NOTIFICATIONS: NavigationNotification[] = [
+  {
+    id: 'notif-quests-active',
+    title: 'Hundred Islands Trail Quest',
+    description: 'New eco-quest active! Visit Governor Island & Quezon Island to claim 150 mJDQ.',
+    time: '25m ago',
+    href: '/quests',
+    read: false,
+    type: 'quest',
+  },
+  {
+    id: 'notif-choice-proposal',
+    title: 'Community DAO Proposal #2',
+    description: 'Voting is open for Bolinao Heritage Trail preservation incentives.',
+    time: '3h ago',
+    href: '/choice',
+    read: false,
+    type: 'dao',
+  },
+  {
+    id: 'notif-welcome',
+    title: 'Welcome to JuanDerQuest',
+    description: 'Explore Pangasinan destinations, verify arrivals, and earn civic tokens.',
+    time: '1d ago',
+    href: '/dashboard',
+    read: true,
+    type: 'system',
+  },
+];
 
 export const Navigation: React.FC<{
   children?: React.ReactNode;
@@ -71,15 +96,45 @@ export const Navigation: React.FC<{
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [isDesktopDrawerCollapsed, setIsDesktopDrawerCollapsed] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NavigationNotification[]>(INITIAL_NOTIFICATIONS);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const [durableNotificationItems, setDurableNotificationItems] = useState<NavigationNotification[]>([]);
+  const [visitedNewsPages, setVisitedNewsPages] = useState<Set<string>>(new Set());
+  const [sidePanelVisited, setSidePanelVisited] = useState<boolean>(false);
   const [logoutError, setLogoutError] = useState('');
   const [rewardToast, setRewardToast] = useState<{ diff: number; total: number } | null>(null);
   const [hasMerchantOwnership, setHasMerchantOwnership] = useState<boolean>(false);
+
+  const loadDurableNotifications = useCallback(async () => {
+    if (!user) {
+      setDurableNotificationItems([]);
+      return;
+    }
+    try {
+      const items = await getNotifications();
+      setDurableNotificationItems(items.map((item: DurableNotification) => ({
+        id: item.id,
+        title: item.title,
+        description: item.message,
+        time: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.created_at)),
+        href: item.href,
+        read: item.read,
+        type: item.kind === 'sponsorship' ? 'sponsorship' : 'funding',
+        durable: true,
+      })));
+    } catch {
+      // The activity menu remains usable if durable notifications are temporarily unavailable.
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (isNotificationsOpen) void loadDurableNotifications();
+  }, [isNotificationsOpen, loadDurableNotifications]);
+
+  useEffect(() => {
+    if (!user) setDurableNotificationItems([]);
+  }, [user]);
 
   useEffect(() => {
     let active = true;
@@ -114,14 +169,10 @@ export const Navigation: React.FC<{
     return () => window.removeEventListener('jdq:reward-received', handleReward);
   }, []);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
-  const desktopSearchContainerRef = useRef<HTMLDivElement>(null);
-  const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
-  // Hydrate read notifications and desktop drawer preference from localStorage
+  // Hydrate read notifications, visited news pages, and desktop drawer preference from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem('juanderquest_read_notif_ids');
@@ -130,6 +181,10 @@ export const Navigation: React.FC<{
         setNotifications((prev) =>
           prev.map((item) => (readIds.has(item.id) ? { ...item, read: true } : item))
         );
+      }
+      const storedNews = localStorage.getItem('juanderquest_visited_news_pages');
+      if (storedNews) {
+        setVisitedNewsPages(new Set(JSON.parse(storedNews) as string[]));
       }
       const storedNavCollapse = localStorage.getItem('juanderquest_nav_collapsed');
       if (storedNavCollapse !== null) {
@@ -140,14 +195,79 @@ export const Navigation: React.FC<{
     }
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Update visited status for page-specific sidePanel
+  useEffect(() => {
+    try {
+      const sideVisited = localStorage.getItem(`juanderquest_sidepanel_visited_${pathname}`);
+      setSidePanelVisited(sideVisited === 'true');
+    } catch {}
+  }, [pathname]);
+
+  // When pathname changes, mark matching route notifications as read and add to visitedNewsPages
+  useEffect(() => {
+    if (!pathname) return;
+    const durableUnread = durableNotificationItems.filter((n) =>
+      !n.read && (n.href === pathname || pathname.startsWith(`${n.href}/`))
+    );
+    durableUnread.forEach((item) => { void markNotificationRead(item.id).catch(() => {}); });
+    if (durableUnread.length > 0) {
+      const ids = new Set(durableUnread.map((item) => item.id));
+      setDurableNotificationItems((prev) => prev.map((item) => ids.has(item.id) ? { ...item, read: true } : item));
+    }
+    setNotifications((prev) => {
+      const matchingUnread = prev.filter(
+        (n) =>
+          !n.read &&
+          (n.href === pathname ||
+            pathname.startsWith(`${n.href}/`) ||
+            (n.href === '/choice' && pathname === '/vote') ||
+            (n.href === '/vote' && pathname === '/choice'))
+      );
+      if (matchingUnread.length === 0) return prev;
+      const updated = prev.map((n) =>
+        n.href === pathname ||
+        pathname.startsWith(`${n.href}/`) ||
+        (n.href === '/choice' && pathname === '/vote') ||
+        (n.href === '/vote' && pathname === '/choice')
+          ? { ...n, read: true }
+          : n
+      );
+      try {
+        const stored = localStorage.getItem('juanderquest_read_notif_ids');
+        const readIds = new Set(stored ? (JSON.parse(stored) as string[]) : []);
+        matchingUnread.forEach((n) => readIds.add(n.id));
+        localStorage.setItem('juanderquest_read_notif_ids', JSON.stringify(Array.from(readIds)));
+      } catch {}
+      return updated;
+    });
+
+    setVisitedNewsPages((prev) => {
+      if (prev.has(pathname)) return prev;
+      const next = new Set(prev);
+      next.add(pathname);
+      try {
+        localStorage.setItem('juanderquest_visited_news_pages', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+  }, [pathname, durableNotificationItems]);
+
+  const allNotifications = [...durableNotificationItems, ...notifications];
+  const unreadCount = allNotifications.filter((n) => !n.read).length;
 
   const handleMarkAllAsRead = () => {
+    if (user) void markAllNotificationsRead().catch(() => {});
+    setDurableNotificationItems((prev) => prev.map((n) => ({ ...n, read: true })));
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setVisitedNewsPages(new Set(['/quests', '/choice', '/explore', '/dashboard']));
     try {
       localStorage.setItem(
         'juanderquest_read_notif_ids',
-        JSON.stringify(notifications.map((n) => n.id))
+        JSON.stringify(allNotifications.map((n) => n.id))
+      );
+      localStorage.setItem(
+        'juanderquest_visited_news_pages',
+        JSON.stringify(['/quests', '/choice', '/explore', '/dashboard'])
       );
     } catch {
       // ignore
@@ -155,6 +275,9 @@ export const Navigation: React.FC<{
   };
 
   const handleNotificationClick = (id: string) => {
+    const durableItem = durableNotificationItems.find((n) => n.id === id);
+    if (durableItem) void markNotificationRead(id).catch(() => {});
+    setDurableNotificationItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
@@ -169,127 +292,27 @@ export const Navigation: React.FC<{
     setIsNotificationsOpen(false);
   };
 
-  const { groups, matchedAreas, loading, error, flatItems, executeSearch } = useSearchPreview(
-    searchQuery,
-    isSearchOpen
-  );
-
   const handleLogout = async () => {
     setLogoutError('');
     try { await logout(); }
     catch { setLogoutError('Could not sign out. Please retry.'); }
   };
 
-  const handleCloseSearch = useCallback(() => {
-    setIsSearchOpen(false);
-    setSearchQuery('');
-    setSelectedIndex(-1);
-  }, []);
-
-  const handleOpenSearch = useCallback(() => {
-    setIsSearchOpen(true);
-    setIsProfileOpen(false);
-    setIsNotificationsOpen(false);
-    setSelectedIndex(-1);
-    setTimeout(() => {
-      if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-        searchInputRef.current?.focus();
-      } else {
-        mobileSearchInputRef.current?.focus();
-      }
-    }, 60);
-  }, []);
-
-  const handleQueryChange = (val: string) => {
-    setSearchQuery(val);
-    setSelectedIndex(-1);
-  };
-
-  const handleSelectChip = (chipText: string) => {
-    setSearchQuery(chipText);
-    setSelectedIndex(-1);
-    executeSearch(chipText);
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      searchInputRef.current?.focus();
-    } else {
-      mobileSearchInputRef.current?.focus();
-    }
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex((prev) => {
-        const max = flatItems.length;
-        if (max === 0) return -1;
-        return prev < max ? prev + 1 : 0;
-      });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex((prev) => {
-        const max = flatItems.length;
-        if (max === 0) return -1;
-        return prev > 0 ? prev - 1 : max;
-      });
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const normalized = normalizeSearchQuery(searchQuery);
-      if (!isProcessableQuery(normalized)) return;
-
-      if (selectedIndex >= 0 && selectedIndex < flatItems.length) {
-        const target = flatItems[selectedIndex];
-        handleCloseSearch();
-        router.push(target.href);
-        return;
-      }
-
-      // Smart geographic area detection (e.g. Pangasinan, Bolinao, Alaminos, Dagupan, or live OSM)
-      const areaMatch =
-        findAreaByIdOrName(normalized) ||
-        (matchedAreas && matchedAreas.length > 0 ? matchedAreas[0] : null);
-      if (areaMatch) {
-        handleCloseSearch();
-        router.push(areaToHref(areaMatch));
-        return;
-      }
-
-      handleCloseSearch();
-      router.push(`/search?q=${encodeURIComponent(normalized)}&type=all`);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      if (searchQuery) {
-        setSearchQuery('');
-        setSelectedIndex(-1);
-      } else {
-        handleCloseSearch();
-      }
-    }
-  };
-
-  // Close search, profile menu, notifications, and drawers when pathname changes
+  // Close profile menu, notifications, and drawers when pathname changes
   useEffect(() => {
-    handleCloseSearch();
     setIsProfileOpen(false);
     setIsNotificationsOpen(false);
     setSidePanelOpen(false);
     setDrawerOpen(false);
-  }, [pathname, handleCloseSearch]);
+  }, [pathname]);
 
-  // Click-outside listener for search, profile menu, and notifications
+  // Click-outside listener for profile menu and notifications
   useEffect(() => {
-    if (!isSearchOpen && !isProfileOpen && !isNotificationsOpen) return;
+    if (!isProfileOpen && !isNotificationsOpen) return;
 
     const handlePointerDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node | null;
       if (!target) return;
-
-      if (isSearchOpen) {
-        const insideDesktop = desktopSearchContainerRef.current?.contains(target);
-        const insideMobile = mobileSearchContainerRef.current?.contains(target);
-        if (!insideDesktop && !insideMobile) {
-          handleCloseSearch();
-        }
-      }
 
       if (isProfileOpen && !profileMenuRef.current?.contains(target)) {
         setIsProfileOpen(false);
@@ -306,19 +329,7 @@ export const Navigation: React.FC<{
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('touchstart', handlePointerDown);
     };
-  }, [isSearchOpen, isProfileOpen, isNotificationsOpen, handleCloseSearch]);
-
-  // Global Ctrl+K / Cmd+K shortcut
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        handleOpenSearch();
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleOpenSearch]);
+  }, [isProfileOpen, isNotificationsOpen]);
 
   // Close overlays on Escape
   useEffect(() => {
@@ -339,12 +350,31 @@ export const Navigation: React.FC<{
     href: string;
     icon: React.ElementType;
     flair?: string;
+    hasNews?: boolean;
   }
 
   interface NavGroup {
     label?: string;
     items: NavItem[];
   }
+
+  const itemHasNews = useCallback(
+    (item: NavItem) => {
+      if (pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`))) {
+        return false;
+      }
+      const hasUnread = notifications.some(
+        (n) =>
+          !n.read &&
+          (n.href === item.href ||
+            n.href.startsWith(`${item.href}/`) ||
+            (item.href === '/choice' && n.href === '/vote') ||
+            (item.href === '/vote' && n.href === '/choice'))
+      );
+      return Boolean(hasUnread || (item.hasNews && !visitedNewsPages.has(item.href)));
+    },
+    [notifications, pathname, visitedNewsPages]
+  );
 
   // Primary destinations stay unlabeled at the top; secondary areas are grouped
   // so the rail stays scannable. Only availability flair (Soon) survives.
@@ -354,9 +384,9 @@ export const Navigation: React.FC<{
         { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
         { label: 'Explore Feed', href: '/explore', icon: Compass },
         { label: 'Interactive Map', href: '/map', icon: MapPin },
-        { label: 'The Trail', href: '/trail', icon: Route, flair: 'Soon' },
-        { label: 'Quests', href: '/quests', icon: Zap },
-        { label: 'JuanChoice', href: '/choice', icon: Award },
+        { label: 'The Trail', href: '/trail', icon: Route },
+        { label: 'Eco-Quests', href: '/quests', icon: Zap, hasNews: true },
+        { label: 'JuanChoice', href: '/choice', icon: Award, hasNews: true },
       ],
     },
     {
@@ -448,25 +478,14 @@ export const Navigation: React.FC<{
           </span>
         </Link>
 
-        {/* Compact Right Actions: Search, Notifications, SidePanel */}
+        {/* Compact Right Actions: Notifications, Drawer Trigger */}
         <div className="flex items-center gap-1 sm:gap-1.5">
-          {/* Mobile Global Search Button */}
-          <button
-            type="button"
-            onClick={handleOpenSearch}
-            className="p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] flex items-center justify-center cursor-pointer transition active:scale-95 min-h-[38px] min-w-[38px]"
-            aria-label="Open search"
-          >
-            <PixelSearchIcon className="w-4 h-4" size={18} />
-          </button>
-
           {/* Notifications Bell */}
           <div className="relative" ref={notificationsRef}>
             <button
               type="button"
               onClick={() => {
                 setIsNotificationsOpen((prev) => !prev);
-                setIsSearchOpen(false);
               }}
               className={`relative p-2 rounded-xl border transition cursor-pointer select-none min-h-[38px] min-w-[38px] flex items-center justify-center ${
                 isNotificationsOpen
@@ -513,14 +532,14 @@ export const Navigation: React.FC<{
                 </div>
 
                 <div className="divide-y divide-[var(--color-border-default)]/60 max-h-72 overflow-y-auto my-1">
-                  {notifications.length === 0 ? (
+                  {allNotifications.length === 0 ? (
                     <div className="py-6 text-center text-stone-400">
                       <Bell className="w-6 h-6 mx-auto mb-1 text-stone-300" />
                       <p className="text-xs font-semibold">No recent activity</p>
                       <p className="text-[10px] text-stone-400 mt-0.5">Explore Pangasinan or complete quests to see updates here.</p>
                     </div>
                   ) : (
-                    notifications.map((item) => (
+        allNotifications.map((item) => (
                       <Link
                         key={item.id}
                         href={item.href}
@@ -532,7 +551,8 @@ export const Navigation: React.FC<{
                         }`}
                       >
                         <div className="w-7 h-7 rounded-lg bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)] flex items-center justify-center shrink-0 mt-0.5">
-                          {item.type === 'quest' && <Zap className="w-3.5 h-3.5 text-amber-600" />}
+                          {(item.type === 'quest' || item.type === 'funding') && <Zap className="w-3.5 h-3.5 text-amber-600" />}
+                          {item.type === 'sponsorship' && <Store className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'dao' && <Vote className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'system' && <Compass className="w-3.5 h-3.5 text-stone-600" />}
                         </div>
@@ -580,7 +600,6 @@ export const Navigation: React.FC<{
             onClick={() => {
               setDrawerOpen(true);
               setIsNotificationsOpen(false);
-              setIsSearchOpen(false);
               setSidePanelOpen(false);
             }}
             className="p-2 rounded-xl text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center transition active:scale-95 group"
@@ -591,133 +610,7 @@ export const Navigation: React.FC<{
             <Menu className="w-4 h-4 text-[var(--color-brand-primary)]" />
           </button>
         </div>
-
-        {/* Mobile Header Bar Extended Search Mode */}
-        {isSearchOpen && (
-          <div
-            ref={mobileSearchContainerRef}
-            className="absolute inset-y-1.5 inset-x-2 flex items-center gap-2 bg-white rounded-xl border-2 border-[#2D6A4F] px-3 shadow-md z-50 animate-in fade-in duration-150"
-          >
-            <PixelSearchIcon className="w-4 h-4 shrink-0" size={18} />
-            <input
-              ref={mobileSearchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleQueryChange(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Search places, food, tags, @scouts..."
-              aria-label="Search destinations, users or quests"
-              className="flex-1 bg-transparent text-xs sm:text-sm font-semibold text-[#2C221E] placeholder:text-[#837560]/70 outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => handleQueryChange('')}
-                className="w-5 h-5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center cursor-pointer transition"
-                title="Clear query"
-                aria-label="Clear search query"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleCloseSearch}
-              className="text-xs font-bold text-[#582F0E] hover:text-[#2D6A4F] px-2 py-1 rounded-lg transition active:scale-95 cursor-pointer"
-            >
-              Cancel
-            </button>
-
-            {/* Suggestions Dropdown (Mobile) */}
-            <SearchSuggestionsDropdown
-              isOpen={isSearchOpen}
-              onClose={handleCloseSearch}
-              query={searchQuery}
-              setQuery={setSearchQuery}
-              selectedIndex={selectedIndex}
-              setSelectedIndex={setSelectedIndex}
-              flatItems={flatItems}
-              matchedAreas={matchedAreas}
-              groups={groups}
-              loading={loading}
-              error={error}
-              onRetry={() => executeSearch(searchQuery)}
-              onSelectChip={handleSelectChip}
-              className="absolute top-full mt-2 left-0 right-0 max-h-[calc(100dvh-5rem)]"
-            />
-          </div>
-        )}
       </header>
-
-      {/* Desktop Search Dialog Modal (Centered when triggered via Ctrl+K or search button) */}
-      {isSearchOpen && (
-        <div
-          className="hidden lg:flex fixed inset-0 z-50 bg-black/40 backdrop-blur-xs items-start justify-center pt-20 px-4 animate-in fade-in duration-150"
-          onClick={handleCloseSearch}
-        >
-          <div
-            ref={desktopSearchContainerRef}
-            className="w-full max-w-2xl bg-white rounded-2xl border border-[var(--color-border-default)] shadow-2xl overflow-hidden relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Search Input Bar inside Modal */}
-            <div className="relative flex items-center p-3 border-b border-[var(--color-border-default)] bg-[#FAF9F5]">
-              <PixelSearchIcon
-                className="w-5 h-5 absolute left-5 pointer-events-none select-none text-[#837560]"
-                size={20}
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleQueryChange(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Search Pangasinan destinations, tags, @scouts... (ESC to close)"
-                aria-label="Search destinations, areas, or scouts"
-                className="w-full h-11 bg-white rounded-xl pl-12 pr-20 text-sm font-semibold outline-none border border-[#E3DFD5] focus:border-[#2D6A4F] text-[#2B2319] placeholder:text-[#837560]/70 shadow-xs"
-              />
-              <div className="absolute right-5 flex items-center gap-1.5">
-                {searchQuery ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleQueryChange('');
-                      searchInputRef.current?.focus();
-                    }}
-                    className="w-6 h-6 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center cursor-pointer transition"
-                    title="Clear query"
-                    aria-label="Clear search query"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <kbd className="text-[10px] font-mono px-2 py-0.5 rounded bg-stone-200/80 text-stone-600 font-bold pointer-events-none">
-                    ESC
-                  </kbd>
-                )}
-              </div>
-            </div>
-
-            {/* Suggestions Dropdown (Desktop modal embedded) */}
-            <SearchSuggestionsDropdown
-              isOpen={isSearchOpen}
-              onClose={handleCloseSearch}
-              query={searchQuery}
-              setQuery={setSearchQuery}
-              selectedIndex={selectedIndex}
-              setSelectedIndex={setSelectedIndex}
-              flatItems={flatItems}
-              matchedAreas={matchedAreas}
-              groups={groups}
-              loading={loading}
-              error={error}
-              onRetry={() => executeSearch(searchQuery)}
-              onSelectChip={handleSelectChip}
-              className="static max-h-[60vh] border-0 rounded-none shadow-none"
-            />
-          </div>
-        </div>
-      )}
 
       {logoutError && <p role="alert" className="z-40 bg-red-50 px-4 py-2 text-center text-sm text-red-800">{logoutError}</p>}
 
@@ -785,38 +678,6 @@ export const Navigation: React.FC<{
             </div>
           )}
 
-          {/* Global Search Action Row */}
-          <div className="px-2 pt-2 pb-1 shrink-0">
-            {!isDesktopDrawerCollapsed ? (
-              <button
-                type="button"
-                onClick={handleOpenSearch}
-                className="w-full h-9 px-3 rounded-xl bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/50 flex items-center justify-between text-stone-600 transition shadow-2xs hover:shadow-xs group cursor-pointer"
-                aria-label="Search destinations or scouts (Ctrl+K)"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <PixelSearchIcon className="w-3.5 h-3.5 text-[#837560] group-hover:text-[#2D6A4F]" size={15} />
-                  <span className="text-xs font-medium text-stone-500 group-hover:text-stone-700 truncate">
-                    Search...
-                  </span>
-                </div>
-                <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-stone-200/70 text-stone-600 font-bold shrink-0">
-                  Ctrl+K
-                </kbd>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleOpenSearch}
-                className="w-full h-9 rounded-xl bg-[#FAF9F5] hover:bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/50 flex items-center justify-center text-stone-600 transition shadow-2xs cursor-pointer"
-                title="Search (Ctrl+K)"
-                aria-label="Search"
-              >
-                <PixelSearchIcon className="w-4 h-4 text-[#837560]" size={17} />
-              </button>
-            )}
-          </div>
-
           {/* Activity / Notifications Action Row */}
           <div className="px-2 pb-1.5 shrink-0 relative" ref={notificationsRef}>
             <button
@@ -876,14 +737,14 @@ export const Navigation: React.FC<{
                 </div>
 
                 <div className="divide-y divide-[var(--color-border-default)]/60 max-h-72 overflow-y-auto my-1">
-                  {notifications.length === 0 ? (
+                  {allNotifications.length === 0 ? (
                     <div className="py-6 text-center text-stone-400">
                       <Bell className="w-6 h-6 mx-auto mb-1 text-stone-300" />
                       <p className="text-xs font-semibold">No recent activity</p>
                       <p className="text-[10px] text-stone-400 mt-0.5">Explore Pangasinan or complete quests to see updates here.</p>
                     </div>
                   ) : (
-                    notifications.map((item) => (
+                    allNotifications.map((item) => (
                       <Link
                         key={item.id}
                         href={item.href}
@@ -895,7 +756,8 @@ export const Navigation: React.FC<{
                         }`}
                       >
                         <div className="w-7 h-7 rounded-lg bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)] flex items-center justify-center shrink-0 mt-0.5">
-                          {item.type === 'quest' && <Zap className="w-3.5 h-3.5 text-amber-600" />}
+                          {(item.type === 'quest' || item.type === 'funding') && <Zap className="w-3.5 h-3.5 text-amber-600" />}
+                          {item.type === 'sponsorship' && <Store className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'dao' && <Vote className="w-3.5 h-3.5 text-emerald-700" />}
                           {item.type === 'system' && <Compass className="w-3.5 h-3.5 text-stone-600" />}
                         </div>
@@ -956,6 +818,7 @@ export const Navigation: React.FC<{
                       item.href === '/dashboard'
                         ? pathname === '/dashboard' || pathname === '/'
                         : pathname === item.href || (item.href !== '/explore' && pathname.startsWith(`${item.href}/`));
+                    const hasNews = itemHasNews(item);
 
                     return (
                       <Link
@@ -984,7 +847,19 @@ export const Navigation: React.FC<{
 
                         {!isDesktopDrawerCollapsed && (
                           <div className="flex-1 min-w-0 flex items-center justify-between gap-1.5">
-                            <span className="text-xs truncate">{item.label}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-xs truncate">{item.label}</span>
+                              {hasNews && (
+                                <span
+                                  data-testid={`notif-indicator-${item.href.replace(/^\//, '')}`}
+                                  aria-label="New updates available"
+                                  className="relative flex h-2 w-2 shrink-0"
+                                >
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E76F51] opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E76F51]" />
+                                </span>
+                              )}
+                            </div>
                             {item.flair && (
                               <span
                                 className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md shrink-0 ${
@@ -1002,6 +877,15 @@ export const Navigation: React.FC<{
                         {/* Active Indicator Strip when collapsed */}
                         {isDesktopDrawerCollapsed && isActive && (
                           <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-[var(--color-brand-accent)]" />
+                        )}
+
+                        {/* Red Notification Indicator when collapsed */}
+                        {isDesktopDrawerCollapsed && hasNews && (
+                          <span
+                            data-testid={`notif-indicator-collapsed-${item.href.replace(/^\//, '')}`}
+                            aria-label="New updates available"
+                            className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#E76F51] ring-2 ring-white"
+                          />
                         )}
                       </Link>
                     );
@@ -1113,7 +997,7 @@ export const Navigation: React.FC<{
           { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
           { label: 'Explore', href: '/explore', icon: Compass },
           { label: 'Map', href: '/map', icon: MapPin },
-          { label: 'Quests', href: '/quests', icon: Zap },
+          { label: 'Quests', href: '/quests', icon: Zap, hasNews: true },
           { label: 'Profile', href: userProfileHref, icon: User },
         ].map((item) => {
           const Icon = item.icon;
@@ -1123,6 +1007,7 @@ export const Navigation: React.FC<{
               : item.label === 'Profile'
               ? pathname === '/profile' || pathname.startsWith('/profile/')
               : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const hasNews = itemHasNews(item);
           return (
             <Link
               key={item.label}
@@ -1134,8 +1019,15 @@ export const Navigation: React.FC<{
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-medium'
               }`}
             >
-              <div className={`p-1 rounded-xl transition ${isActive ? 'bg-[var(--color-brand-primary)]/10' : ''}`}>
+              <div className={`relative p-1 rounded-xl transition ${isActive ? 'bg-[var(--color-brand-primary)]/10' : ''}`}>
                 <Icon className={`w-5 h-5 ${isActive ? 'text-[var(--color-brand-primary)]' : 'text-[var(--color-text-muted)]'}`} />
+                {hasNews && (
+                  <span
+                    data-testid={`bottom-notif-indicator-${item.href.replace(/^\//, '')}`}
+                    aria-label="New updates available"
+                    className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#E76F51] ring-2 ring-white"
+                  />
+                )}
               </div>
               <span className="text-[11px] mt-0.5 tracking-tight">{item.label}</span>
             </Link>
@@ -1270,12 +1162,26 @@ export const Navigation: React.FC<{
                   onClick={() => {
                     setDrawerOpen(false);
                     setSidePanelOpen(true);
+                    setSidePanelVisited(true);
+                    try {
+                      localStorage.setItem(`juanderquest_sidepanel_visited_${pathname}`, 'true');
+                    } catch {}
                   }}
                   className="mb-4 flex w-full items-center justify-between rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-subtle)] px-3 py-2.5 text-xs font-bold text-[var(--color-brand-brown)] hover:border-[var(--color-brand-primary)]/40 transition min-h-[44px]"
                 >
                   <span className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
                     <span>{sidePanelTitle}</span>
+                    {!sidePanelVisited && (
+                      <span
+                        data-testid="sidepanel-drawer-notif-indicator"
+                        aria-label="New highlights"
+                        className="relative flex h-2 w-2 shrink-0"
+                      >
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E76F51] opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E76F51]" />
+                      </span>
+                    )}
                   </span>
                   <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" aria-hidden="true" />
                 </button>
@@ -1300,6 +1206,7 @@ export const Navigation: React.FC<{
                             ? pathname === '/explore'
                             : pathname === item.href || pathname.startsWith(`${item.href}/`);
                         const targetHref = item.href === '/profile' ? userProfileHref : item.href;
+                        const hasNews = itemHasNews(item);
                         return (
                           <Link
                             key={item.href}
@@ -1315,6 +1222,16 @@ export const Navigation: React.FC<{
                             <div className="flex items-center gap-2.5">
                               <Icon className="w-4 h-4" />
                               <span>{item.label}</span>
+                              {hasNews && (
+                                <span
+                                  data-testid={`drawer-notif-indicator-${item.href.replace(/^\//, '')}`}
+                                  aria-label="New updates available"
+                                  className="relative flex h-2 w-2 shrink-0"
+                                >
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E76F51] opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E76F51]" />
+                                </span>
+                              )}
                             </div>
                             {item.flair && (
                               <span

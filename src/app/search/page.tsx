@@ -165,13 +165,26 @@ function SearchResultsContent() {
     <div className="w-full space-y-6">
       {/* Search Header Bar */}
       <div className="rounded-3xl border border-[#E3DFD5] bg-white p-4 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-xl sm:text-2xl font-black text-[#582F0E] tracking-tight">
+            Search Pangasinan
+          </h1>
+          <Link
+            href="/map"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] hover:bg-[#2D6A4F]/10 border border-[#E3DFD5] text-xs font-bold text-[#2D6A4F] transition shrink-0"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Map View</span>
+          </Link>
+        </div>
+
         <form onSubmit={handleSearchSubmit} className="relative flex items-center">
           <Search className="h-5 w-5 text-[#2D6A4F] absolute left-4 pointer-events-none" />
           <input
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder="Search places, people, or quests (e.g. beach, @juan, hiking)…"
+            placeholder="Search places, people, or quests (e.g. Hundred Islands, Bolinao, @vash)…"
             aria-label="Search query"
             maxLength={100}
             className="w-full h-12 rounded-full border border-[#E3DFD5] bg-[#FAF9F5] pl-12 pr-12 text-sm sm:text-base font-semibold text-[#2C221E] placeholder:text-[#837560]/70 focus:border-[#2D6A4F] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#2D6A4F]/10 transition-all"
@@ -220,18 +233,40 @@ function SearchResultsContent() {
 
       {/* 1. Quiet Prompt State */}
       {!isProcessable && (
-        <div className="rounded-3xl border border-[#E3DFD5] bg-white p-8 sm:p-12 text-center space-y-3 shadow-xs">
+        <div className="rounded-3xl border border-[#E3DFD5] bg-white p-8 sm:p-12 text-center space-y-4 shadow-xs">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#D8F3DC]/60 text-[#2D6A4F] shadow-2xs">
             <Search className="h-7 w-7" />
           </div>
           <div className="space-y-1">
             <h2 className="text-lg sm:text-xl font-bold text-[#2C221E]">
-              Discover places and people
+              Discover places, people, and quests
             </h2>
             <p className="text-xs sm:text-sm text-[#837560] max-w-md mx-auto">
-              Type at least 2 characters to search tourist destinations, community travelers, and gamified quest bounties.
+              Type at least 2 characters to search tourist destinations, community travelers, and Eco-Quest bounties.
             </p>
           </div>
+
+          {/* Quick Suggestion Chips */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+            <span className="text-xs font-bold text-[#837560]">Popular:</span>
+            {['Hundred Islands', 'Bolinao', 'Manaoag', 'Dagupan', 'Lingayen'].map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => {
+                  setInputQuery(suggestion);
+                  const params = new URLSearchParams();
+                  params.set('q', suggestion);
+                  params.set('type', 'all');
+                  router.push(`/search?${params.toString()}`);
+                }}
+                className="px-3 py-1 rounded-full text-xs font-bold bg-[#FAF9F5] hover:bg-emerald-50 text-[#2D6A4F] border border-[#E3DFD5] hover:border-[#2D6A4F] transition cursor-pointer shadow-2xs active:scale-95"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+
           <div className="pt-2 flex items-center justify-center gap-1.5 text-xs font-medium text-[#7D5800]">
             <Sparkles className="h-4 w-4 text-[#FFB703]" />
             <span>Search tip: Use <strong>@handle</strong> to locate specific registered scouts</span>

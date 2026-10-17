@@ -20,6 +20,22 @@ describe('API helpers', () => {
     expect(normalizeSubmission({ id: 's1', quest_id: 'q1', status: 'pending', captured_lat: 16.1, captured_lng: 120.3, created_at: '2026-08-03' })).toMatchObject({ questId: 'q1', questTitle: 'Unknown Quest', rewardPoints: 0 });
   });
 
+  it('preserves the public funded quest summary without implying cash value', () => {
+    const quest = normalizeQuest({
+      id: 'funded-quest', title: 'Coastal cleanup', description: 'Join the cleanup', category: 'eco',
+      location_name: 'Test Beach', gps_lat: 16.1, gps_lng: 120.3, radius_meters: 100, reward_points: 50,
+      funding: {
+        mode: 'budget', status: 'active', ends_at: '2026-10-20T00:00:00.000Z', reward_points: 50,
+        completions_left_estimate: 4, sponsors: [{ name: 'Test Cafe', logo: null }],
+        perk: { title: 'Free juice', remaining: 2 }, simulated: true,
+      },
+    });
+    expect(quest.funding).toMatchObject({
+      status: 'active', reward_points: 50, completions_left_estimate: 4,
+      sponsors: [{ name: 'Test Cafe' }], perk: { title: 'Free juice', remaining: 2 }, simulated: true,
+    });
+  });
+
   it('builds the backend submission payload from a server challenge token only', () => {
     expect(() =>
       buildSubmissionPayload({ id: 'q1' }, { lat: 16.1, lng: 120.3, accuracy: 8 })

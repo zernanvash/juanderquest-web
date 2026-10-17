@@ -21,6 +21,8 @@ import {
   Copy,
   ExternalLink,
 } from 'lucide-react';
+import Link from 'next/link';
+import { formatPoints, COPY } from '@/lib/copy';
 import { VoucherRippingOverlay } from '@/components/VoucherRippingOverlay';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 
@@ -121,7 +123,7 @@ export default function ShopPage() {
                   Merchant Voucher Shop
                 </h1>
                 <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-xl leading-relaxed">
-                  Explore local partner rewards as they become available. Our first merchant pilot focuses on Pangasinan communities.
+                  Explore local partner rewards as they become available. Complete Eco-Quests across Pangasinan to earn points and redeem merchant perks.
                 </p>
               </div>
 
@@ -133,7 +135,7 @@ export default function ShopPage() {
                 <div>
                   <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Available Points</div>
                   <div className="text-lg font-black text-[var(--color-brand-brown)]">
-                    <AnimatedCounter value={user?.points ?? 0} suffix=" PTS" />
+                    <AnimatedCounter value={user?.points ?? 0} suffix=" pts" />
                   </div>
                 </div>
               </div>
@@ -226,8 +228,30 @@ export default function ShopPage() {
                 </button>
               </div>
             ) : vouchers.length === 0 ? (
-              <div className="bg-white p-12 rounded-3xl border border-[#E3DFD5] text-center text-xs text-gray-500 shadow-xs">
-                No merchant vouchers listed at this moment. Check back soon!
+              <div className="bg-white p-10 sm:p-12 rounded-3xl border border-[#E3DFD5] text-center space-y-4 shadow-xs max-w-lg mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 mx-auto flex items-center justify-center">
+                  <ShoppingBag className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-black text-[#582F0E]">No merchant vouchers listed right now</h3>
+                  <p className="text-xs text-[#837560] leading-relaxed">
+                    Earn points by completing Eco-Quests across Pangasinan, then redeem them for exclusive local discounts and merchant perks.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                  <Link
+                    href="/quests"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-2xs"
+                  >
+                    Browse Eco-Quests
+                  </Link>
+                  <Link
+                    href="/affiliate"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-stone-100 border border-[#E3DFD5] text-xs font-bold text-[#582F0E] transition"
+                  >
+                    Merchant? Offer a voucher
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5 items-start">
@@ -248,7 +272,7 @@ export default function ShopPage() {
                             <span>{v.merchantName}</span>
                           </span>
                           <span className="text-xs font-black text-[#2D6A4F]">
-                            {v.costPoints} PTS
+                            {v.costPoints} pts
                           </span>
                         </div>
 
@@ -266,10 +290,10 @@ export default function ShopPage() {
                           <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-[#E8DCB8] space-y-3 animate-fade-in shadow-inner">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-black text-[#582F0E]">
-                                Unwrap for {v.costPoints} PTS?
+                                Unwrap for {v.costPoints} pts?
                               </span>
                               <span className="text-[11px] text-gray-500">
-                                Balance: {user?.points ?? 0} PTS
+                                Balance: {user?.points ?? 0} pts
                               </span>
                             </div>
 
@@ -320,7 +344,7 @@ export default function ShopPage() {
                               {!user
                                 ? 'Log in to Redeem'
                                 : user.points < v.costPoints
-                                ? `Need ${v.costPoints - user.points} more PTS`
+                                ? `Need ${v.costPoints - user.points} more pts`
                                 : 'Unwrap Voucher'}
                             </span>
                           </button>

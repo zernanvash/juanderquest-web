@@ -42,4 +42,10 @@ describe('Search Query Normalizer and Gate (web_app/src/lib/search.ts)', () => {
     const { fetchSearchResults } = await import('./search');
     await expect(fetchSearchResults('a')).rejects.toThrow('Query does not meet minimum processable criteria');
   });
+
+  it('searchPublicTravelers rejects unprocessable queries before network dispatch', async () => {
+    const { searchPublicTravelers } = await import('./search');
+    await expect(searchPublicTravelers('')).rejects.toThrow('Query does not meet minimum processable criteria');
+    await expect(searchPublicTravelers('x')).rejects.toThrow('Query does not meet minimum processable criteria');
+  });
 });

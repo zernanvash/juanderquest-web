@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SPOT_BEST_TIME,
+  SPOT_GOOD_FOR,
   SPOT_POSTING_STEPS,
   buildSpotPayload,
   createSpotPostingDraft,
   firstInvalidPostingStep,
-  formatPinLabel,
   subcategoriesForCategory,
   validatePostingMediaFile,
   validatePostingPin,
@@ -21,7 +22,8 @@ const validDraft = (overrides: Partial<SpotPostingDraft> = {}): SpotPostingDraft
   address: 'Brgy. Tambobong, Dasol',
   pin: { lat: 15.9083, lng: 119.7892 },
   dailyHours: '06:00 AM - 06:00 PM',
-  priceLevel: 1,
+  goodFor: ['families', 'solo'],
+  bestTime: ['sunset', 'dry_season'],
   tags: [],
   amenities: ['parking'],
   ...overrides,
@@ -62,11 +64,29 @@ describe('spot posting step validation', () => {
     expect(errors.pin).toMatch(/place the destination pin/i);
   });
 
+  it('validates good_for and best_time limits on details step', () => {
+    const errors = validatePostingStep(
+      'details',
+      validDraft({
+        goodFor: ['invalid_id' as any],
+        bestTime: ['early_morning', 'daytime', 'sunset', 'night', 'weekdays'],
+      })
+    );
+    expect(errors.goodFor).toMatch(/invalid visitor fit/i);
+    expect(errors.bestTime).toMatch(/at most 4/i);
+  });
+
   it('reports the first invalid step in wizard order', () => {
     expect(firstInvalidPostingStep(createSpotPostingDraft())).toBe('basics');
     expect(firstInvalidPostingStep(validDraft({ description: '' }))).toBe('story');
     expect(firstInvalidPostingStep(validDraft({ address: '' }))).toBe('place');
-    expect(firstInvalidPostingStep(validDraft({ priceLevel: 9 }))).toBe('details');
+    expect(
+      firstInvalidPostingStep(
+        validDraft({
+          bestTime: ['early_morning', 'daytime', 'sunset', 'night', 'weekdays'],
+        })
+      )
+    ).toBe('details');
     expect(firstInvalidPostingStep(validDraft())).toBeNull();
   });
 
@@ -84,7 +104,7 @@ describe('spot posting step validation', () => {
 });
 
 describe('spot posting payload builder', () => {
-  it('maps the draft onto the API contract with server-compatible defaults', () => {
+  it('maps the draft onto the API contract with server-compatible defaults without price_level', () => {
     const payload = buildSpotPayload(validDraft({ tags: ['hidden_gem'] }), {
       assetId: 'asset-1',
       imageUrl: 'https://cdn.example/photo.jpg',
@@ -98,13 +118,15 @@ describe('spot posting payload builder', () => {
       address: 'Brgy. Tambobong, Dasol',
       gps_lat: 15.9083,
       gps_lng: 119.7892,
-      price_level: 1,
+      good_for: ['families', 'solo'],
+      best_time: ['sunset', 'dry_season'],
       hours: { daily: '06:00 AM - 06:00 PM' },
       amenities: ['parking'],
       image_url: 'https://cdn.example/photo.jpg',
       asset_id: 'asset-1',
       asset_ids: ['asset-1'],
     });
+    expect((payload as any).price_level).toBeUndefined();
   });
 
   it('omits media keys and empty hours when nothing was provided', () => {
@@ -117,11 +139,14 @@ describe('spot posting payload builder', () => {
 });
 
 describe('spot posting helpers', () => {
-  it('lists subcategories for a category and formats pin labels', () => {
+  it('lists subcategories for a category', () => {
     expect(subcategoriesForCategory('eat_drink')).toContain('seafood_shack');
     expect(subcategoriesForCategory('unknown')).toEqual([]);
-    expect(formatPinLabel(null)).toBe('No pin selected');
-    expect(formatPinLabel({ lat: 15.90834, lng: 119.78923 })).toBe('15.90834, 119.78923');
+  });
+
+  it('provides good for and best time option lists', () => {
+    expect(SPOT_GOOD_FOR.length).toBeGreaterThanOrEqual(5);
+    expect(SPOT_BEST_TIME.length).toBeGreaterThanOrEqual(7);
   });
 
   it('enforces media size limits per media type', () => {

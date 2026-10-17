@@ -44,11 +44,17 @@ if (distDir === ".next-presentation") {
   }
 }
 
+const disableDevIndicators = process.env.DISABLE_DEV_INDICATORS === "true" || process.env.CI === "true";
+
 const nextConfig: NextConfig = {
   basePath,
   ...(distDir ? { distDir } : {}),
+  ...(disableDevIndicators ? { devIndicators: false } : {}),
   async redirects() {
-    return [{ source: "/download/juanderquest-latest.apk", destination: "/api/v1/app/download", permanent: false }];
+    return [
+      { source: "/download/juanderquest-latest.apk", destination: "/api/v1/app/download", permanent: false },
+      { source: "/spots/new", destination: "/map?add=1", permanent: false },
+    ];
   },
   async rewrites() {
     return [

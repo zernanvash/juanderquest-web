@@ -49,12 +49,22 @@ export const SPOT_POSTING_AMENITIES = [
   'pwd_accessible',
 ] as const;
 
-export const SPOT_POSTING_PRICE_LEVELS = [
-  { value: 0, label: 'Free (₱0)' },
-  { value: 1, label: 'Budget (₱)' },
-  { value: 2, label: 'Mid (₱₱)' },
-  { value: 3, label: 'Premium (₱₱₱)' },
-  { value: 4, label: 'Luxury (₱₱₱₱)' },
+export const SPOT_GOOD_FOR = [
+  { id: 'families', label: '👨‍👩‍👧 Families & kids' },
+  { id: 'solo', label: '🎒 Solo travelers' },
+  { id: 'couples', label: '💑 Couples' },
+  { id: 'groups', label: '👯 Groups & barkada' },
+  { id: 'seniors_access', label: '🧓 Seniors / limited mobility' },
+] as const;
+
+export const SPOT_BEST_TIME = [
+  { id: 'early_morning', label: '🌅 Early morning' },
+  { id: 'daytime', label: '☀️ Daytime' },
+  { id: 'sunset', label: '🌇 Sunset' },
+  { id: 'night', label: '🌙 Night' },
+  { id: 'weekdays', label: '📅 Weekdays (fewer crowds)' },
+  { id: 'dry_season', label: '🏖️ Dry season (Nov–May)' },
+  { id: 'rainy_season', label: '🌧️ Also good in rainy season' },
 ] as const;
 
 export const SPOT_POSTING_MEDIA_LIMITS = {
@@ -91,7 +101,8 @@ export interface SpotPostingDraft {
   address: string;
   pin: SpotPostingPin | null;
   dailyHours: string;
-  priceLevel: number;
+  goodFor: string[];
+  bestTime: string[];
   tags: string[];
   amenities: string[];
 }
@@ -106,7 +117,8 @@ export function createSpotPostingDraft(pin: SpotPostingPin | null = null): SpotP
     address: '',
     pin,
     dailyHours: '',
-    priceLevel: 1,
+    goodFor: [],
+    bestTime: [],
     tags: [],
     amenities: [],
   };
@@ -127,7 +139,7 @@ export function validatePostingPin(pin: SpotPostingPin | null): string | null {
     pin.lng < PHILIPPINE_GPS_BOUNDS.minLng ||
     pin.lng > PHILIPPINE_GPS_BOUNDS.maxLng
   ) {
-    return 'The pin must be inside the Philippines. Move the pin and try again.';
+    return 'Place the pin inside the Philippines and try again.';
   }
   return null;
 }
@@ -171,9 +183,26 @@ export function validatePostingStep(
   }
 
   if (step === 'details' || step === 'review') {
-    if (!Number.isInteger(draft.priceLevel) || draft.priceLevel < 0 || draft.priceLevel > 4) {
-      errors.priceLevel = 'Choose a valid price level.';
+    if (draft.goodFor.length > 5) {
+      errors.goodFor = 'Choose at most 5 visitor fit tags.';
     }
+    for (const item of draft.goodFor) {
+      if (!SPOT_GOOD_FOR.some((g) => g.id === item)) {
+        errors.goodFor = 'Invalid visitor fit selection.';
+        break;
+      }
+    }
+
+    if (draft.bestTime.length > 4) {
+      errors.bestTime = 'Choose at most 4 best time tags.';
+    }
+    for (const item of draft.bestTime) {
+      if (!SPOT_BEST_TIME.some((b) => b.id === item)) {
+        errors.bestTime = 'Invalid best time selection.';
+        break;
+      }
+    }
+
     if (draft.amenities.length > 20) {
       errors.amenities = 'Choose at most 20 amenities.';
     }
@@ -199,11 +228,6 @@ export function firstInvalidPostingStep(draft: SpotPostingDraft): SpotPostingSte
   return null;
 }
 
-export function formatPinLabel(pin: SpotPostingPin | null): string {
-  if (!pin) return 'No pin selected';
-  return `${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`;
-}
-
 export function buildSpotPayload(
   draft: SpotPostingDraft,
   media: { assetId?: string | null; imageUrl?: string | null } = {}
@@ -218,7 +242,8 @@ export function buildSpotPayload(
     address: draft.address.trim(),
     gps_lat: draft.pin?.lat,
     gps_lng: draft.pin?.lng,
-    price_level: draft.priceLevel,
+    good_for: draft.goodFor,
+    best_time: draft.bestTime,
     hours: draft.dailyHours.trim() ? { daily: draft.dailyHours.trim() } : {},
     amenities: draft.amenities,
     image_url: media.imageUrl || '',

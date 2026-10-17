@@ -19,6 +19,13 @@ vi.mock('next/link', () => ({
     </a>
   ),
 }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+vi.mock('@/components/MiniMapPreview', () => ({
+  MiniMapPreview: () => <div data-testid="mini-map-preview" />,
+}));
 vi.mock('@/lib/api', () => ({
   api: apiMock,
   normalizeSpot: (spot: unknown) => spot,
@@ -87,7 +94,7 @@ describe('SpotPostingWizard', () => {
     expect(screen.getByDisplayValue('Tambobong')).toBeTruthy();
   });
 
-  it('shows the pinned coordinates and lets the traveler request a pin move', () => {
+  it('shows the place location and lets the traveler request a pin move', () => {
     const { props } = renderWizard();
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.change(screen.getByLabelText(/destination name/i), { target: { value: 'Tambobong' } });
@@ -97,9 +104,17 @@ describe('SpotPostingWizard', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
 
-    expect(screen.getByText('15.90830, 119.78920')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /move pin/i })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /move pin/i }));
     expect(props.onRequestMovePin).toHaveBeenCalledTimes(1);
+  });
+
+  it('guarantees no raw latitude/longitude numbers are rendered in the review step', async () => {
+    renderWizard();
+    await advanceToReview();
+    const dialogText = screen.getByRole('dialog').textContent || '';
+    // Assert no raw coordinate patterns like 15.9083 or 119.7892 appear in user-facing text
+    expect(dialogText).not.toMatch(/\b\d{1,3}\.\d{4,}\b/);
   });
 
   it('publishes once, follows server success and reports the created spot', async () => {

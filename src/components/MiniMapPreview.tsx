@@ -222,9 +222,9 @@ export function MiniMapPreview({
         </div>
       )}
 
-      {/* Subtle Bottom Location Pill (if name or municipality provided) */}
+      {/* Subtle Bottom Location Pill (if name or municipality provided) — positioned above Leaflet attribution */}
       {(name || municipality || address) && (
-        <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 pointer-events-none">
+        <div className="absolute bottom-7 left-2.5 right-2.5 z-10 pointer-events-none">
           <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-black/60 text-white backdrop-blur-md text-[11px] font-medium shadow-md">
             <div className="flex items-center gap-1.5 min-w-0">
               <MapPin className="w-3.5 h-3.5 text-[#FFB703] shrink-0" />

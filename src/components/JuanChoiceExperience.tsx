@@ -166,12 +166,30 @@ export function JuanChoiceExperience({
     )}
     {loading && <p role="status" className="rounded-2xl bg-white p-6 text-[#514532]">Loading the current round…</p>}
     {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Retry</button></div>}
-    {!loading && !error && !campaign && <section className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6" aria-labelledby="next-round-heading">
-      <h2 id="next-round-heading" className="text-xl font-black text-[#2C221E]">{presentation.nextRoundHeading}</h2>
-      {overview?.next ? <p className="mt-2 text-sm text-[#514532]">{presentation.nextRoundWindowLabel} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time> and closes <time dateTime={overview.next.closes_at}>{formatDate(overview.next.closes_at)} PHT</time>{overview.next.theme ? ` · ${overview.next.theme}` : ''}.</p>
-        : <p className="mt-2 text-sm text-[#514532]">The next voting date has not been confirmed yet.</p>}
-      <p className="mt-2 text-sm text-[#514532]">{presentation.educationalRewardCopy}</p>
-      {overview?.notice && <p role="status" className="mt-3 text-sm text-[#514532]">{overview.notice.message}</p>}
+    {!loading && !error && !campaign && <section className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6 space-y-4" aria-labelledby="next-round-heading">
+      <div>
+        <h2 id="next-round-heading" className="text-xl font-black text-[#2C221E]">{presentation.nextRoundHeading}</h2>
+        {overview?.next ? <p className="mt-2 text-sm text-[#514532]">{presentation.nextRoundWindowLabel} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time> and closes <time dateTime={overview.next.closes_at}>{formatDate(overview.next.closes_at)} PHT</time>{overview.next.theme ? ` · ${overview.next.theme}` : ''}.</p>
+          : <p className="mt-2 text-sm text-[#514532]">{overview?.notice?.message ?? 'The next voting date has not been confirmed yet.'}</p>}
+        <p className="mt-2 text-sm text-[#514532]">{presentation.educationalRewardCopy}</p>
+      </div>
+      <div className="pt-4 border-t border-[#E3DFD5]">
+        <h3 className="text-xs font-black uppercase tracking-wider text-[#582F0E]">How JuanChoice works</h3>
+        <ol className="mt-3 grid gap-3 sm:grid-cols-3 text-xs text-[#514532]">
+          <li className="rounded-xl bg-[#FAF9F5] border border-[#E8E5DE] p-3">
+            <span className="font-black text-[#2D6A4F] block mb-1">1. Explore &amp; Verify</span>
+            Complete one verified visit or hold an explorer account for 72 hours to unlock community voting.
+          </li>
+          <li className="rounded-xl bg-[#FAF9F5] border border-[#E8E5DE] p-3">
+            <span className="font-black text-[#2D6A4F] block mb-1">2. Cast 1 Free Ballot</span>
+            Support one Pangasinan destination per round at 0 points cost. Earn +25 Civic XP for participating.
+          </li>
+          <li className="rounded-xl bg-[#FAF9F5] border border-[#E8E5DE] p-3">
+            <span className="font-black text-[#2D6A4F] block mb-1">3. Spotlight Rotation</span>
+            Top-voted destinations enter the community spotlight after LGU safety and capacity review.
+          </li>
+        </ol>
+      </div>
     </section>}
     {campaign && overview?.next && <p className="rounded-2xl border border-[#E3DFD5] bg-white p-4 text-sm text-[#514532]">{presentation.nextRoundPrefix} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time>.</p>}
     {campaign && <section className="space-y-5" aria-labelledby="round-heading">
@@ -183,7 +201,7 @@ export function JuanChoiceExperience({
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'ACCOUNT_TOO_NEW' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting unlocks after {myState.eligibility.eligible_at ? formatDate(myState.eligibility.eligible_at) : 'your account is 72 hours old'} or after one approved destination visit.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'UNAVAILABLE' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting eligibility could not be confirmed. Please try again later.</p>}
         {ballot && <p className="mt-3 text-sm font-semibold text-[#2D6A4F]">Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'} · version {ballot.version}</p>}
-        {receipt && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo stamp in the separate test database only' : 'Ballot recorded. +25 Civic XP and +1 stamp earned'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 mJDQ issued.</p>}
+        {receipt && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo stamp in the separate test database only' : 'Ballot recorded. +25 Civic XP and +1 stamp earned'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</p>}
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">{detail.standings.map((item, index) => <article key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`} className={`rounded-2xl border bg-white p-5 flex flex-col justify-between ${focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>

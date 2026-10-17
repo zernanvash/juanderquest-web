@@ -53,23 +53,23 @@ export interface DestinationBadge {
 // ========================================================================
 
 export const SAMPLE_USER_BADGES: UserBadge[] = [
-  // --- Soulbound NFTs & Web3 Badges ---
+  // --- Verified Explorer Badges ---
   {
     id: 'nft-hundred-islands-pioneer',
     name: 'Hundred Islands Pioneer',
     type: 'nft',
     icon: '💎',
-    description: 'Soulbound NFT earned by verifying visits to all 4 major islands in Alaminos during Season 1.',
+    description: 'Verified badge earned by checking in at all 4 major islands in Alaminos during Season 1.',
     howToEarn: 'Complete on-site GPS check-ins at Governor Island, Quezon Island, Children’s Island, and Marcos Island within a single season.',
     criteria: [
       'Verified GPS proximity (≤ 100m) at 4 pilot islands',
       'Leave No Trace eco-commitment submission',
-      'Minted to Base Sepolia smart contract ledger',
+      'Recorded to verified explorer achievement ledger',
     ],
     rarity: 'legendary',
     isNft: true,
     tokenId: '#0042',
-    network: 'Base L2',
+    network: 'Verified',
     themeColor: {
       bg: 'bg-gradient-to-r from-amber-500/15 to-purple-500/15',
       text: 'text-amber-900',
@@ -83,17 +83,17 @@ export const SAMPLE_USER_BADGES: UserBadge[] = [
     name: 'Bolinao Twilight Sentinel',
     type: 'nft',
     icon: '🌅',
-    description: 'Special edition Cape Bolinao twilight check-in NFT commemorating coastal exploration.',
+    description: 'Special edition Cape Bolinao twilight check-in badge commemorating coastal exploration.',
     howToEarn: 'Check in at Cape Bolinao Lighthouse or Patar Beach during golden hour (5:00 PM – 6:30 PM) with photographic proof.',
     criteria: [
       'Golden hour GPS timestamp verification',
       '1 approved scenic sunset photograph',
-      'Base L2 Soulbound proof of expedition',
+      'Verified proof of coastal expedition',
     ],
     rarity: 'epic',
     isNft: true,
     tokenId: '#0118',
-    network: 'Base L2',
+    network: 'Verified',
     themeColor: {
       bg: 'bg-gradient-to-r from-orange-500/15 to-rose-500/15',
       text: 'text-orange-950',
@@ -107,8 +107,8 @@ export const SAMPLE_USER_BADGES: UserBadge[] = [
     name: 'Manaoag Pilgrim Genesis',
     type: 'nft',
     icon: '🏛️',
-    description: 'Genesis Soulbound badge for cultural and spiritual heritage patron pilgrims.',
-    howToEarn: 'Visit the Minor Basilica of Our Lady of the Rosary of Manaoag and complete the spiritual heritage trail quest.',
+    description: 'Genesis heritage badge for cultural and spiritual heritage patron pilgrims.',
+    howToEarn: 'Visit the Minor Basilica of Our Lady of the Rosary of Manaoag and complete the spiritual heritage Eco-Quest.',
     criteria: [
       'Manaoag Church GPS perimeter check-in',
       'Heritage etiquette compliance pledge',
@@ -117,7 +117,7 @@ export const SAMPLE_USER_BADGES: UserBadge[] = [
     rarity: 'legendary',
     isNft: true,
     tokenId: '#0007',
-    network: 'Base L2',
+    network: 'Verified',
     themeColor: {
       bg: 'bg-gradient-to-r from-yellow-500/15 to-amber-500/15',
       text: 'text-amber-950',
@@ -131,17 +131,17 @@ export const SAMPLE_USER_BADGES: UserBadge[] = [
     name: 'Lingayen Gulf Navigator',
     type: 'nft',
     icon: '🌊',
-    description: 'ERC-5192 Soulbound token for maritime historical trail completion.',
-    howToEarn: 'Navigate through the Lingayen Capitol Beachfront and the Veterans Memorial Park using sovereign turn-by-turn routing.',
+    description: 'Verified explorer badge for maritime historical Eco-Quest completion.',
+    howToEarn: 'Navigate through the Lingayen Capitol Beachfront and the Veterans Memorial Park using turn-by-turn routing.',
     criteria: [
-      'Valhalla sovereign navigation route completion',
+      'Valhalla navigation route completion',
       'Provincial capitol complex checkpoint validation',
-      'Maritime trail history checkpoint reached',
+      'Maritime history checkpoint reached',
     ],
     rarity: 'rare',
     isNft: true,
     tokenId: '#0891',
-    network: 'Base L2',
+    network: 'Verified',
     themeColor: {
       bg: 'bg-gradient-to-r from-cyan-500/15 to-blue-500/15',
       text: 'text-cyan-950',
@@ -161,7 +161,7 @@ export const SAMPLE_USER_BADGES: UserBadge[] = [
     howToEarn: 'Awarded to vetted community leaders and rangers who have verified at least 15 public safety or crowd reports.',
     criteria: [
       'Accredited by Pangasinan Tourism LGU partner program',
-      '15+ crowd or trail condition audits submitted',
+      '15+ crowd or destination condition audits submitted',
       'High reliability community trust rating (>95%)',
     ],
     rarity: 'epic',
@@ -178,10 +178,10 @@ export const SAMPLE_USER_BADGES: UserBadge[] = [
     type: 'civic',
     icon: '🗳️',
     description: 'Active community voter in monthly Pangasinan tourism development ballots.',
-    howToEarn: 'Cast quadratic votes in at least 3 monthly JuanChoice tourism spotlight governance rounds.',
+    howToEarn: 'Cast community votes in at least 3 monthly JuanChoice tourism spotlight rounds.',
     criteria: [
       'Participated in 3+ community governance ballots',
-      'mJDQ voting stake verified',
+      'Points voting stake verified',
       'Helped elect community destination spotlights',
     ],
     rarity: 'common',
@@ -352,11 +352,11 @@ export const SAMPLE_DESTINATION_BADGES: DestinationBadge[] = [
     category: 'official',
     icon: '✨',
     description: 'Elected top community highlight in the monthly provincial governance round.',
-    howToEarn: 'Voted #1 destination by JuanDerQuest token electors in the decentralized monthly JuanChoice governance round.',
+    howToEarn: 'Voted #1 destination by JuanDerQuest community electors in the monthly JuanChoice round.',
     criteria: [
-      'Over 1,000 quadratic community votes cast',
+      'Over 1,000 community votes cast',
       'Certified community favorite for current quarter',
-      'Receives mJDQ reward pool spotlight boost',
+      'Receives reward pool spotlight boost',
     ],
     themeColor: {
       bg: 'bg-amber-50',
@@ -587,18 +587,18 @@ export const SAMPLE_DESTINATION_BADGES: DestinationBadge[] = [
     },
   },
 
-  // --- Web3 & Quest Bounty Badges ---
+  // --- Eco-Quest & Bounty Badges ---
   {
     id: 'dest-soulbound-quest',
-    name: 'Soulbound NFT Quest',
+    name: 'Verified Eco-Quest',
     category: 'web3',
     icon: '🪙',
-    description: 'Features an on-site checkpoint quest granting verifiable soulbound credentials.',
-    howToEarn: 'Eligible for in-app AR viewfinder check-in and minting of an immutable Base L2 Soulbound badge upon completion.',
+    description: 'Features an on-site checkpoint Eco-Quest granting verified explorer badges.',
+    howToEarn: 'Eligible for in-app AR viewfinder check-in and earning a permanent explorer badge upon completion.',
     criteria: [
       'AR geospatial marker active on coordinates',
-      'Automatic smart contract minting bridge available',
-      'Provides permanent cryptographic verification of visit',
+      'Verified achievement badge unlocked on completion',
+      'Provides permanent verification of visit',
     ],
     themeColor: {
       bg: 'bg-amber-100/70',
@@ -608,13 +608,13 @@ export const SAMPLE_DESTINATION_BADGES: DestinationBadge[] = [
   },
   {
     id: 'dest-bounty-active',
-    name: '500 mJDQ Bounty Active',
+    name: '+500 pts Bounty Active',
     category: 'web3',
     icon: '🏆',
     description: 'Verified check-in submissions currently receive elevated community rewards.',
     howToEarn: 'Sponsored by municipal tourism boards or local merchants to distribute bonus reward points.',
     criteria: [
-      '500 mJDQ reward pool currently active',
+      '500 pts reward pool currently active',
       'Requires verified GPS check-in & photo proof',
       'Points redeemable for local partner vouchers',
     ],
