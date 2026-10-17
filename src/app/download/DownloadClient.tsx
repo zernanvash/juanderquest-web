@@ -149,7 +149,7 @@ export function DownloadClient() {
               </p>
               <p className="leading-relaxed">
                 The JuanDerQuest native APK is built for Android smartphones. An iOS release is
-                under development. You can explore all destinations, quests, and interactive maps
+                under development. You can explore destinations, quests, and the map
                 right here in your Safari browser!
               </p>
               <div className="pt-2 flex flex-wrap gap-2">
@@ -164,7 +164,7 @@ export function DownloadClient() {
                   href="/map"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-blue-300 text-blue-900 font-bold text-xs hover:bg-blue-50 transition"
                 >
-                  <span>Open Interactive Map</span>
+                  <span>Open Map</span>
                 </Link>
               </div>
             </div>

@@ -205,7 +205,7 @@ export default function QuestDetailClient() {
                         Checkpoint Map Preview
                       </h2>
                       <p className="text-xs text-[#837560] mt-0.5">
-                        Target location in {quest.locationName}. Tap map to explore in the full interactive map.
+                        Target location in {quest.locationName}. Tap the map to explore.
                       </p>
                     </div>
                     <Link
