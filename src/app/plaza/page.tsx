@@ -45,6 +45,7 @@ function PlazaContent() {
   );
 
   const [standingsData, setStandingsData] = useState<StandingsResponseData | null>(null);
+  const [allTimePreview, setAllTimePreview] = useState<StandingsResponseData | null>(null);
   const [standingsLoading, setStandingsLoading] = useState(true);
   const [standingsError, setStandingsError] = useState<string | null>(null);
 
@@ -127,6 +128,19 @@ function PlazaContent() {
     setStandingsLoading(true);
     loadStandings();
   }, [loadStandings]);
+
+  const weeklyBoardEmpty = !standingsLoading && !standingsError && period === 'weekly'
+    && standingsData?.period === 'weekly' && standingsData.podium.length === 0
+    && standingsData.entries.length === 0;
+
+  useEffect(() => {
+    if (!weeklyBoardEmpty) return;
+    let active = true;
+    getStandings({ board: 'everyone', period: 'all_time', limit: 3 })
+      .then((data) => { if (active) setAllTimePreview(data); })
+      .catch(() => { if (active) setAllTimePreview(null); });
+    return () => { active = false; };
+  }, [weeklyBoardEmpty]);
 
   useEffect(() => {
     loadTowns();
@@ -249,7 +263,23 @@ function PlazaContent() {
       ) : (
         <>
           {/* 🏆 Podium Section (Ranks 1, 2, 3) */}
-          {podium.length > 0 && <Podium podium={podium} />}
+          {weeklyBoardEmpty ? (
+            <div id="plaza-rankings" className="space-y-5">
+              <div className="rounded-2xl border border-[var(--color-border-default)] bg-white p-6 text-center shadow-xs">
+                <h2 className="text-lg font-bold text-[var(--color-brand-brown)]">No quests completed this week yet — be the first</h2>
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]">The weekly board starts fresh each week. Past achievements are still on the all-time board.</p>
+                <button type="button" onClick={() => setPeriod('all_time')} className="mt-4 rounded-xl bg-[var(--color-brand-primary)] px-4 py-2 text-sm font-bold text-white hover:opacity-90">
+                  View All time
+                </button>
+              </div>
+              {allTimePreview && allTimePreview.podium.length > 0 && (
+                <section aria-label="All-time podium" className="space-y-3">
+                  <h2 className="text-base font-bold text-[var(--color-brand-brown)]">All-time leaders</h2>
+                  <Podium podium={allTimePreview.podium} />
+                </section>
+              )}
+            </div>
+          ) : podium.length > 0 && <div id="plaza-rankings"><Podium podium={podium} /></div>}
 
           {/* Rivals Strip */}
           <RivalsStrip

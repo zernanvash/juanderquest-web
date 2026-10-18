@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { Compass, Loader2 } from 'lucide-react';
 import type { ActivityItem, StandingEntry } from '@/lib/plaza-api';
 import { ActivityCard } from './ActivityCard';
@@ -104,6 +105,10 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
             <div className="space-y-4">
               <div className="bg-white p-8 rounded-2xl border border-[var(--color-border-default)] text-center text-xs text-[var(--color-text-muted)]">
                 You are not following anyone yet or the explorers you follow have not shared recent activity.
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <Link href="/quests" className="rounded-xl bg-[var(--color-brand-primary)] px-4 py-2 font-bold text-white">Explore quests</Link>
+                  <Link href="/plaza?period=all_time#plaza-rankings" className="rounded-xl border border-[var(--color-border-default)] px-4 py-2 font-bold text-[var(--color-brand-brown)]">Find explorers to follow</Link>
+                </div>
               </div>
               {suggestedExplorers && suggestedExplorers.length > 0 && (
                 <SuggestedExplorers
@@ -114,8 +119,13 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
               )}
             </div>
           ) : (
-            <div className="bg-white p-8 rounded-2xl border border-[var(--color-border-default)] text-center text-xs text-[var(--color-text-muted)]">
-              No recent activity found. Complete a quest to start the buzz on the Plaza!
+            <div className="bg-white p-8 rounded-2xl border border-[var(--color-border-default)] text-center space-y-4">
+              <p className="text-sm font-semibold text-[var(--color-brand-brown)]">No explorer stories yet — yours could be the first.</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Complete a quest or connect with other explorers to get the Plaza moving.</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Link href="/quests" className="rounded-xl bg-[var(--color-brand-primary)] px-4 py-2 text-xs font-bold text-white hover:opacity-90">Explore quests</Link>
+                <Link href="/plaza?period=all_time#plaza-rankings" className="rounded-xl border border-[var(--color-border-default)] px-4 py-2 text-xs font-bold text-[var(--color-brand-brown)] hover:bg-[var(--color-bg-subtle)]">Find explorers to follow</Link>
+              </div>
             </div>
           )
         ) : (

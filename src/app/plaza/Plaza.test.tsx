@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import PlazaPage from './page';
 
 vi.mock('@/lib/auth', () => ({
@@ -199,6 +199,49 @@ describe('PlazaPage Component', () => {
     await waitFor(() => {
       expect(screen.getByText('6')).toBeDefined();
       expect(mockCheerActivity).toHaveBeenCalledWith('act_101');
+    });
+  });
+
+  it('shows the all-time podium and a one-tap switch when the weekly board is empty', async () => {
+    const populated = await mockGetStandings();
+    mockGetStandings.mockImplementation(({ period }: { period: string }) => Promise.resolve(
+      period === 'all_time' ? { ...populated, period: 'all_time' } : {
+        ...populated, podium: [], entries: [], total: 0, me: null,
+      }
+    ));
+
+    render(<PlazaPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No quests completed this week yet — be the first')).toBeDefined();
+      expect(within(screen.getByRole('region', { name: 'All-time podium' })).getByText('1st Place Champion')).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'View All time' }));
+    await waitFor(() => expect(mockGetStandings).toHaveBeenCalledWith(expect.objectContaining({ period: 'all_time' })));
+  });
+
+  it('offers quest and explorer CTAs when the activity feed is empty', async () => {
+    mockGetFeed.mockResolvedValue({ items: [], next_cursor: null });
+    render(<PlazaPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No explorer stories yet — yours could be the first.')).toBeDefined();
+      const feed = screen.getByRole('region', { name: 'Plaza Activity Feed' });
+      expect(within(feed).getByRole('link', { name: 'Explore quests' }).getAttribute('href')).toBe('/quests');
+      expect(within(feed).getByRole('link', { name: 'Find explorers to follow' }).getAttribute('href')).toBe('/plaza?period=all_time#plaza-rankings');
+    });
+  });
+
+  it('keeps discovery CTAs when the Following feed is empty', async () => {
+    mockGetFeed.mockResolvedValue({ items: [], next_cursor: null });
+    render(<PlazaPage />);
+    const feed = screen.getByRole('region', { name: 'Plaza Activity Feed' });
+    fireEvent.click(within(feed).getByRole('button', { name: 'Following' }));
+    await waitFor(() => {
+      expect(within(feed).getByText(/not following anyone yet/)).toBeDefined();
+      expect(within(feed).getByRole('link', { name: 'Explore quests' })).toBeDefined();
+      expect(within(feed).getByRole('link', { name: 'Find explorers to follow' })).toBeDefined();
     });
   });
 });
