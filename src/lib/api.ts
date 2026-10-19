@@ -1322,4 +1322,55 @@ export async function fetchLeaderboard(params?: {
   return res.data.data;
 }
 
+export interface AdminAreaModel {
+  id: string;
+  level: 'province' | 'town' | 'barangay';
+  name: string;
+  display_name: string;
+  label_lat: number;
+  label_lng: number;
+  has_boundary: boolean;
+  bbox: [number, number, number, number];
+  parent_id?: string | null;
+  published_spot_count: number;
+}
+
+export interface AdminAreaDetailModel extends AdminAreaModel {
+  psgc_code?: number;
+  parents: { id: string; name: string; level: string }[];
+}
+
+export async function fetchAdminAreas(params?: {
+  bbox?: string;
+  zoom?: number;
+}): Promise<AdminAreaModel[]> {
+  const res = await api.get('/areas', { params });
+  if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to fetch areas');
+  return res.data.data;
+}
+
+export async function fetchAdminAreaDetail(id: string): Promise<AdminAreaDetailModel> {
+  const res = await api.get(`/areas/${encodeURIComponent(id)}`);
+  if (!res.data?.success) throw new Error(res.data?.error?.message || `Failed to fetch area ${id}`);
+  return res.data.data;
+}
+
+export async function fetchAdminAreaShape(id: string): Promise<any> {
+  const res = await api.get(`/areas/${encodeURIComponent(id)}/shape`);
+  return res.data;
+}
+
+export async function fetchAdminAreaSpots(id: string, params?: {
+  page?: number;
+  limit?: number;
+}): Promise<{ spots: SpotModel[]; total: number }> {
+  const res = await api.get(`/areas/${encodeURIComponent(id)}/spots`, { params });
+  if (!res.data?.success) throw new Error(res.data?.error?.message || `Failed to fetch spots for area ${id}`);
+  const rawList = res.data.data || [];
+  return {
+    spots: rawList.map(normalizeSpot),
+    total: res.data.meta?.total || rawList.length,
+  };
+}
+
 

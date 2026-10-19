@@ -52,6 +52,14 @@ const INITIAL_MACRO_ZOOM = 7;
 const REGIONAL_ZOOM = 10;
 const FOCUSED_ZOOM = 13;
 
+import dynamic from 'next/dynamic';
+import { isWebGLSupported } from '@/lib/webgl';
+
+const VectorMapCanvas = dynamic(
+  () => import('@/components/map/VectorMapCanvas').then((mod) => mod.VectorMapCanvas),
+  { ssr: false }
+);
+
 // One map host per browser session; retain rendered tiles and viewport state between route visits.
 let retainedMap: LeafletMap | null = null;
 let retainedHost: HTMLDivElement | null = null;
@@ -165,10 +173,14 @@ export default function QuestMapPage() {
   const [clusterZoom, setClusterZoom] = useState<number>(REGIONAL_ZOOM);
   const isZoomedIn = currentZoom >= DESTINATIONS_MIN_ZOOM;
 
-  // Responsive Workspace Panel state (collapsed as default per user directive)
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
   const [mobileSnap, setMobileSnap] = useState<MobileSnapState>('peek');
   const [activeArea, setActiveArea] = useState<AreaDefinition | null>(null);
+  const [webglSupported, setWebglSupported] = useState<boolean>(false);
+
+  useEffect(() => {
+    setWebglSupported(isWebGLSupported());
+  }, []);
 
   const [signInPrompt, setSignInPrompt] = useState<{ open: boolean; actionLabel: string }>({
     open: false,
@@ -1066,8 +1078,39 @@ export default function QuestMapPage() {
 
         <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
           <h1 className="sr-only">Destination map</h1>
-          {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
-          <div ref={mapContainerRef} className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`} />
+          {/* Map canvas: Vector map (MapLibre) if WebGL supported, else Leaflet fallback */}
+          {webglSupported ? (
+            <div className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`}>
+              <VectorMapCanvas
+                selectedAreaId={activeArea?.id || null}
+                onSelectArea={(areaId) => {
+                  const areaDef = findAreaByIdOrName(areaId) || {
+                    id: areaId,
+                    name: areaId.split('--').pop() || areaId,
+                    type: areaId.includes('--') ? 'municipality' : 'city',
+                    subtitle: 'Pangasinan territory',
+                    center: PANGASINAN_CENTER,
+                    zoom: 13,
+                    keywords: [areaId],
+                  };
+                  handleSelectArea(areaDef);
+                }}
+                onSelectSpot={(spot) => handleSelectSpot(spot)}
+                onClearArea={handleClearActiveArea}
+                pinPlacementActive={pinPlacementActive}
+                onDropPin={(pin) => {
+                  setDraftPin(pin);
+                  setPinPlacementActive(false);
+                  setWizardOpen(true);
+                  setWizardMinimized(false);
+                }}
+                draftPin={draftPin}
+                userLocation={userLocation}
+              />
+            </div>
+          ) : (
+            <div ref={mapContainerRef} className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`} />
+          )}
 
           {/* STANDALONE FLOATING SEARCH OVERLAY */}
           <MapSearchOverlay
