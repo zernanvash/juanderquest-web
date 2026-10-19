@@ -14,6 +14,15 @@ vi.mock('@/lib/auth', () => ({
   }),
 }));
 
+vi.mock('@/components/Navigation', () => ({
+  Navigation: ({ children }: { children: React.ReactNode }) => (
+    <div>
+      <aside aria-label="Sidebar Navigation" />
+      <main id="main-content">{children}</main>
+    </div>
+  ),
+}));
+
 const mockGetStandings = vi.fn();
 const mockGetTowns = vi.fn();
 const mockGetFeed = vi.fn();
@@ -37,6 +46,13 @@ vi.mock('@/lib/plaza-api', () => ({
 }));
 
 describe('PlazaPage Component', () => {
+  it('uses the shared navigation shell that provides the side panel', async () => {
+    render(<PlazaPage />);
+    expect(screen.getByRole('complementary', { name: 'Sidebar Navigation' })).toBeDefined();
+    expect(screen.getByRole('main')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Aira Leader completed Hundred Islands Trail')).toBeDefined());
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
 

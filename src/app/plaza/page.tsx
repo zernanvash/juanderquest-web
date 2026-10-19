@@ -27,6 +27,7 @@ import { RankList } from '@/components/plaza/RankList';
 import { TownBoard } from '@/components/plaza/TownBoard';
 import { AlertsCard } from '@/components/plaza/AlertsCard';
 import { ActivityFeed } from '@/components/plaza/ActivityFeed';
+import { Navigation } from '@/components/Navigation';
 
 function PlazaContent() {
   const { user } = useAuth();
@@ -347,14 +348,16 @@ function PlazaContent() {
 
 export default function PlazaPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="py-24 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-[var(--color-brand-primary)]" />
-        </div>
-      }
-    >
-      <PlazaContent />
-    </Suspense>
+    <Navigation>
+      <Suspense
+        fallback={
+          <div className="py-24 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-[var(--color-brand-primary)]" />
+          </div>
+        }
+      >
+        <PlazaContent />
+      </Suspense>
+    </Navigation>
   );
 }
