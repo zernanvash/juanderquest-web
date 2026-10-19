@@ -21,7 +21,6 @@ export interface VectorMapCanvasProps {
 }
 
 const PANGASINAN_CENTER: [number, number] = [120.33, 16.03]; // [lng, lat] for MapLibre
-const PANGASINAN_BBOX: [number, number, number, number] = [119.5, 15.6, 121.1, 16.4];
 
 export function VectorMapCanvas({
   selectedAreaId,
@@ -37,7 +36,11 @@ export function VectorMapCanvas({
   const mapRef = useRef<MapLibreMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeAreaSpots, setActiveAreaSpots] = useState<SpotModel[]>([]);
+  const activeAreaSpotsRef = useRef<SpotModel[]>([]);
+  activeAreaSpotsRef.current = activeAreaSpots;
+
   const [loadingShape, setLoadingShape] = useState(false);
+  const moveEndTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize MapLibre
   useEffect(() => {
@@ -49,9 +52,33 @@ export function VectorMapCanvas({
       const maplibregl = (await import('maplibre-gl')).default;
       if (isCancelled || !containerRef.current) return;
 
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
+      // Build style at runtime with absolute URLs for tiles & glyphs
+      let resolvedStyle: any = '/map/style.json';
+      try {
+        const styleRes = await fetch('/map/style.json');
+        if (styleRes.ok) {
+          const styleJson = await styleRes.json();
+          if (styleJson.sources?.openmaptiles?.tiles) {
+            styleJson.sources.openmaptiles.tiles = styleJson.sources.openmaptiles.tiles.map((t: string) =>
+              t.startsWith('/') ? `${origin}${t}` : t
+            );
+          }
+          if (styleJson.glyphs && styleJson.glyphs.startsWith('/')) {
+            styleJson.glyphs = `${origin}${styleJson.glyphs}`;
+          }
+          resolvedStyle = styleJson;
+        }
+      } catch (err) {
+        console.warn('[vector-map] Could not fetch style.json for runtime absolute URL rewrite; using fallback transformRequest', err);
+      }
+
+      if (isCancelled || !containerRef.current) return;
+
       const map = new maplibregl.Map({
         container: containerRef.current,
-        style: '/map/style.json',
+        style: resolvedStyle,
         center: PANGASINAN_CENTER,
         zoom: 9.5,
         minZoom: 6,
@@ -61,12 +88,17 @@ export function VectorMapCanvas({
           [127.0, 22.0],
         ],
         attributionControl: false,
+        transformRequest: (url: string) => {
+          if (url.startsWith('/vt/') || url.startsWith('/map/')) {
+            return { url: `${origin}${url}` };
+          }
+          return { url };
+        },
       });
 
       map.addControl(
         new maplibregl.AttributionControl({
           compact: true,
-          customAttribution: '© OpenStreetMap contributors · PSA/NAMRIA (indicative) · Protomaps',
         }),
         'bottom-right'
       );
@@ -203,7 +235,7 @@ export function VectorMapCanvas({
         map.on('click', 'area-spots-circles', (e) => {
           if (e.features && e.features[0]) {
             const spotId = e.features[0].properties?.id;
-            const spot = activeAreaSpots.find((s) => s.id === spotId);
+            const spot = activeAreaSpotsRef.current.find((s) => s.id === spotId);
             if (spot) {
               onSelectSpot(spot);
             }
@@ -225,6 +257,38 @@ export function VectorMapCanvas({
             });
           }
         });
+
+        // Initial places fetch
+        try {
+          const bounds = map.getBounds();
+          const zoom = Math.floor(map.getZoom());
+          const bboxStr = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+          fetchAdminAreas({ bbox: bboxStr, zoom }).then((areas) => {
+            const src = map.getSource('admin-places') as GeoJSONSource | undefined;
+            if (src) {
+              src.setData({
+                type: 'FeatureCollection',
+                features: areas.map((a) => ({
+                  type: 'Feature',
+                  geometry: {
+                    type: 'Point',
+                    coordinates: [a.label_lng, a.label_lat],
+                  },
+                  properties: {
+                    id: a.id,
+                    name: a.name,
+                    level: a.level,
+                    published_spot_count: a.published_spot_count,
+                  },
+                })),
+              });
+            }
+          }).catch((err) => {
+            console.warn('[vector-map] Initial places load error:', err);
+          });
+        } catch (e) {
+          console.warn('[vector-map] Initial bounds error:', e);
+        }
       });
     }
 
@@ -232,6 +296,9 @@ export function VectorMapCanvas({
 
     return () => {
       isCancelled = true;
+      if (moveEndTimerRef.current) {
+        clearTimeout(moveEndTimerRef.current);
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -239,7 +306,7 @@ export function VectorMapCanvas({
     };
   }, [onSelectArea, onSelectSpot, pinPlacementActive, onDropPin]);
 
-  // Load and refresh places layer on camera move
+  // Load and refresh places layer on camera move (debounced)
   const updatePlaces = useCallback(async () => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
@@ -279,10 +346,24 @@ export function VectorMapCanvas({
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
+    // Trigger immediately on load
     updatePlaces();
-    map.on('moveend', updatePlaces);
+
+    const handleMoveEnd = () => {
+      if (moveEndTimerRef.current) {
+        clearTimeout(moveEndTimerRef.current);
+      }
+      moveEndTimerRef.current = setTimeout(() => {
+        updatePlaces();
+      }, 250);
+    };
+
+    map.on('moveend', handleMoveEnd);
     return () => {
-      map.off('moveend', updatePlaces);
+      map.off('moveend', handleMoveEnd);
+      if (moveEndTimerRef.current) {
+        clearTimeout(moveEndTimerRef.current);
+      }
     };
   }, [mapLoaded, updatePlaces]);
 

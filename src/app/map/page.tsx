@@ -113,6 +113,23 @@ function MapUrlSync({
         onSelectArea(matched);
         return;
       }
+      // If it's a valid area identifier (e.g. from PSA database like dagupan--pantal or custom town)
+      if (areaQuery.length >= 2 && !areaQuery.includes(' ')) {
+        const parts = areaQuery.split('--');
+        const displayName = parts[parts.length - 1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        const dynamicArea: AreaDefinition = {
+          id: areaQuery,
+          name: displayName,
+          type: parts.length > 1 ? 'municipality' : 'city',
+          subtitle: 'Pangasinan territory',
+          center: PANGASINAN_CENTER,
+          zoom: parts.length > 1 ? 14 : 12,
+          keywords: [areaQuery, displayName.toLowerCase()],
+        };
+        lastProcessedKeyRef.current = currentKey;
+        onSelectArea(dynamicArea);
+        return;
+      }
     }
 
     // Dynamic OpenStreetMap territory parameters (?lat=...&lng=...&name=...)
@@ -176,7 +193,10 @@ export default function QuestMapPage() {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
   const [mobileSnap, setMobileSnap] = useState<MobileSnapState>('peek');
   const [activeArea, setActiveArea] = useState<AreaDefinition | null>(null);
-  const [webglSupported, setWebglSupported] = useState<boolean>(false);
+  const [webglSupported, setWebglSupported] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return isWebGLSupported();
+  });
 
   useEffect(() => {
     setWebglSupported(isWebGLSupported());
@@ -1012,6 +1032,16 @@ export default function QuestMapPage() {
     setSelectedItem(null);
     setIsDesktopCollapsed(true);
     setMobileSnap('peek');
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('area') !== area.id) {
+        url.searchParams.set('area', area.id);
+        url.searchParams.delete('q');
+        url.searchParams.delete('spot');
+        url.searchParams.delete('quest');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
     const map = mapInstanceRef.current || retainedMap;
     if (map) {
       try {
@@ -1029,6 +1059,14 @@ export default function QuestMapPage() {
   // Clear area filter and return to Pangasinan regional view
   const handleClearActiveArea = useCallback(() => {
     setActiveArea(null);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('area') || url.searchParams.has('q')) {
+        url.searchParams.delete('area');
+        url.searchParams.delete('q');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
     const map = mapInstanceRef.current || retainedMap;
     if (map) {
       try {

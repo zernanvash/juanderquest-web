@@ -9,7 +9,7 @@
       "type": "vector",
       "tiles": ["/vt/{z}/{x}/{y}.mvt"],
       "maxzoom": 15,
-      "attribution": "<a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a> · Protomaps · <a href=\"https://psa.gov.ph\" target=\"_blank\">Boundaries: PSA / NAMRIA (indicative, not official)</a>"
+      "attribution": "<a href=\"https://openmaptiles.org/\" target=\"_blank\">&copy; OpenMapTiles</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a> &middot; Boundaries: PSA / NAMRIA (indicative)"
     }
   },
   "glyphs": "/map/fonts/{fontstack}/{range}.pbf",

@@ -9,7 +9,7 @@ const coordinate = (z: number, lat: number, lng: number) => {
   return { z: `${z}`, x: `${x}`, y: `${y}.mvt` };
 };
 
-const invoke = (tile: { z: string; x: string; y: string }, headers: HeadersInit = '') =>
+const invoke = (tile: { z: string; x: string; y: string }, headers: HeadersInit = {}) =>
   GET(new Request(`https://juanderquest.app/vt/${tile.z}/${tile.x}/${tile.y}`, { headers }), {
     params: Promise.resolve(tile),
   });
