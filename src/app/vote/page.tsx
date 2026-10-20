@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useAuth, useRequireAuth } from '@/lib/auth';
 import {
   api,
@@ -188,13 +189,13 @@ export default function VotePage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <a
+                <Link
                   href="/choice"
                   className="inline-flex items-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-black px-6 py-4 rounded-2xl shadow-md transition transform active:scale-95 text-xs cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-[#FFB703]" />
                   <span>Go to JuanChoice Voting</span>
-                </a>
+                </Link>
               </div>
             </div>
           </div>

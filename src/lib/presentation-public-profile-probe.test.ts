@@ -1,4 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import robots from '@/app/robots';
 import sitemap from '@/app/sitemap';
 import nextConfig from '../../next.config';
@@ -21,6 +24,31 @@ import {
 
 describe('JuanChoice Presentation Web Crawler & Configuration Probe', () => {
   const origEnv = { ...process.env };
+  let artifactFixtureRoot: string | undefined;
+
+  function createPresentationArtifactFixture(
+    computeBundleSha256: (distDirPath: string) => { bundleSha256: string; bundleFileCount: number },
+  ) {
+    artifactFixtureRoot = mkdtempSync(join(tmpdir(), 'jdq-presentation-probe-'));
+    const distDirPath = join(artifactFixtureRoot, '.next-presentation');
+    const chunksDir = join(distDirPath, 'server', 'chunks');
+    mkdirSync(chunksDir, { recursive: true });
+
+    const buildId = 'presentation-probe-build-id';
+    writeFileSync(join(distDirPath, 'BUILD_ID'), `${buildId}\n`);
+    for (let index = 0; index < 101; index += 1) {
+      writeFileSync(join(chunksDir, `chunk-${String(index).padStart(3, '0')}.js`), `export const chunk = ${index};\n`);
+    }
+
+    const { bundleSha256 } = computeBundleSha256(distDirPath);
+    writeFileSync(join(distDirPath, 'presentation-profile.json'), JSON.stringify({
+      profile: 'public',
+      buildId,
+      bundleSha256,
+      siteUrl: 'https://presentation.juanderquest.app',
+    }));
+    return distDirPath;
+  }
 
   beforeEach(() => {
     process.env = { ...origEnv };
@@ -28,6 +56,10 @@ describe('JuanChoice Presentation Web Crawler & Configuration Probe', () => {
 
   afterEach(() => {
     process.env = { ...origEnv };
+    if (artifactFixtureRoot) {
+      rmSync(artifactFixtureRoot, { recursive: true, force: true });
+      artifactFixtureRoot = undefined;
+    }
   });
 
   describe('Search Engine Indexing Suppression (Robots & Sitemap)', () => {
@@ -155,24 +187,20 @@ describe('JuanChoice Presentation Web Crawler & Configuration Probe', () => {
   });
 
   describe('Compiled Artifact Integrity & Profile Verification', () => {
-    it('verifies that computeBundleSha256 produces a valid hex digest on .next-presentation', async () => {
+    it('verifies that computeBundleSha256 produces a valid digest on a presentation artifact fixture', async () => {
       const { computeBundleSha256 } = await import('../../scripts/build-presentation.mjs');
-      const { resolve } = await import('node:path');
-      const distDirPath = resolve(process.cwd(), '.next-presentation');
+      const distDirPath = createPresentationArtifactFixture(computeBundleSha256);
       const { bundleSha256, bundleFileCount } = computeBundleSha256(distDirPath);
 
       expect(bundleSha256).toMatch(/^[a-f0-9]{64}$/);
       expect(bundleFileCount).toBeGreaterThan(100);
     });
 
-    it('verifies that presentation-profile.json matches BUILD_ID and computed bundleSha256', async () => {
+    it('verifies that presentation-profile.json matches BUILD_ID and computed bundleSha256 in a fixture', async () => {
       const { computeBundleSha256 } = await import('../../scripts/build-presentation.mjs');
-      const { resolve } = await import('node:path');
-      const { readFileSync, existsSync } = await import('node:fs');
-
-      const distDirPath = resolve(process.cwd(), '.next-presentation');
-      const manifestPath = resolve(distDirPath, 'presentation-profile.json');
-      const buildIdPath = resolve(distDirPath, 'BUILD_ID');
+      const distDirPath = createPresentationArtifactFixture(computeBundleSha256);
+      const manifestPath = join(distDirPath, 'presentation-profile.json');
+      const buildIdPath = join(distDirPath, 'BUILD_ID');
 
       expect(existsSync(manifestPath)).toBe(true);
       expect(existsSync(buildIdPath)).toBe(true);

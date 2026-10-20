@@ -101,6 +101,88 @@ export function CelebrationEffects() {
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number | null>(null);
 
+  const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) => {
+    let rot = (Math.PI / 2) * 3;
+    let x = cx;
+    let y = cy;
+    const step = Math.PI / spikes;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outerRadius);
+    for (let i = 0; i < spikes; i++) {
+      x = cx + Math.cos(rot) * outerRadius;
+      y = cy + Math.sin(rot) * outerRadius;
+      ctx.lineTo(x, y);
+      rot += step;
+
+      x = cx + Math.cos(rot) * innerRadius;
+      y = cy + Math.sin(rot) * innerRadius;
+      ctx.lineTo(x, y);
+      rot += step;
+    }
+    ctx.lineTo(cx, cy - outerRadius);
+    ctx.closePath();
+    ctx.fill();
+  };
+
+  const startAnimationLoop = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const particles = particlesRef.current;
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+
+        p.life++;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.35; // Gravity
+        p.vx *= 0.98; // Air drag
+        p.vy *= 0.98;
+        p.rotation += p.rotSpeed;
+
+        // Fade out during last 30% of lifespan
+        const fadeThreshold = p.maxLife * 0.7;
+        if (p.life > fadeThreshold) {
+          p.opacity = Math.max(0, 1 - (p.life - fadeThreshold) / (p.maxLife - fadeThreshold));
+        }
+
+        if (p.life >= p.maxLife || p.opacity <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = p.color;
+
+        if (p.type === 'confetti') {
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        } else if (p.type === 'star') {
+          drawStar(ctx, 0, 0, 5, p.w / 1.5, p.w / 3.2);
+        }
+
+        ctx.restore();
+      }
+
+      if (particles.length > 0) {
+        animFrameRef.current = requestAnimationFrame(render);
+      } else {
+        animFrameRef.current = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(render);
+  };
+
   const spawnParticles = useCallback((options: CelebrationOptions = {}) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -213,88 +295,6 @@ export function CelebrationEffects() {
       startAnimationLoop();
     }
   }, []);
-
-  const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) => {
-    let rot = (Math.PI / 2) * 3;
-    let x = cx;
-    let y = cy;
-    const step = Math.PI / spikes;
-
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - outerRadius);
-    for (let i = 0; i < spikes; i++) {
-      x = cx + Math.cos(rot) * outerRadius;
-      y = cy + Math.sin(rot) * outerRadius;
-      ctx.lineTo(x, y);
-      rot += step;
-
-      x = cx + Math.cos(rot) * innerRadius;
-      y = cy + Math.sin(rot) * innerRadius;
-      ctx.lineTo(x, y);
-      rot += step;
-    }
-    ctx.lineTo(cx, cy - outerRadius);
-    ctx.closePath();
-    ctx.fill();
-  };
-
-  const startAnimationLoop = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const render = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const particles = particlesRef.current;
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-
-        p.life++;
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.35; // Gravity
-        p.vx *= 0.98; // Air drag
-        p.vy *= 0.98;
-        p.rotation += p.rotSpeed;
-
-        // Fade out during last 30% of lifespan
-        const fadeThreshold = p.maxLife * 0.7;
-        if (p.life > fadeThreshold) {
-          p.opacity = Math.max(0, 1 - (p.life - fadeThreshold) / (p.maxLife - fadeThreshold));
-        }
-
-        if (p.life >= p.maxLife || p.opacity <= 0) {
-          particles.splice(i, 1);
-          continue;
-        }
-
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.globalAlpha = p.opacity;
-        ctx.fillStyle = p.color;
-
-        if (p.type === 'confetti') {
-          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        } else if (p.type === 'star') {
-          drawStar(ctx, 0, 0, 5, p.w / 1.5, p.w / 3.2);
-        }
-
-        ctx.restore();
-      }
-
-      if (particles.length > 0) {
-        animFrameRef.current = requestAnimationFrame(render);
-      } else {
-        animFrameRef.current = null;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    };
-
-    animFrameRef.current = requestAnimationFrame(render);
-  };
 
   useEffect(() => {
     const handleResize = () => {

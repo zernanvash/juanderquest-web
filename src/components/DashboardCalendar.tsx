@@ -254,7 +254,7 @@ export function DashboardCalendar() {
   }, [eventsByDate, selectedDate]);
 
   // Total active events count in this month
-  const monthEventsCount = useMemo(() => {
+  const monthEventsCount = (() => {
     const set = new Set<string>();
     Object.entries(eventsByDate).forEach(([d, evs]) => {
       if (d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)) {
@@ -262,7 +262,7 @@ export function DashboardCalendar() {
       }
     });
     return set.size;
-  }, [eventsByDate, year, month]);
+  })();
 
   return (
     <section className="bg-white rounded-3xl border border-[#E3DFD5] shadow-xs overflow-hidden">
