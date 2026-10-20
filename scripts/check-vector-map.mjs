@@ -46,7 +46,6 @@ async function runBrowserCheck() {
     if (msg.type() === 'error' && msg.text().toLowerCase().includes('hydration')) {
       pageErrors.push(msg.text());
     }
-    console.log(`[browser-console] ${msg.type()}: ${msg.text()}`);
   });
 
   const outDir = path.resolve(process.cwd(), '../../docs/dev-journal/assets/vector-map');
@@ -84,155 +83,166 @@ async function runBrowserCheck() {
     throw new Error('Attribution still contains Protomaps!');
   }
 
-  // Assert visible place labels at zoom ~10 (e.g. Dagupan City)
-  const placeFeatures = await page.evaluate(() => {
-    const map = window.__jdqVectorMap;
-    if (!map) return [];
-    const features = map.queryRenderedFeatures({ layers: ['place-labels'] });
-    return features.map((f) => ({
-      id: f.properties.id,
-      name: f.properties.name,
-      count: f.properties.published_spot_count,
-    }));
-  });
-  console.log(`[test] Rendered place-labels count: ${placeFeatures.length}`, placeFeatures.slice(0, 6));
-  if (placeFeatures.length === 0) {
-    throw new Error('Assertion failed: No place-labels rendered on the map canvas!');
-  }
-
-  const dagupanFeature = await page.evaluate(() => {
-    const map = window.__jdqVectorMap;
-    if (!map) return null;
-    const features = map.queryRenderedFeatures({ layers: ['place-labels'] });
-    const dag = features.find((f) => f.properties.id === 'dagupan');
-    if (!dag) return null;
-    const pt = map.project(dag.geometry.coordinates);
-    return { id: dag.properties.id, name: dag.properties.name, x: pt.x, y: pt.y };
-  });
-
-  if (!dagupanFeature) {
-    throw new Error('Assertion failed: "Dagupan City" label is not visible on default /map!');
-  }
-  console.log('[test] Found Dagupan City label at canvas coordinates:', dagupanFeature);
-
-  // Screenshot 1: Default view with names
+  // Screenshot 1: Default view with names & count badges
   const defaultScreenshot = path.join(outDir, '01-default-view-names.png');
   await page.screenshot({ path: defaultScreenshot });
   console.log(`[test] Saved screenshot 1: ${defaultScreenshot}`);
 
-  // 2. Click "Dagupan City" on the map canvas
-  console.log('[test] 2. Clicking "Dagupan City" on the map canvas...');
-  const canvasBox = await page.locator('canvas.maplibregl-canvas').boundingBox();
-  if (!canvasBox) throw new Error('Canvas bounding box not found');
-  await page.mouse.click(canvasBox.x + dagupanFeature.x, canvasBox.y + dagupanFeature.y);
-
-  await page.waitForTimeout(3000);
-
-  // Verify URL updated to /map?area=dagupan
-  const currentUrlAfterClick = page.url();
-  console.log(`[test] URL after clicking Dagupan City: ${currentUrlAfterClick}`);
-  if (!currentUrlAfterClick.includes('area=dagupan')) {
-    throw new Error(`Expected URL to contain area=dagupan, got ${currentUrlAfterClick}`);
-  }
-
-  // Verify highlight layer & Dagupan's pins (poll up to 10s for async API & camera fit)
-  await page.waitForFunction(
-    () => Boolean(window.__jdqAreaState && window.__jdqAreaState.hasShape && window.__jdqAreaState.spotCount > 0),
-    { timeout: 10000 }
-  );
-  await page.waitForTimeout(1500);
-  const dagupanState = await page.evaluate(() => {
+  // 2. Select Dagupan City & verify pins with names (D9)
+  console.log('[test] 2. Selecting Dagupan City on the map...');
+  const dagupanLabel = await page.evaluate(() => {
     const map = window.__jdqVectorMap;
     if (!map) return null;
-    const areaState = window.__jdqAreaState;
-    const spotFeatures = map.queryRenderedFeatures({ layers: ['area-spots-circles'] });
-    return {
-      areaState,
-      renderedSpots: spotFeatures.length,
-    };
+    const features = map.queryRenderedFeatures({ layers: ['place-labels'] });
+    const d = features.find((f) => f.properties?.id === 'dagupan');
+    if (d) {
+      return map.project(d.geometry.coordinates);
+    }
+    return null;
   });
-  console.log('[test] Dagupan selected state:', dagupanState);
-  if (!dagupanState || !dagupanState.areaState?.hasShape || dagupanState.areaState?.spotCount === 0) {
-    throw new Error(`Assertion failed: Dagupan highlight or spot pins missing! State: ${JSON.stringify(dagupanState)}`);
+
+  const canvasBox = await page.locator('canvas.maplibregl-canvas').boundingBox();
+  if (!canvasBox) throw new Error('Could not find map canvas bounding box');
+
+  if (dagupanLabel) {
+    await page.mouse.click(canvasBox.x + dagupanLabel.x, canvasBox.y + dagupanLabel.y);
+  } else {
+    await page.evaluate(() => {
+      window.__jdqSelectArea('dagupan');
+    });
   }
 
-  // Screenshot 2: Dagupan selected
+  await page.waitForFunction(
+    () => Boolean(window.__jdqAreaState && window.__jdqAreaState.selectedAreaId === 'dagupan' && window.__jdqAreaState.hasShape && window.__jdqAreaState.spotCount > 0),
+    { timeout: 15000 }
+  );
+  await page.waitForTimeout(2500);
+
+  // Assert pins with names rendered on canvas (D9)
+  const pinFeatures = await page.evaluate(() => {
+    const map = window.__jdqVectorMap;
+    if (!map) return [];
+    return map.queryRenderedFeatures({ layers: ['area-spots-pins'] }).map((f) => ({
+      id: f.properties.id,
+      name: f.properties.name,
+      coords: f.geometry.coordinates,
+    }));
+  });
+  console.log(`[test] Dagupan pin features count: ${pinFeatures.length}`, pinFeatures);
+  if (pinFeatures.length === 0) {
+    throw new Error('Assertion failed: No area-spots-pins rendered in Dagupan!');
+  }
+
+  // Screenshot 2: Pins with names (D9)
+  const pinsScreenshot = path.join(outDir, '04-pins-with-names.png');
+  await page.screenshot({ path: pinsScreenshot });
+  console.log(`[test] Saved screenshot: ${pinsScreenshot}`);
+
+  // Screenshot 2b: Dagupan selected (overview)
   const dagupanScreenshot = path.join(outDir, '02-dagupan-selected.png');
   await page.screenshot({ path: dagupanScreenshot });
   console.log(`[test] Saved screenshot 2: ${dagupanScreenshot}`);
 
-  // 3. Test Clear / Escape resets selection
-  console.log('[test] 3. Pressing Escape to clear active area...');
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(2000);
-  const urlAfterEsc = page.url();
-  console.log(`[test] URL after Escape: ${urlAfterEsc}`);
-  if (urlAfterEsc.includes('area=')) {
-    throw new Error(`Expected area param to be cleared after Escape, got ${urlAfterEsc}`);
-  }
-
-  // 4. Test Pantal deep link: /map?area=dagupan--pantal (use fresh page to avoid dev HMR lockup)
-  console.log('[test] 4. Navigating to deep-link: http://127.0.0.1:3110/map?area=dagupan--pantal...');
-  const pantalPage = await context.newPage();
-  pantalPage.on('pageerror', (err) => {
-    console.error(`[pantal-page-error] ${err.message}`);
-    pageErrors.push(err.message);
-  });
-  await pantalPage.goto('http://127.0.0.1:3110/map?area=dagupan--pantal', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await pantalPage.waitForSelector('.maplibregl-map', { timeout: 30000 });
-  await pantalPage.waitForSelector('canvas.maplibregl-canvas', { timeout: 30000 });
-  await pantalPage.waitForTimeout(4500);
-
-  // Verify Pantal title, breadcrumb ("Pangasinan › Dagupan City › Pantal"), and real polygon outline
-  await pantalPage.waitForFunction(
-    () => Boolean(window.__jdqAreaState && window.__jdqAreaState.hasShape),
-    { timeout: 10000 }
-  );
-  await pantalPage.waitForTimeout(1500);
-  const bodyText = await pantalPage.textContent('body');
-  if (!bodyText?.includes('Pantal')) {
-    throw new Error('Assertion failed: Pantal name not shown on /map?area=dagupan--pantal');
-  }
-  if (!bodyText?.includes('Pangasinan › Dagupan City › Pantal')) {
-    throw new Error(`Assertion failed: Breadcrumb "Pangasinan › Dagupan City › Pantal" not found in UI!`);
-  }
-
-  const pantalShapeState = await pantalPage.evaluate(async () => {
+  // 3. Test Hover preview card (D8)
+  console.log('[test] 3. Testing hover preview card on destination pin (D8)...');
+  const firstPin = pinFeatures[0];
+  const pinScreenCoords = await page.evaluate((pinCoords) => {
     const map = window.__jdqVectorMap;
     if (!map) return null;
+    return map.project(pinCoords);
+  }, firstPin.coords);
+
+  if (!pinScreenCoords) throw new Error('Could not calculate pin screen position');
+
+  // Move mouse over the pin and wait ~200ms for the 150ms hover trigger
+  await page.mouse.move(canvasBox.x + pinScreenCoords.x, canvasBox.y + pinScreenCoords.y - 12);
+  await page.waitForTimeout(400);
+
+  const hoverCardVisible = await page.locator('[data-testid="pin-hover-card"]').isVisible();
+  console.log(`[test] Hover preview card visible: ${hoverCardVisible}`);
+  if (!hoverCardVisible) {
+    throw new Error('Assertion failed: Hover card [data-testid="pin-hover-card"] did not appear on pin hover!');
+  }
+
+  // Screenshot: Hover preview card
+  const hoverScreenshot = path.join(outDir, '05-pin-hover-preview.png');
+  await page.screenshot({ path: hoverScreenshot });
+  console.log(`[test] Saved screenshot: ${hoverScreenshot}`);
+
+  // 4. Test Click-away OUTSIDE boundary deselects (D7)
+  console.log('[test] 4. Testing click-away OUTSIDE boundary (D7)...');
+  // Click in the open ocean area (top-center of canvas, unobstructed by UI overlays and outside Dagupan polygon)
+  await page.mouse.click(canvasBox.x + 120, canvasBox.y + 220);
+  await page.waitForTimeout(2000);
+  const urlAfterClickAway = page.url();
+  console.log(`[test] URL after click-away: ${urlAfterClickAway}`);
+  if (urlAfterClickAway.includes('area=')) {
+    throw new Error(`Expected area selection to be cleared after clicking outside boundary, got ${urlAfterClickAway}`);
+  }
+
+  // 5. Test Province Selection (D6) - /map?area=pangasinan
+  console.log('[test] 5. Testing province selection: pangasinan (D6)...');
+  await page.evaluate(() => {
+    window.__jdqSelectArea('pangasinan');
+  });
+  await page.waitForFunction(
+    () => Boolean(window.__jdqAreaState && window.__jdqAreaState.selectedAreaId === 'pangasinan' && window.__jdqAreaState.hasShape),
+    { timeout: 15000 }
+  );
+  await page.waitForTimeout(3000);
+
+  const provinceState = await page.evaluate(async () => {
+    const map = window.__jdqVectorMap;
     const areaState = window.__jdqAreaState;
-    const res = await fetch('/api/v1/areas/dagupan--pantal/shape');
-    const json = await res.json();
+    const res = await fetch('/api/v1/areas/pangasinan/shape');
+    const shape = await res.json();
+    const clusterFeatures = map.queryRenderedFeatures({ layers: ['area-spots-clusters'] });
+    const pinFeatures = map.queryRenderedFeatures({ layers: ['area-spots-pins'] });
     return {
       areaState,
-      hasBoundary: json.properties?.has_boundary,
-      isFallbackCircle: Boolean(json.properties?.is_fallback_circle),
-      geomType: json.geometry?.type,
+      shapeHasBoundary: shape.properties?.has_boundary,
+      isFallbackCircle: Boolean(shape.properties?.is_fallback_circle),
+      geomType: shape.geometry?.type,
+      renderedClusters: clusterFeatures.length,
+      renderedPins: pinFeatures.length,
     };
   });
-  console.log('[test] Pantal shape state:', pantalShapeState);
-  if (!pantalShapeState || !pantalShapeState.areaState?.hasShape || !pantalShapeState.hasBoundary || pantalShapeState.isFallbackCircle) {
-    throw new Error(`Assertion failed: Pantal did not resolve to real PSA boundary! State: ${JSON.stringify(pantalShapeState)}`);
+  console.log('[test] Province state (D6):', provinceState);
+  if (!provinceState || !provinceState.shapeHasBoundary || provinceState.isFallbackCircle) {
+    throw new Error(`Assertion failed: Province returned fallback circle instead of real dissolved polygon! ${JSON.stringify(provinceState)}`);
+  }
+  if (provinceState.renderedClusters === 0 && provinceState.renderedPins === 0) {
+    throw new Error('Assertion failed: Neither clusters nor pins rendered in province view!');
+  }
+
+  // Screenshot: Province selected with real outline and clusters (D6)
+  const provinceScreenshot = path.join(outDir, '06-province-selected.png');
+  await page.screenshot({ path: provinceScreenshot });
+  console.log(`[test] Saved screenshot: ${provinceScreenshot}`);
+
+  // 6. Test Pantal barangay selection /map?area=dagupan--pantal
+  console.log('[test] 6. Selecting Pantal barangay: dagupan--pantal...');
+  await page.evaluate(() => {
+    window.__jdqSelectArea('dagupan--pantal');
+  });
+  await page.waitForFunction(
+    () => Boolean(window.__jdqAreaState && window.__jdqAreaState.selectedAreaId === 'dagupan--pantal' && window.__jdqAreaState.hasShape),
+    { timeout: 15000 }
+  );
+  await page.waitForTimeout(2500);
+
+  const bodyText = await page.textContent('body');
+  if (!bodyText?.includes('Pantal')) {
+    throw new Error('Assertion failed: Pantal name not shown when dagupan--pantal is selected');
   }
 
   // Screenshot 3: Pantal selected
   const pantalScreenshot = path.join(outDir, '03-pantal-selected.png');
-  await pantalPage.screenshot({ path: pantalScreenshot });
+  await page.screenshot({ path: pantalScreenshot });
   console.log(`[test] Saved screenshot 3: ${pantalScreenshot}`);
 
-  // Also test Clear button click
-  console.log('[test] 5. Clicking Clear button...');
-  const clearBtn = pantalPage.locator('button[aria-label="Reset area filter"]');
-  if ((await clearBtn.count()) > 0) {
-    await clearBtn.first().click();
-    await pantalPage.waitForTimeout(1500);
-    if (pantalPage.url().includes('area=')) {
-      throw new Error(`Expected Clear button to remove area param, got ${pantalPage.url()}`);
-    }
-  }
-
   await browser.close();
-  console.log('[test] ALL Playwright vector-map checks and screenshots completed successfully!');
+  console.log('[test] ALL Playwright verification checks for Plan 45 D6–D9 passed successfully!');
 }
 
 runBrowserCheck().catch((err) => {

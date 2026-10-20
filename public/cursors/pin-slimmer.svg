@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28" fill="none">
+  <!-- Subtle ground drop shadow -->
+  <ellipse cx="10" cy="26" rx="5" ry="1.5" fill="#000000" fill-opacity="0.22"/>
+  <!-- Teardrop body with 1.5px outline -->
+  <path d="M10 1C5.02944 1 1 5.02944 1 10C1 16.5 8.8 24.2 9.4 24.8C9.75 25.1 10.25 25.1 10.6 24.8C11.2 24.2 19 16.5 19 10C19 5.02944 14.9706 1 10 1Z" fill="#2D6A4F" stroke="#1B4332" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- White center dot -->
+  <circle cx="10" cy="10" r="3.2" fill="#FFFFFF"/>
+</svg>

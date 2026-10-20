@@ -378,12 +378,13 @@ export default function QuestMapPage() {
     setActiveArea(null);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
-      if (url.searchParams.has('area') || url.searchParams.has('q')) {
-        url.searchParams.delete('area');
-        url.searchParams.delete('q');
-        window.history.replaceState({}, '', url.toString());
-      }
+      url.searchParams.delete('area');
+      url.searchParams.delete('q');
+      url.searchParams.delete('spot');
+      url.searchParams.delete('quest');
+      window.history.replaceState({}, '', url.pathname + url.search);
     }
+    router.replace('/map');
     const map = mapInstanceRef.current || retainedMap;
     if (map) {
       try {
@@ -1287,7 +1288,7 @@ export default function QuestMapPage() {
                   <span className="hidden sm:inline">Locate</span>
                 </button>
 
-                {activeArea && (
+                {activeArea && !webglSupported && (
                   <button
                     type="button"
                     onClick={handleClearActiveArea}
