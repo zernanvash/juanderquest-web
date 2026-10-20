@@ -52,13 +52,8 @@ const INITIAL_MACRO_ZOOM = 7;
 const REGIONAL_ZOOM = 10;
 const FOCUSED_ZOOM = 13;
 
-import dynamic from 'next/dynamic';
 import { isWebGLSupported } from '@/lib/webgl';
-
-const VectorMapCanvas = dynamic(
-  () => import('@/components/map/VectorMapCanvas').then((mod) => mod.VectorMapCanvas),
-  { ssr: false }
-);
+import { VectorMapCanvas } from '@/components/map/VectorMapCanvas';
 
 // One map host per browser session; retain rendered tiles and viewport state between route visits.
 let retainedMap: LeafletMap | null = null;
@@ -74,6 +69,43 @@ let retainedUserCircle: ReturnType<typeof import('leaflet').circle> | null = nul
 function hasMapFocusParameters(search: string): boolean {
   const params = new URLSearchParams(search);
   return ['area', 'q', 'spot', 'quest', 'lat', 'lng'].some((key) => params.has(key));
+}
+
+function resolveAreaByIdOrName(query: string): AreaDefinition | undefined {
+  const matched = findAreaByIdOrName(query);
+  if (matched) return matched;
+
+  const q = query.trim();
+  if (q.length >= 2 && !q.includes(' ')) {
+    const parts = q.split('--');
+    const displayName = parts[parts.length - 1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    if (parts.length > 1) {
+      const parentKnown = findAreaByIdOrName(parts[0]);
+      const parentName = parentKnown ? parentKnown.name : parts[0].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const breadcrumbStr = `Pangasinan › ${parentName} › ${displayName}`;
+      return {
+        id: q,
+        name: displayName,
+        type: 'municipality',
+        subtitle: breadcrumbStr,
+        center: PANGASINAN_CENTER,
+        zoom: 14,
+        keywords: [q, displayName.toLowerCase()],
+        breadcrumb: ['Pangasinan', parentName, displayName],
+      };
+    }
+    return {
+      id: q,
+      name: displayName,
+      type: 'city',
+      subtitle: `Pangasinan › ${displayName}`,
+      center: PANGASINAN_CENTER,
+      zoom: 12,
+      keywords: [q, displayName.toLowerCase()],
+      breadcrumb: ['Pangasinan', displayName],
+    };
+  }
+  return undefined;
 }
 
 function MapUrlSync({
@@ -107,27 +139,10 @@ function MapUrlSync({
     }
 
     if (areaQuery) {
-      const matched = findAreaByIdOrName(areaQuery);
-      if (matched) {
+      const resolved = resolveAreaByIdOrName(areaQuery);
+      if (resolved) {
         lastProcessedKeyRef.current = currentKey;
-        onSelectArea(matched);
-        return;
-      }
-      // If it's a valid area identifier (e.g. from PSA database like dagupan--pantal or custom town)
-      if (areaQuery.length >= 2 && !areaQuery.includes(' ')) {
-        const parts = areaQuery.split('--');
-        const displayName = parts[parts.length - 1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-        const dynamicArea: AreaDefinition = {
-          id: areaQuery,
-          name: displayName,
-          type: parts.length > 1 ? 'municipality' : 'city',
-          subtitle: 'Pangasinan territory',
-          center: PANGASINAN_CENTER,
-          zoom: parts.length > 1 ? 14 : 12,
-          keywords: [areaQuery, displayName.toLowerCase()],
-        };
-        lastProcessedKeyRef.current = currentKey;
-        onSelectArea(dynamicArea);
+        onSelectArea(resolved);
         return;
       }
     }
@@ -193,13 +208,12 @@ export default function QuestMapPage() {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
   const [mobileSnap, setMobileSnap] = useState<MobileSnapState>('peek');
   const [activeArea, setActiveArea] = useState<AreaDefinition | null>(null);
-  const [webglSupported, setWebglSupported] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return isWebGLSupported();
-  });
+  const [mounted, setMounted] = useState(false);
+  const [webglSupported, setWebglSupported] = useState<boolean>(false);
 
   useEffect(() => {
     setWebglSupported(isWebGLSupported());
+    setMounted(true);
   }, []);
 
   const [signInPrompt, setSignInPrompt] = useState<{ open: boolean; actionLabel: string }>({
@@ -241,7 +255,7 @@ export default function QuestMapPage() {
   const allCoordinatesRef = useRef<[number, number][]>([]);
   const fittedRef = useRef(false);
 
-  const fetchData = useCallback(async (forceRefresh = false) => {
+  const fetchData = useCallback(async (forceRefresh = false): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -281,7 +295,7 @@ export default function QuestMapPage() {
         const urlName = searchParams.get('name');
 
         if (urlArea) {
-          const matchedArea = findAreaByIdOrName(urlArea);
+          const matchedArea = resolveAreaByIdOrName(urlArea);
           if (matchedArea) {
             setActiveArea(matchedArea);
             setIsDesktopCollapsed(true);
@@ -331,7 +345,10 @@ export default function QuestMapPage() {
           }
         }
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Cache scope changed' && !forceRefresh) {
+        return fetchData(true);
+      }
       setError('Could not load map coordinates from the server. The basemap remains interactive.');
     } finally {
       setLoading(false);
@@ -356,17 +373,46 @@ export default function QuestMapPage() {
     }
   }, [user, router]);
 
-  // Escape key cancels pin placement mode
+  // Clear area filter and return to Pangasinan regional view
+  const handleClearActiveArea = useCallback(() => {
+    setActiveArea(null);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('area') || url.searchParams.has('q')) {
+        url.searchParams.delete('area');
+        url.searchParams.delete('q');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+    const map = mapInstanceRef.current || retainedMap;
+    if (map) {
+      try {
+        if ((map as any)._loaded) {
+          map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
+        } else {
+          map.setView(PANGASINAN_CENTER, REGIONAL_ZOOM);
+        }
+      } catch (e) {
+        console.warn('Map camera flight deferred:', e);
+      }
+    }
+  }, []);
+
+  // Escape key cancels pin placement mode or clears active area
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && pinPlacementActive) {
-        setPinPlacementActive(false);
-        if (wizardOpen) setWizardMinimized(false);
+      if (e.key === 'Escape') {
+        if (pinPlacementActive) {
+          setPinPlacementActive(false);
+          if (wizardOpen) setWizardMinimized(false);
+        } else if (activeArea) {
+          handleClearActiveArea();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pinPlacementActive, wizardOpen]);
+  }, [pinPlacementActive, wizardOpen, activeArea, handleClearActiveArea]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -431,8 +477,9 @@ export default function QuestMapPage() {
     );
   }, []);
 
-  // 1. Initialize or Re-attach Retained Leaflet Map
+  // 1. Initialize or Re-attach Retained Leaflet Map (only when WebGL is unsupported)
   useEffect(() => {
+    if (!mounted || webglSupported) return;
     const container = mapContainerRef.current;
     if (!container) return;
 
@@ -602,7 +649,7 @@ export default function QuestMapPage() {
       mapInstanceRef.current = null;
       retainedHost?.remove();
     };
-  }, []);
+  }, [mounted, webglSupported]);
 
   // Center on an item and open details, zooming in like Google Maps
   const handleSelectItem = useCallback((type: 'quest' | 'spot', data: QuestModel | SpotModel) => {
@@ -1056,31 +1103,6 @@ export default function QuestMapPage() {
     }
   }
 
-  // Clear area filter and return to Pangasinan regional view
-  const handleClearActiveArea = useCallback(() => {
-    setActiveArea(null);
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has('area') || url.searchParams.has('q')) {
-        url.searchParams.delete('area');
-        url.searchParams.delete('q');
-        window.history.replaceState({}, '', url.toString());
-      }
-    }
-    const map = mapInstanceRef.current || retainedMap;
-    if (map) {
-      try {
-        if ((map as any)._loaded) {
-          map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
-        } else {
-          map.setView(PANGASINAN_CENTER, REGIONAL_ZOOM);
-        }
-      } catch (e) {
-        console.warn('Map camera flight deferred:', e);
-      }
-    }
-  }, []);
-
   // Accessible, non-map results list (same filter semantics as the pins).
   const visiblePlaces = useMemo(() => {
     const items: Array<{ type: 'quest' | 'spot'; data: QuestModel | SpotModel }> = [];
@@ -1116,13 +1138,15 @@ export default function QuestMapPage() {
 
         <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
           <h1 className="sr-only">Destination map</h1>
-          {/* Map canvas: Vector map (MapLibre) if WebGL supported, else Leaflet fallback */}
-          {webglSupported ? (
+          {/* Map canvas: client-only to prevent hydration mismatch */}
+          {!mounted ? (
+            <div className="absolute inset-0 w-full h-full z-0 bg-stone-100" />
+          ) : webglSupported ? (
             <div className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`}>
               <VectorMapCanvas
                 selectedAreaId={activeArea?.id || null}
                 onSelectArea={(areaId) => {
-                  const areaDef = findAreaByIdOrName(areaId) || {
+                  const areaDef = resolveAreaByIdOrName(areaId) || {
                     id: areaId,
                     name: areaId.split('--').pop() || areaId,
                     type: areaId.includes('--') ? 'municipality' : 'city',
@@ -1132,6 +1156,24 @@ export default function QuestMapPage() {
                     keywords: [areaId],
                   };
                   handleSelectArea(areaDef);
+                }}
+                onAreaDetailLoaded={(detail) => {
+                  const parentNames = (detail.parents || []).map((p) =>
+                    p.name === 'Dagupan' ? 'Dagupan City' : p.name
+                  );
+                  const currentDisplayName = detail.name === 'Dagupan' ? 'Dagupan City' : detail.name;
+                  const fullBreadcrumb = [...parentNames, currentDisplayName];
+                  const breadcrumbSubtitle = fullBreadcrumb.join(' › ');
+                  setActiveArea((prev) => {
+                    if (!prev || prev.id !== detail.id) return prev;
+                    if (prev.name === currentDisplayName && prev.subtitle === breadcrumbSubtitle) return prev;
+                    return {
+                      ...prev,
+                      name: currentDisplayName,
+                      subtitle: breadcrumbSubtitle,
+                      breadcrumb: fullBreadcrumb,
+                    };
+                  });
                 }}
                 onSelectSpot={(spot) => handleSelectSpot(spot)}
                 onClearArea={handleClearActiveArea}

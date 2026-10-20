@@ -16,6 +16,7 @@ export interface AreaDefinition {
   zoom: number;
   keywords: string[];
   source?: 'local' | 'osm';
+  breadcrumb?: string[];
 }
 
 export function areaToHref(area: AreaDefinition): string {
@@ -549,6 +550,9 @@ export function findMatchingAreas(query: string): AreaDefinition[] {
 export function findAreaByIdOrName(query: string): AreaDefinition | undefined {
   const q = query.trim().toLowerCase();
   if (!q) return undefined;
+
+  // Compound IDs like dagupan--pantal belong to barangays not in KNOWN_AREAS
+  if (q.includes('--')) return undefined;
 
   return (
     KNOWN_AREAS.find((area) => area.id.toLowerCase() === q) ||

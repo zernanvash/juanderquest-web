@@ -153,7 +153,7 @@ export function MapWorkspacePanel({
                   {title}
                 </span>
                 {subtitle && (
-                  <span className="text-[10px] text-[#837560] font-semibold truncate max-w-[160px]">
+                  <span className="text-[10px] text-[#837560] font-semibold truncate max-w-[240px]">
                     {subtitle}
                   </span>
                 )}

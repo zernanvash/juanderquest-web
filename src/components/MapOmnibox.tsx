@@ -238,10 +238,11 @@ export function MapOmnibox({
             <button
               type="button"
               onClick={onClearActiveArea}
-              className="text-[#2D6A4F]/70 hover:text-[#2D6A4F] transition p-0.5 cursor-pointer"
+              className="text-[#2D6A4F]/70 hover:text-[#2D6A4F] transition px-1 py-0.5 cursor-pointer flex items-center gap-0.5"
               title="Reset area filter"
               aria-label="Reset area filter"
             >
+              <span>Clear</span>
               <X className="w-3 h-3" />
             </button>
           </div>

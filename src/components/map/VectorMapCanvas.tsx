@@ -3,7 +3,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { Map as MapLibreMap, GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { AdminAreaModel, SpotModel, fetchAdminAreas, fetchAdminAreaShape, fetchAdminAreaSpots } from '@/lib/api';
+import {
+  AdminAreaDetailModel,
+  SpotModel,
+  fetchAdminAreas,
+  fetchAdminAreaDetail,
+  fetchAdminAreaShape,
+  fetchAdminAreaSpots,
+} from '@/lib/api';
 import { buildInvertedMask } from '@/lib/map-mask';
 import { SpotPostingPin } from '@/lib/spot-posting';
 
@@ -12,6 +19,7 @@ export interface VectorMapCanvasProps {
   onSelectArea: (areaId: string) => void;
   onSelectSpot: (spot: SpotModel) => void;
   onClearArea: () => void;
+  onAreaDetailLoaded?: (detail: AdminAreaDetailModel) => void;
   // Pin placement support
   pinPlacementActive?: boolean;
   onDropPin?: (pin: SpotPostingPin) => void;
@@ -27,6 +35,7 @@ export function VectorMapCanvas({
   onSelectArea,
   onSelectSpot,
   onClearArea,
+  onAreaDetailLoaded,
   pinPlacementActive = false,
   onDropPin,
   draftPin,
@@ -39,10 +48,24 @@ export function VectorMapCanvas({
   const activeAreaSpotsRef = useRef<SpotModel[]>([]);
   activeAreaSpotsRef.current = activeAreaSpots;
 
+  // Store callback handlers in refs so map initialization never tears down on parent re-renders
+  const onSelectAreaRef = useRef(onSelectArea);
+  onSelectAreaRef.current = onSelectArea;
+  const onSelectSpotRef = useRef(onSelectSpot);
+  onSelectSpotRef.current = onSelectSpot;
+  const onClearAreaRef = useRef(onClearArea);
+  onClearAreaRef.current = onClearArea;
+  const onAreaDetailLoadedRef = useRef(onAreaDetailLoaded);
+  onAreaDetailLoadedRef.current = onAreaDetailLoaded;
+  const pinPlacementActiveRef = useRef(pinPlacementActive);
+  pinPlacementActiveRef.current = pinPlacementActive;
+  const onDropPinRef = useRef(onDropPin);
+  onDropPinRef.current = onDropPin;
+
   const [loadingShape, setLoadingShape] = useState(false);
   const moveEndTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize MapLibre
+  // Initialize MapLibre ONCE on mount
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -105,120 +128,143 @@ export function VectorMapCanvas({
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true }), 'bottom-right');
 
-      map.on('load', async () => {
-        if (isCancelled) return;
+      let layersAdded = false;
+      const setupLayersAndPlaces = () => {
+        if (isCancelled || layersAdded) return;
+        if (!map.getSource('openmaptiles')) return;
+        layersAdded = true;
         mapRef.current = map;
-        setMapLoaded(true);
+        if (typeof window !== 'undefined') {
+          (window as any).__jdqVectorMap = map;
+        }
 
         // Add places GeoJSON source for clickable towns and barangays
-        map.addSource('admin-places', {
-          type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] },
-        });
+        if (!map.getSource('admin-places')) {
+          map.addSource('admin-places', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+          });
+        }
 
         // Add selected area mask & highlight layers
-        map.addSource('selected-area-shape', {
-          type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] },
-        });
+        if (!map.getSource('selected-area-shape')) {
+          map.addSource('selected-area-shape', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+          });
+        }
 
-        map.addSource('selected-area-mask', {
-          type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] },
-        });
+        if (!map.getSource('selected-area-mask')) {
+          map.addSource('selected-area-mask', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+          });
+        }
 
         // Layer: Inverted dimming mask
-        map.addLayer({
-          id: 'selected-area-mask-fill',
-          type: 'fill',
-          source: 'selected-area-mask',
-          paint: {
-            'fill-color': '#000000',
-            'fill-opacity': 0.35,
-          },
-        });
+        if (!map.getLayer('selected-area-mask-fill')) {
+          map.addLayer({
+            id: 'selected-area-mask-fill',
+            type: 'fill',
+            source: 'selected-area-mask',
+            paint: {
+              'fill-color': '#000000',
+              'fill-opacity': 0.35,
+            },
+          });
+        }
 
         // Layer: Selected area fill
-        map.addLayer({
-          id: 'selected-area-fill',
-          type: 'fill',
-          source: 'selected-area-shape',
-          paint: {
-            'fill-color': '#2D6A4F',
-            'fill-opacity': 0.12,
-          },
-        });
+        if (!map.getLayer('selected-area-fill')) {
+          map.addLayer({
+            id: 'selected-area-fill',
+            type: 'fill',
+            source: 'selected-area-shape',
+            paint: {
+              'fill-color': '#2D6A4F',
+              'fill-opacity': 0.14,
+            },
+          });
+        }
 
         // Layer: Selected area boundary outline
-        map.addLayer({
-          id: 'selected-area-stroke',
-          type: 'line',
-          source: 'selected-area-shape',
-          paint: {
-            'line-color': '#2D6A4F',
-            'line-width': 2.5,
-            'line-opacity': 0.85,
-          },
-        });
+        if (!map.getLayer('selected-area-stroke')) {
+          map.addLayer({
+            id: 'selected-area-stroke',
+            type: 'line',
+            source: 'selected-area-shape',
+            paint: {
+              'line-color': '#2D6A4F',
+              'line-width': 2.5,
+              'line-opacity': 0.9,
+            },
+          });
+        }
 
         // Layer: Clickable place symbols (name + spot count badge)
-        map.addLayer({
-          id: 'place-labels',
-          type: 'symbol',
-          source: 'admin-places',
-          layout: {
-            'text-field': [
-              'case',
-              ['>', ['get', 'published_spot_count'], 0],
-              ['concat', ['get', 'name'], ' (', ['to-string', ['get', 'published_spot_count']], ')'],
-              ['get', 'name'],
-            ],
-            'text-font': ['Noto Sans Bold'],
-            'text-size': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              8, 11,
-              12, 14,
-              16, 16,
-            ],
-            'text-anchor': 'center',
-            'text-offset': [0, 0],
-            'text-allow-overlap': false,
-            'symbol-sort-key': ['-', 1000, ['get', 'published_spot_count']], // Places with spots get layout priority
-          },
-          paint: {
-            'text-color': '#1B4332',
-            'text-halo-color': '#FAF9F5',
-            'text-halo-width': 2.0,
-          },
-        });
+        if (!map.getLayer('place-labels')) {
+          map.addLayer({
+            id: 'place-labels',
+            type: 'symbol',
+            source: 'admin-places',
+            layout: {
+              'text-field': [
+                'case',
+                ['>', ['get', 'published_spot_count'], 0],
+                ['concat', ['get', 'name'], ' (', ['to-string', ['get', 'published_spot_count']], ')'],
+                ['get', 'name'],
+              ],
+              'text-font': ['Noto Sans Bold'],
+              'text-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                8, 11,
+                12, 14,
+                16, 16,
+              ],
+              'text-anchor': 'center',
+              'text-offset': [0, 0],
+              'text-allow-overlap': false,
+              'symbol-sort-key': ['-', 1000, ['get', 'published_spot_count']], // Places with spots get layout priority
+            },
+            paint: {
+              'text-color': '#1B4332',
+              'text-halo-color': '#FAF9F5',
+              'text-halo-width': 2.0,
+            },
+          });
+        }
 
         // Add destination spots source for selected area
-        map.addSource('area-spots', {
-          type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] },
-        });
+        if (!map.getSource('area-spots')) {
+          map.addSource('area-spots', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+          });
+        }
 
         // Layer: Destination spot circles/pins
-        map.addLayer({
-          id: 'area-spots-circles',
-          type: 'circle',
-          source: 'area-spots',
-          paint: {
-            'circle-radius': 7,
-            'circle-color': '#2D6A4F',
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#FAF9F5',
-          },
-        });
+        if (!map.getLayer('area-spots-circles')) {
+          map.addLayer({
+            id: 'area-spots-circles',
+            type: 'circle',
+            source: 'area-spots',
+            paint: {
+              'circle-radius': 8,
+              'circle-color': '#2D6A4F',
+              'circle-stroke-width': 2.5,
+              'circle-stroke-color': '#FAF9F5',
+            },
+          });
+        }
 
         // Click on place name -> select area
         map.on('click', 'place-labels', (e) => {
           if (e.features && e.features[0]) {
             const areaId = e.features[0].properties?.id;
             if (areaId) {
-              onSelectArea(areaId);
+              onSelectAreaRef.current(areaId);
             }
           }
         });
@@ -237,7 +283,7 @@ export function VectorMapCanvas({
             const spotId = e.features[0].properties?.id;
             const spot = activeAreaSpotsRef.current.find((s) => s.id === spotId);
             if (spot) {
-              onSelectSpot(spot);
+              onSelectSpotRef.current(spot);
             }
           }
         });
@@ -250,46 +296,58 @@ export function VectorMapCanvas({
           });
           if (features.length > 0) return;
 
-          if (pinPlacementActive && onDropPin) {
-            onDropPin({
+          if (pinPlacementActiveRef.current && onDropPinRef.current) {
+            onDropPinRef.current({
               lat: Number(e.lngLat.lat.toFixed(6)),
               lng: Number(e.lngLat.lng.toFixed(6)),
             });
           }
         });
 
+        // Mark loaded so effects run
+        setMapLoaded(true);
+
         // Initial places fetch
         try {
           const bounds = map.getBounds();
           const zoom = Math.floor(map.getZoom());
           const bboxStr = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
-          fetchAdminAreas({ bbox: bboxStr, zoom }).then((areas) => {
-            const src = map.getSource('admin-places') as GeoJSONSource | undefined;
-            if (src) {
-              src.setData({
-                type: 'FeatureCollection',
-                features: areas.map((a) => ({
-                  type: 'Feature',
-                  geometry: {
-                    type: 'Point',
-                    coordinates: [a.label_lng, a.label_lat],
-                  },
-                  properties: {
-                    id: a.id,
-                    name: a.name,
-                    level: a.level,
-                    published_spot_count: a.published_spot_count,
-                  },
-                })),
-              });
-            }
-          }).catch((err) => {
-            console.warn('[vector-map] Initial places load error:', err);
-          });
+          fetchAdminAreas({ bbox: bboxStr, zoom })
+            .then((areas) => {
+              const src = map.getSource('admin-places') as GeoJSONSource | undefined;
+              if (src) {
+                src.setData({
+                  type: 'FeatureCollection',
+                  features: areas.map((a) => ({
+                    type: 'Feature',
+                    geometry: {
+                      type: 'Point',
+                      coordinates: [a.label_lng, a.label_lat],
+                    },
+                    properties: {
+                      id: a.id,
+                      name: a.name === 'Dagupan' ? 'Dagupan City' : a.name,
+                      raw_name: a.name,
+                      level: a.level,
+                      published_spot_count: a.published_spot_count,
+                    },
+                  })),
+                });
+              }
+            })
+            .catch((err) => {
+              console.warn('[vector-map] Initial places load error:', err);
+            });
         } catch (e) {
           console.warn('[vector-map] Initial bounds error:', e);
         }
-      });
+      };
+
+      map.on('load', setupLayersAndPlaces);
+      map.on('styledata', setupLayersAndPlaces);
+      if (map.isStyleLoaded()) {
+        setupLayersAndPlaces();
+      }
     }
 
     initMap();
@@ -304,7 +362,7 @@ export function VectorMapCanvas({
         mapRef.current = null;
       }
     };
-  }, [onSelectArea, onSelectSpot, pinPlacementActive, onDropPin]);
+  }, []);
 
   // Load and refresh places layer on camera move (debounced)
   const updatePlaces = useCallback(async () => {
@@ -330,7 +388,8 @@ export function VectorMapCanvas({
             },
             properties: {
               id: a.id,
-              name: a.name,
+              name: a.name === 'Dagupan' ? 'Dagupan City' : a.name,
+              raw_name: a.name,
               level: a.level,
               published_spot_count: a.published_spot_count,
             },
@@ -367,7 +426,7 @@ export function VectorMapCanvas({
     };
   }, [mapLoaded, updatePlaces]);
 
-  // Handle selected area: shape, mask, and camera fit
+  // Handle selected area: shape, mask, detail metadata, and camera fit
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
@@ -381,6 +440,11 @@ export function VectorMapCanvas({
       if (maskSource) maskSource.setData({ type: 'FeatureCollection', features: [] });
       if (spotsSource) spotsSource.setData({ type: 'FeatureCollection', features: [] });
       setActiveAreaSpots([]);
+      if (typeof window !== 'undefined') {
+        (window as any).__jdqAreaState = null;
+      }
+      // Reset camera back to regional Pangasinan overview
+      map.flyTo({ center: PANGASINAN_CENTER, zoom: 9.5, duration: 900 });
       return;
     }
 
@@ -389,14 +453,41 @@ export function VectorMapCanvas({
 
     async function loadAreaDetails() {
       try {
-        const [shapeData, spotsData] = await Promise.all([
-          fetchAdminAreaShape(selectedAreaId!),
-          fetchAdminAreaSpots(selectedAreaId!),
+        const retryFetch = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
+          let lastErr: unknown;
+          for (let i = 0; i <= retries; i++) {
+            try {
+              return await fn();
+            } catch (e) {
+              lastErr = e;
+              if (i < retries) await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+            }
+          }
+          throw lastErr;
+        };
+
+        const [detailData, shapeData, spotsData] = await Promise.all([
+          retryFetch(() => fetchAdminAreaDetail(selectedAreaId!)).catch(() => null),
+          retryFetch(() => fetchAdminAreaShape(selectedAreaId!)),
+          retryFetch(() => fetchAdminAreaSpots(selectedAreaId!)),
         ]);
 
         if (!isCurrent || !map) return;
 
+        if (detailData && onAreaDetailLoadedRef.current) {
+          onAreaDetailLoadedRef.current(detailData);
+        }
+
         setActiveAreaSpots(spotsData.spots);
+
+        if (typeof window !== 'undefined') {
+          (window as any).__jdqAreaState = {
+            selectedAreaId,
+            hasShape: Boolean(shapeData?.geometry),
+            hasMask: Boolean(shapeData?.geometry),
+            spotCount: spotsData.spots.length,
+          };
+        }
 
         // Update shape layer
         if (shapeSource && shapeData) {
@@ -444,7 +535,10 @@ export function VectorMapCanvas({
           extractCoords(shapeData.geometry.coordinates);
 
           if (coords.length > 0) {
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            let minX = Infinity,
+              minY = Infinity,
+              maxX = -Infinity,
+              maxY = -Infinity;
             for (const [lng, lat] of coords) {
               if (lng < minX) minX = lng;
               if (lat < minY) minY = lat;
@@ -456,7 +550,7 @@ export function VectorMapCanvas({
                 [minX, minY],
                 [maxX, maxY],
               ],
-              { padding: { top: 60, bottom: 60, left: 60, right: 380 }, maxZoom: 15 }
+              { padding: { top: 60, bottom: 60, left: 60, right: 340 }, maxZoom: 15, duration: 800 }
             );
           }
         }
