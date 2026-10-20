@@ -34,6 +34,12 @@ export interface VectorMapCanvasProps {
 }
 
 const PANGASINAN_CENTER: [number, number] = [120.33, 16.03]; // [lng, lat] for MapLibre
+const FADE_MS = 350; // highlight + dimming fade (owner: smoother focus-out)
+const FOCUS_EASE_MS = 750; // camera ease when focusing in/out
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+}
 
 interface HoverCardState {
   spot: SpotModel;
@@ -65,6 +71,7 @@ export function VectorMapCanvas({
 
   // Selected area geometry for D7 click-away boundary check
   const activeAreaGeometryRef = useRef<any | null>(null);
+  const overviewCameraRef = useRef<{ center: [number, number]; zoom: number; bearing: number; pitch: number } | null>(null);
   const selectedAreaIdRef = useRef<string | null>(selectedAreaId);
   selectedAreaIdRef.current = selectedAreaId;
 
@@ -256,6 +263,7 @@ export function VectorMapCanvas({
             paint: {
               'fill-color': '#000000',
               'fill-opacity': 0.35,
+              'fill-opacity-transition': { duration: FADE_MS, delay: 0 },
             } as any,
           });
         }
@@ -269,6 +277,7 @@ export function VectorMapCanvas({
             paint: {
               'fill-color': '#2D6A4F',
               'fill-opacity': 0.14,
+              'fill-opacity-transition': { duration: FADE_MS, delay: 0 },
             } as any,
           });
         }
@@ -283,6 +292,7 @@ export function VectorMapCanvas({
               'line-color': '#2D6A4F',
               'line-width': 2.5,
               'line-opacity': 0.9,
+              'line-opacity-transition': { duration: FADE_MS, delay: 0 },
             } as any,
           });
         }
@@ -338,8 +348,9 @@ export function VectorMapCanvas({
               'icon-image': 'jdq-pin-slimmer',
               'icon-size': 1.0,
               'icon-anchor': 'bottom',
-              'icon-padding': 8,
-              'icon-allow-overlap': false,
+              'icon-padding': 2,
+              'icon-allow-overlap': true,
+              'icon-ignore-placement': true,
               'text-field': ['coalesce', ['get', 'name'], ''],
               'text-font': ['Noto Sans Bold'],
               'text-size': 11,
@@ -359,6 +370,13 @@ export function VectorMapCanvas({
 
         // Click on place name -> select area
         map.on('click', 'place-labels', (e) => {
+          if (
+            selectedAreaIdRef.current &&
+            activeAreaGeometryRef.current &&
+            !isPointInsideGeometry(e.lngLat.lng, e.lngLat.lat, activeAreaGeometryRef.current)
+          ) {
+            return; // handled as click-away by the general click handler
+          }
           if (e.features && e.features[0]) {
             const areaId = e.features[0].properties?.id;
             if (areaId) {
@@ -426,7 +444,18 @@ export function VectorMapCanvas({
 
         // D7 Click-away & pin placement click handler
         map.on('click', (e: MapMouseEvent) => {
-          // If clicking an interactive layer (place label, pin), handled by their specific handlers
+          // Click-away first: any click outside the highlighted area focuses out, even on a
+          // neighbouring place name (owner feedback: focus-out kept jumping to other places).
+          if (
+            !pinPlacementActiveRef.current &&
+            selectedAreaIdRef.current &&
+            activeAreaGeometryRef.current &&
+            !isPointInsideGeometry(e.lngLat.lng, e.lngLat.lat, activeAreaGeometryRef.current)
+          ) {
+            onClearAreaRef.current();
+            return;
+          }
+          // Inside the focused area (or nothing focused): place names and pins have their own handlers
           const features = map.queryRenderedFeatures(e.point, {
             layers: ['place-labels', 'area-spots-pins'].filter((l) => map.getLayer(l)),
           });
@@ -454,33 +483,7 @@ export function VectorMapCanvas({
         // Mark loaded so effects run
         setMapLoaded(true);
 
-        // Initial overview spots load if no area is selected
-        if (!selectedAreaIdRef.current && allSpotsRef.current?.length) {
-          const overviewSrc = map.getSource('area-spots') as GeoJSONSource | undefined;
-          if (overviewSrc) {
-            overviewSrc.setData({
-              type: 'FeatureCollection',
-              features: allSpotsRef.current.map((s) => ({
-                type: 'Feature',
-                geometry: {
-                  type: 'Point',
-                  coordinates: [s.gpsLng, s.gpsLat],
-                },
-                properties: {
-                  id: s.id,
-                  name: s.name || '',
-                  category: s.category || '',
-                  municipality: s.municipality || '',
-                  imageUrl: s.imageUrl || '',
-                  questId: s.questId || '',
-                  description: s.description || '',
-                  is_focused_area: false,
-                },
-              })),
-            });
-            setActiveAreaSpots(allSpotsRef.current);
-          }
-        }
+        // Overview shows place names only; destination markers appear once an area is focused.
         try {
           const bounds = map.getBounds();
           const zoom = Math.floor(map.getZoom());
@@ -636,35 +639,27 @@ export function VectorMapCanvas({
         }
       }, 300);
 
-      // D11: In overview, feed allSpots with is_focused_area: false (individual unclustered markers with collision management)
-      const overviewSpots = allSpotsRef.current || [];
-      if (spotsSource) {
-        spotsSource.setData({
-          type: 'FeatureCollection',
-          features: overviewSpots.map((s) => ({
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [s.gpsLng, s.gpsLat],
-            },
-            properties: {
-              id: s.id,
-              name: s.name || '',
-              category: s.category || '',
-              municipality: s.municipality || '',
-              imageUrl: s.imageUrl || '',
-              questId: s.questId || '',
-              description: s.description || '',
-              is_focused_area: false,
-            },
-          })),
-        });
-      }
-      setActiveAreaSpots(overviewSpots);
+      // Overview shows no destination markers (owner feedback 2026-10-20).
+      if (spotsSource) spotsSource.setData({ type: 'FeatureCollection', features: [] });
+      setActiveAreaSpots([]);
 
-      // D10: Smooth focus-out camera ease back to regional Pangasinan overview (~600-800ms)
-      map.easeTo({ center: PANGASINAN_CENTER, zoom: 9.5, duration: 800 });
+      // Smooth focus-out: ease back to where the traveler was before focusing.
+      const back = overviewCameraRef.current;
+      overviewCameraRef.current = null;
+      map.easeTo({
+        center: back?.center ?? PANGASINAN_CENTER,
+        zoom: back?.zoom ?? 9.5,
+        bearing: back?.bearing ?? 0,
+        pitch: back?.pitch ?? 0,
+        duration: prefersReducedMotion() ? 0 : FOCUS_EASE_MS,
+        essential: true,
+      });
       return;
+    }
+
+    if (!overviewCameraRef.current) {
+      const c = map.getCenter();
+      overviewCameraRef.current = { center: [c.lng, c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
     }
 
     let isCurrent = true;
@@ -796,7 +791,7 @@ export function VectorMapCanvas({
               {
                 padding: { top: 60, bottom: 60, left: 60, right: 340 },
                 maxZoom: isProvince ? 10.5 : 15,
-                duration: 800,
+                duration: prefersReducedMotion() ? 0 : FOCUS_EASE_MS,
               }
             );
           }

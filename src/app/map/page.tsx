@@ -374,6 +374,15 @@ export default function QuestMapPage() {
   }, [user, router]);
 
   // Clear area filter and return to Pangasinan regional view
+  // Vector map: the side panel follows focus — opens when a place or destination is focused,
+  // hides when focus is cleared (owner feedback 2026-10-20: no separate panel button).
+  const hasFocus = Boolean(activeArea || selectedItem);
+  useEffect(() => {
+    if (!webglSupported) return;
+    setIsDesktopCollapsed(!hasFocus);
+    setMobileSnap(hasFocus ? 'half' : 'peek');
+  }, [hasFocus, webglSupported]);
+
   const handleClearActiveArea = useCallback(() => {
     setActiveArea(null);
     if (typeof window !== 'undefined') {
@@ -1231,6 +1240,7 @@ export default function QuestMapPage() {
             }
             isDesktopCollapsed={isDesktopCollapsed}
             onDesktopCollapseChange={setIsDesktopCollapsed}
+            showCollapsedPill={!webglSupported}
             mobileSnap={mobileSnap}
             onMobileSnapChange={setMobileSnap}
             // Floating tools (Top-right)
@@ -1251,14 +1261,14 @@ export default function QuestMapPage() {
                   title={pinPlacementActive ? 'Cancel pin placement' : 'Pin a destination on the map'}
                   aria-label={pinPlacementActive ? 'Cancel pin placement' : 'Pin a new destination on the map'}
                   aria-pressed={pinPlacementActive}
-                  className={`h-10 px-3 rounded-2xl border shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer ${
+                  className={`h-11 px-4 rounded-2xl border-2 shadow-lg inline-flex items-center justify-center gap-2 text-sm font-black transition active:scale-95 cursor-pointer ${
                     pinPlacementActive
                       ? 'bg-[#FFB703] border-amber-400 text-[#582F0E] animate-pulse'
-                      : 'bg-white/95 backdrop-blur-md border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white'
+                      : 'bg-[#2D6A4F] border-[#FFD166] text-white hover:bg-[#1B4332] ring-4 ring-[#FFD166]/30 hover:ring-[#FFD166]/50'
                   }`}
                 >
-                  <PlusCircle className="w-4 h-4 shrink-0" />
-                  <span className="hidden sm:inline">{pinPlacementActive ? 'Cancel' : 'Add spot'}</span>
+                  <PlusCircle className={`w-5 h-5 shrink-0 ${pinPlacementActive ? '' : 'text-[#FFD166]'}`} />
+                  <span>{pinPlacementActive ? 'Cancel' : 'Add spot'}</span>
                 </button>
 
                 <button

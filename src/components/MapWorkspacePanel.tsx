@@ -42,6 +42,8 @@ export interface MapWorkspacePanelProps {
   // Desktop collapse state
   isDesktopCollapsed: boolean;
   onDesktopCollapseChange: (collapsed: boolean) => void;
+  /** When false, a collapsed desktop panel renders nothing (no "Open" pill); the page opens it on focus. */
+  showCollapsedPill?: boolean;
   // Mobile snap state
   mobileSnap: MobileSnapState;
   onMobileSnapChange: (snap: MobileSnapState) => void;
@@ -64,6 +66,7 @@ export function MapWorkspacePanel({
   onTabChange,
   isDesktopCollapsed,
   onDesktopCollapseChange,
+  showCollapsedPill = true,
   mobileSnap,
   onMobileSnapChange,
   peekContent,
@@ -135,7 +138,7 @@ export function MapWorkspacePanel({
 
       {/* 2. DESKTOP WORKSPACE PANEL (lg & up) */}
       <div className="hidden lg:block pointer-events-none">
-        {isDesktopCollapsed ? (
+        {isDesktopCollapsed && !showCollapsedPill ? null : isDesktopCollapsed ? (
           /* Desktop Collapsed Floating Mini-Pill (below search overlay) */
           <div className="absolute top-[76px] left-4 z-20 flex items-center gap-2 pointer-events-auto animate-in fade-in slide-in-from-left-2 duration-200">
             <button
