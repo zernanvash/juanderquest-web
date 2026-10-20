@@ -52,7 +52,7 @@ export function VoucherRippingOverlay({
     }
   }, [isOpen]);
 
-  const handleTear = () => {
+  function handleTear() {
     if (tearStage !== 'pristine') return;
     setTearStage('tearing');
 
@@ -67,7 +67,7 @@ export function VoucherRippingOverlay({
         triggerCelebration({ type: 'poppers', playAudio: true });
       }, 100);
     }, 550);
-  };
+  }
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
