@@ -20,6 +20,7 @@ import { appRoutes } from '@/lib/routes';
 
 export interface VectorMapCanvasProps {
   selectedAreaId: string | null;
+  allSpots?: SpotModel[];
   onSelectArea: (areaId: string) => void;
   onSelectSpot: (spot: SpotModel) => void;
   onClearArea: () => void;
@@ -43,6 +44,7 @@ interface HoverCardState {
 
 export function VectorMapCanvas({
   selectedAreaId,
+  allSpots = [],
   onSelectArea,
   onSelectSpot,
   onClearArea,
@@ -58,6 +60,8 @@ export function VectorMapCanvas({
   const [activeAreaSpots, setActiveAreaSpots] = useState<SpotModel[]>([]);
   const activeAreaSpotsRef = useRef<SpotModel[]>([]);
   activeAreaSpotsRef.current = activeAreaSpots;
+  const allSpotsRef = useRef<SpotModel[]>(allSpots);
+  allSpotsRef.current = allSpots;
 
   // Selected area geometry for D7 click-away boundary check
   const activeAreaGeometryRef = useRef<any | null>(null);
@@ -252,7 +256,7 @@ export function VectorMapCanvas({
             paint: {
               'fill-color': '#000000',
               'fill-opacity': 0.35,
-            },
+            } as any,
           });
         }
 
@@ -265,7 +269,7 @@ export function VectorMapCanvas({
             paint: {
               'fill-color': '#2D6A4F',
               'fill-opacity': 0.14,
-            },
+            } as any,
           });
         }
 
@@ -279,23 +283,18 @@ export function VectorMapCanvas({
               'line-color': '#2D6A4F',
               'line-width': 2.5,
               'line-opacity': 0.9,
-            },
+            } as any,
           });
         }
 
-        // Layer: Clickable place symbols (name + spot count badge)
+        // Layer: Clickable place symbols (name without (N) count badge per D11)
         if (!map.getLayer('place-labels')) {
           map.addLayer({
             id: 'place-labels',
             type: 'symbol',
             source: 'admin-places',
             layout: {
-              'text-field': [
-                'case',
-                ['>', ['get', 'published_spot_count'], 0],
-                ['concat', ['get', 'name'], ' (', ['to-string', ['get', 'published_spot_count']], ')'],
-                ['get', 'name'],
-              ],
+              'text-field': ['get', 'name'],
               'text-font': ['Noto Sans Bold'],
               'text-size': [
                 'interpolate',
@@ -318,83 +317,35 @@ export function VectorMapCanvas({
           });
         }
 
-        // Add destination spots source for selected area (supports clustering D6)
+        // Add destination spots source for unclustered individual markers (D11: No numeric clusters)
         if (!map.getSource('area-spots')) {
           map.addSource('area-spots', {
             type: 'geojson',
             data: { type: 'FeatureCollection', features: [] },
-            cluster: true,
-            clusterMaxZoom: 11,
-            clusterRadius: 50,
           });
         }
 
-        // Clusters for macro / province zoom (zoom < 12)
-        if (!map.getLayer('area-spots-clusters')) {
-          map.addLayer({
-            id: 'area-spots-clusters',
-            type: 'circle',
-            source: 'area-spots',
-            filter: ['has', 'point_count'],
-            paint: {
-              'circle-color': [
-                'step',
-                ['coalesce', ['get', 'point_count'], 0],
-                '#2D6A4F',
-                10,
-                '#1B4332',
-                25,
-                '#0B271E',
-              ],
-              'circle-radius': [
-                'step',
-                ['coalesce', ['get', 'point_count'], 0],
-                16,
-                10,
-                20,
-                25,
-                24,
-              ],
-              'circle-stroke-width': 3,
-              'circle-stroke-color': '#FAF9F5',
-            },
-          });
-        }
-
-        if (!map.getLayer('area-spots-cluster-count')) {
-          map.addLayer({
-            id: 'area-spots-cluster-count',
-            type: 'symbol',
-            source: 'area-spots',
-            filter: ['has', 'point_count'],
-            layout: {
-              'text-field': ['to-string', ['coalesce', ['get', 'point_count_abbreviated'], ['get', 'point_count'], '']],
-              'text-font': ['Noto Sans Bold'],
-              'text-size': 12,
-            },
-            paint: {
-              'text-color': '#FAF9F5',
-            },
-          });
-        }
-
-        // Unclustered pins: Slimmer JDQ Pin icon with Destination Name pill beside it (D9)
+        // D11: Individual destination pins with name labels beside them.
+        // In overview: icon collision managed (icon-allow-overlap: false, icon-padding: 8).
+        // Inside focused area: all spots shown (icon-allow-overlap: true).
+        // Name labels are always collision-managed with halo pills (D9).
         if (!map.getLayer('area-spots-pins')) {
           map.addLayer({
             id: 'area-spots-pins',
             type: 'symbol',
             source: 'area-spots',
-            filter: ['!', ['has', 'point_count']],
             layout: {
               'icon-image': 'jdq-pin-slimmer',
               'icon-size': 1.0,
               'icon-anchor': 'bottom',
-              'icon-allow-overlap': true,
+              'icon-padding': 8,
+              'icon-allow-overlap': false,
               'text-field': ['coalesce', ['get', 'name'], ''],
               'text-font': ['Noto Sans Bold'],
               'text-size': 11,
               'text-anchor': 'left',
               'text-offset': [0.9, -1.1],
+              'text-padding': 6,
               'text-optional': true,
               'text-allow-overlap': false,
             },
@@ -406,21 +357,6 @@ export function VectorMapCanvas({
           });
         }
 
-        // Click cluster -> zoom in
-        map.on('click', 'area-spots-clusters', (e) => {
-          const features = map.queryRenderedFeatures(e.point, { layers: ['area-spots-clusters'] });
-          if (!features || !features[0]) return;
-          const clusterId = features[0].properties?.cluster_id;
-          const source = map.getSource('area-spots') as any;
-          if (source && source.getClusterExpansionZoom) {
-            source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
-              if (err) return;
-              const geom = features[0].geometry as any;
-              map.easeTo({ center: geom.coordinates, zoom: zoom + 0.5 });
-            });
-          }
-        });
-
         // Click on place name -> select area
         map.on('click', 'place-labels', (e) => {
           if (e.features && e.features[0]) {
@@ -431,17 +367,11 @@ export function VectorMapCanvas({
           }
         });
 
-        // Cursor style for places & clusters
+        // Cursor style for places & pins
         map.on('mouseenter', 'place-labels', () => {
           map.getCanvas().style.cursor = 'pointer';
         });
         map.on('mouseleave', 'place-labels', () => {
-          map.getCanvas().style.cursor = '';
-        });
-        map.on('mouseenter', 'area-spots-clusters', () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'area-spots-clusters', () => {
           map.getCanvas().style.cursor = '';
         });
 
@@ -496,9 +426,9 @@ export function VectorMapCanvas({
 
         // D7 Click-away & pin placement click handler
         map.on('click', (e: MapMouseEvent) => {
-          // If clicking an interactive layer (place label, pin, or cluster), handled by their specific handlers
+          // If clicking an interactive layer (place label, pin), handled by their specific handlers
           const features = map.queryRenderedFeatures(e.point, {
-            layers: ['place-labels', 'area-spots-pins', 'area-spots-clusters'].filter((l) => map.getLayer(l)),
+            layers: ['place-labels', 'area-spots-pins'].filter((l) => map.getLayer(l)),
           });
           if (features.length > 0) return;
 
@@ -524,7 +454,33 @@ export function VectorMapCanvas({
         // Mark loaded so effects run
         setMapLoaded(true);
 
-        // Initial places fetch
+        // Initial overview spots load if no area is selected
+        if (!selectedAreaIdRef.current && allSpotsRef.current?.length) {
+          const overviewSrc = map.getSource('area-spots') as GeoJSONSource | undefined;
+          if (overviewSrc) {
+            overviewSrc.setData({
+              type: 'FeatureCollection',
+              features: allSpotsRef.current.map((s) => ({
+                type: 'Feature',
+                geometry: {
+                  type: 'Point',
+                  coordinates: [s.gpsLng, s.gpsLat],
+                },
+                properties: {
+                  id: s.id,
+                  name: s.name || '',
+                  category: s.category || '',
+                  municipality: s.municipality || '',
+                  imageUrl: s.imageUrl || '',
+                  questId: s.questId || '',
+                  description: s.description || '',
+                  is_focused_area: false,
+                },
+              })),
+            });
+            setActiveAreaSpots(allSpotsRef.current);
+          }
+        }
         try {
           const bounds = map.getBounds();
           const zoom = Math.floor(map.getZoom());
@@ -657,15 +613,57 @@ export function VectorMapCanvas({
 
     if (!selectedAreaId) {
       activeAreaGeometryRef.current = null;
-      if (shapeSource) shapeSource.setData({ type: 'FeatureCollection', features: [] });
-      if (maskSource) maskSource.setData({ type: 'FeatureCollection', features: [] });
-      if (spotsSource) spotsSource.setData({ type: 'FeatureCollection', features: [] });
-      setActiveAreaSpots([]);
       if (typeof window !== 'undefined') {
         (window as any).__jdqAreaState = null;
       }
-      // Reset camera back to regional Pangasinan overview
-      map.flyTo({ center: PANGASINAN_CENTER, zoom: 9.5, duration: 900 });
+
+      // Smooth focus-out: fade out boundary fill/stroke and mask
+      if (map.getLayer('selected-area-fill')) {
+        map.setPaintProperty('selected-area-fill', 'fill-opacity', 0);
+      }
+      if (map.getLayer('selected-area-stroke')) {
+        map.setPaintProperty('selected-area-stroke', 'line-opacity', 0);
+      }
+      if (map.getLayer('selected-area-mask-fill')) {
+        map.setPaintProperty('selected-area-mask-fill', 'fill-opacity', 0);
+      }
+
+      // Clear shapes after fade transition (300ms)
+      setTimeout(() => {
+        if (!selectedAreaIdRef.current) {
+          if (shapeSource) shapeSource.setData({ type: 'FeatureCollection', features: [] });
+          if (maskSource) maskSource.setData({ type: 'FeatureCollection', features: [] });
+        }
+      }, 300);
+
+      // D11: In overview, feed allSpots with is_focused_area: false (individual unclustered markers with collision management)
+      const overviewSpots = allSpotsRef.current || [];
+      if (spotsSource) {
+        spotsSource.setData({
+          type: 'FeatureCollection',
+          features: overviewSpots.map((s) => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [s.gpsLng, s.gpsLat],
+            },
+            properties: {
+              id: s.id,
+              name: s.name || '',
+              category: s.category || '',
+              municipality: s.municipality || '',
+              imageUrl: s.imageUrl || '',
+              questId: s.questId || '',
+              description: s.description || '',
+              is_focused_area: false,
+            },
+          })),
+        });
+      }
+      setActiveAreaSpots(overviewSpots);
+
+      // D10: Smooth focus-out camera ease back to regional Pangasinan overview (~600-800ms)
+      map.easeTo({ center: PANGASINAN_CENTER, zoom: 9.5, duration: 800 });
       return;
     }
 
@@ -716,6 +714,17 @@ export function VectorMapCanvas({
           };
         }
 
+        // Restore opacity on fill, stroke, mask
+        if (map.getLayer('selected-area-fill')) {
+          map.setPaintProperty('selected-area-fill', 'fill-opacity', 0.14);
+        }
+        if (map.getLayer('selected-area-stroke')) {
+          map.setPaintProperty('selected-area-stroke', 'line-opacity', 0.9);
+        }
+        if (map.getLayer('selected-area-mask-fill')) {
+          map.setPaintProperty('selected-area-mask-fill', 'fill-opacity', 0.35);
+        }
+
         // Update shape layer
         if (shapeSource && shapeData) {
           shapeSource.setData(shapeData);
@@ -733,7 +742,7 @@ export function VectorMapCanvas({
           }
         }
 
-        // Update destination pins (supports clustering for province overview D6)
+        // Update destination pins (D11: is_focused_area: true shows all area markers without collision culling)
         if (spotsSource) {
           spotsSource.setData({
             type: 'FeatureCollection',
@@ -751,6 +760,7 @@ export function VectorMapCanvas({
                 imageUrl: s.imageUrl || '',
                 questId: s.questId || '',
                 description: s.description || '',
+                is_focused_area: true,
               },
             })),
           });

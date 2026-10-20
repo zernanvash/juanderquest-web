@@ -196,23 +196,21 @@ async function runBrowserCheck() {
     const areaState = window.__jdqAreaState;
     const res = await fetch('/api/v1/areas/pangasinan/shape');
     const shape = await res.json();
-    const clusterFeatures = map.queryRenderedFeatures({ layers: ['area-spots-clusters'] });
     const pinFeatures = map.queryRenderedFeatures({ layers: ['area-spots-pins'] });
     return {
       areaState,
       shapeHasBoundary: shape.properties?.has_boundary,
       isFallbackCircle: Boolean(shape.properties?.is_fallback_circle),
       geomType: shape.geometry?.type,
-      renderedClusters: clusterFeatures.length,
       renderedPins: pinFeatures.length,
     };
   });
-  console.log('[test] Province state (D6):', provinceState);
+  console.log('[test] Province state (D6 & D11):', provinceState);
   if (!provinceState || !provinceState.shapeHasBoundary || provinceState.isFallbackCircle) {
     throw new Error(`Assertion failed: Province returned fallback circle instead of real dissolved polygon! ${JSON.stringify(provinceState)}`);
   }
-  if (provinceState.renderedClusters === 0 && provinceState.renderedPins === 0) {
-    throw new Error('Assertion failed: Neither clusters nor pins rendered in province view!');
+  if (provinceState.renderedPins === 0) {
+    throw new Error('Assertion failed: No pins rendered in province view (D11 unclustered markers)!');
   }
 
   // Screenshot: Province selected with real outline and clusters (D6)

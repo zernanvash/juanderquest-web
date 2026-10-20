@@ -1146,6 +1146,7 @@ export default function QuestMapPage() {
             <div className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`}>
               <VectorMapCanvas
                 selectedAreaId={activeArea?.id || null}
+                allSpots={spots}
                 onSelectArea={(areaId) => {
                   const areaDef = resolveAreaByIdOrName(areaId) || {
                     id: areaId,
