@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import type { Map as MapLibreMap, GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -25,6 +25,8 @@ export interface VectorMapCanvasProps {
   onSelectSpot: (spot: SpotModel) => void;
   onClearArea: () => void;
   onAreaDetailLoaded?: (detail: AdminAreaDetailModel) => void;
+  /** Reports the focused area's destination ids and boundary (null when focus clears). */
+  onAreaContentLoaded?: (content: { spotIds: string[]; geometry: any } | null) => void;
   // Pin placement support
   pinPlacementActive?: boolean;
   onDropPin?: (pin: SpotPostingPin) => void;
@@ -45,7 +47,17 @@ interface HoverCardState {
   spot: SpotModel;
   x: number;
   y: number;
+  containerWidth: number;
   questCount?: number;
+}
+
+/** Keeps a ref pointing at the latest value without writing refs during render. */
+function useLatestRef<T>(value: T) {
+  const ref = useRef(value);
+  useLayoutEffect(() => {
+    ref.current = value;
+  });
+  return ref;
 }
 
 export function VectorMapCanvas({
@@ -55,6 +67,7 @@ export function VectorMapCanvas({
   onSelectSpot,
   onClearArea,
   onAreaDetailLoaded,
+  onAreaContentLoaded,
   pinPlacementActive = false,
   onDropPin,
   draftPin,
@@ -64,16 +77,12 @@ export function VectorMapCanvas({
   const mapRef = useRef<MapLibreMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [activeAreaSpots, setActiveAreaSpots] = useState<SpotModel[]>([]);
-  const activeAreaSpotsRef = useRef<SpotModel[]>([]);
-  activeAreaSpotsRef.current = activeAreaSpots;
-  const allSpotsRef = useRef<SpotModel[]>(allSpots);
-  allSpotsRef.current = allSpots;
+  const activeAreaSpotsRef = useLatestRef<SpotModel[]>(activeAreaSpots);
 
   // Selected area geometry for D7 click-away boundary check
   const activeAreaGeometryRef = useRef<any | null>(null);
   const overviewCameraRef = useRef<{ center: [number, number]; zoom: number; bearing: number; pitch: number } | null>(null);
-  const selectedAreaIdRef = useRef<string | null>(selectedAreaId);
-  selectedAreaIdRef.current = selectedAreaId;
+  const selectedAreaIdRef = useLatestRef<string | null>(selectedAreaId);
 
   // Hover card state for D8
   const [hoverCard, setHoverCard] = useState<HoverCardState | null>(null);
@@ -81,18 +90,13 @@ export function VectorMapCanvas({
   const [hoveredSpotId, setHoveredSpotId] = useState<string | null>(null);
 
   // Store callback handlers in refs so map initialization never tears down on parent re-renders
-  const onSelectAreaRef = useRef(onSelectArea);
-  onSelectAreaRef.current = onSelectArea;
-  const onSelectSpotRef = useRef(onSelectSpot);
-  onSelectSpotRef.current = onSelectSpot;
-  const onClearAreaRef = useRef(onClearArea);
-  onClearAreaRef.current = onClearArea;
-  const onAreaDetailLoadedRef = useRef(onAreaDetailLoaded);
-  onAreaDetailLoadedRef.current = onAreaDetailLoaded;
-  const pinPlacementActiveRef = useRef(pinPlacementActive);
-  pinPlacementActiveRef.current = pinPlacementActive;
-  const onDropPinRef = useRef(onDropPin);
-  onDropPinRef.current = onDropPin;
+  const onSelectAreaRef = useLatestRef(onSelectArea);
+  const onSelectSpotRef = useLatestRef(onSelectSpot);
+  const onClearAreaRef = useLatestRef(onClearArea);
+  const onAreaDetailLoadedRef = useLatestRef(onAreaDetailLoaded);
+  const onAreaContentLoadedRef = useLatestRef(onAreaContentLoaded);
+  const pinPlacementActiveRef = useLatestRef(pinPlacementActive);
+  const onDropPinRef = useLatestRef(onDropPin);
 
   const [loadingShape, setLoadingShape] = useState(false);
   const moveEndTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -407,6 +411,7 @@ export function VectorMapCanvas({
                   spot,
                   x: e.point.x,
                   y: e.point.y,
+                  containerWidth: map.getContainer().clientWidth,
                   questCount: spot.questId ? 1 : 0,
                 });
               }, 150); // ~150ms delay per D8
@@ -642,6 +647,7 @@ export function VectorMapCanvas({
       // Overview shows no destination markers (owner feedback 2026-10-20).
       if (spotsSource) spotsSource.setData({ type: 'FeatureCollection', features: [] });
       setActiveAreaSpots([]);
+      onAreaContentLoadedRef.current?.(null);
 
       // Smooth focus-out: ease back to where the traveler was before focusing.
       const back = overviewCameraRef.current;
@@ -695,6 +701,7 @@ export function VectorMapCanvas({
         }
 
         setActiveAreaSpots(spotsData.spots);
+        onAreaContentLoadedRef.current?.({ spotIds: spotsData.spots.map((sp) => sp.id), geometry: shapeData?.geometry ?? null });
 
         if (typeof window !== 'undefined') {
           (window as any).__jdqSelectArea = (areaId: string) => onSelectAreaRef.current(areaId);
@@ -789,7 +796,10 @@ export function VectorMapCanvas({
                 [maxX, maxY],
               ],
               {
-                padding: { top: 60, bottom: 60, left: 60, right: 340 },
+                padding:
+                  typeof window !== 'undefined' && window.innerWidth >= 1024
+                    ? { top: 90, bottom: 60, left: 460, right: 90 } // side panel docks on the left
+                    : { top: 90, bottom: Math.round((typeof window !== 'undefined' ? window.innerHeight : 800) * 0.45), left: 40, right: 40 },
                 maxZoom: isProvince ? 10.5 : 15,
                 duration: prefersReducedMotion() ? 0 : FOCUS_EASE_MS,
               }
@@ -866,7 +876,7 @@ export function VectorMapCanvas({
           className="absolute z-20 pointer-events-auto bg-[#FAF9F5] border border-[#E3DFD5] rounded-2xl shadow-xl p-3 w-64 max-w-[calc(100vw-32px)] text-[#2C221E] transition-opacity duration-150"
           style={{
             // Position carefully so card never covers its pin or leaves the viewport
-            left: Math.max(16, Math.min(hoverCard.x - 128, (containerRef.current?.clientWidth || 800) - 272)),
+            left: Math.max(16, Math.min(hoverCard.x - 128, (hoverCard.containerWidth || 800) - 272)),
             top: hoverCard.y > 220 ? hoverCard.y - 195 : hoverCard.y + 25,
           }}
           onMouseEnter={() => {

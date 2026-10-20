@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
+import { isPointInsideGeometry } from '@/lib/map-geometry';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer as LeafletTileLayer, Marker as LeafletMarker } from 'leaflet';
@@ -208,8 +209,14 @@ export default function QuestMapPage() {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
   const [mobileSnap, setMobileSnap] = useState<MobileSnapState>('peek');
   const [activeArea, setActiveArea] = useState<AreaDefinition | null>(null);
+  // Destinations inside the focused area (vector map): the side panel lists only these.
+  const [areaContent, setAreaContent] = useState<{ spotIds: string[]; geometry: any } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [webglSupported, setWebglSupported] = useState<boolean>(false);
+  const webglSupportedRef = useRef(false);
+  useEffect(() => {
+    webglSupportedRef.current = webglSupported;
+  }, [webglSupported]);
 
   useEffect(() => {
     setWebglSupported(isWebGLSupported());
@@ -298,8 +305,11 @@ export default function QuestMapPage() {
           const matchedArea = resolveAreaByIdOrName(urlArea);
           if (matchedArea) {
             setActiveArea(matchedArea);
-            setIsDesktopCollapsed(true);
-            setMobileSnap('peek');
+            if (!webglSupportedRef.current) {
+              // Leaflet fallback keeps the collapsed pill; the vector map opens the panel on focus.
+              setIsDesktopCollapsed(true);
+              setMobileSnap('peek');
+            }
           }
         } else if (isValidLatitude(urlLat) && isValidLongitude(urlLng) && urlName) {
           const osmArea: AreaDefinition = {
@@ -313,8 +323,11 @@ export default function QuestMapPage() {
             source: 'osm',
           };
           setActiveArea(osmArea);
-          setIsDesktopCollapsed(true);
-          setMobileSnap('peek');
+          if (!webglSupportedRef.current) {
+            // Leaflet fallback keeps the collapsed pill; the vector map opens the panel on focus.
+            setIsDesktopCollapsed(true);
+            setMobileSnap('peek');
+          }
         } else if (urlSpot) {
           const matchedSpot = loadedSpots.find((s) => s.id === urlSpot || s.slug === urlSpot);
           if (matchedSpot) {
@@ -1087,8 +1100,11 @@ export default function QuestMapPage() {
   function handleSelectArea(area: AreaDefinition) {
     setActiveArea((prev) => (prev?.id === area.id ? prev : area));
     setSelectedItem(null);
-    setIsDesktopCollapsed(true);
-    setMobileSnap('peek');
+    if (!webglSupportedRef.current) {
+      // Leaflet fallback keeps the collapsed pill; the vector map opens the panel on focus.
+      setIsDesktopCollapsed(true);
+      setMobileSnap('peek');
+    }
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       if (url.searchParams.get('area') !== area.id) {
@@ -1116,13 +1132,18 @@ export default function QuestMapPage() {
   // Accessible, non-map results list (same filter semantics as the pins).
   const visiblePlaces = useMemo(() => {
     const items: Array<{ type: 'quest' | 'spot'; data: QuestModel | SpotModel }> = [];
+    const inArea = activeArea && areaContent ? new Set(areaContent.spotIds) : null;
+    const questInArea = (q: QuestModel) =>
+      !inArea || !areaContent?.geometry || isPointInsideGeometry(q.gpsLng, q.gpsLat, areaContent.geometry);
     if (filterType === 'all' || filterType === 'quests' || filterType === 'saved') {
       quests
+        .filter((q) => questInArea(q))
         .filter((q) => filterType !== 'saved' || isSaved('quests', q.id))
         .forEach((q) => items.push({ type: 'quest', data: q }));
     }
     if (filterType === 'all' || filterType === 'spots' || filterType === 'saved') {
       spots
+        .filter((s) => !inArea || inArea.has(s.id))
         .filter((s) => filterType !== 'saved' || isSaved('spots', s.id))
         .forEach((s) => items.push({ type: 'spot', data: s }));
     }
@@ -1131,7 +1152,19 @@ export default function QuestMapPage() {
       const nameB = ('title' in b.data ? b.data.title : b.data.name).toLowerCase();
       return nameA.localeCompare(nameB);
     });
-  }, [quests, spots, filterType, isSaved]);
+  }, [quests, spots, filterType, isSaved, activeArea, areaContent]);
+
+  // Chip counts follow the focused area (vector map) like the list does.
+  const scopedCounts = useMemo(() => {
+    if (!activeArea || !areaContent) return { quests: quests.length, spots: spots.length };
+    const ids = new Set(areaContent.spotIds);
+    return {
+      spots: spots.filter((s) => ids.has(s.id)).length,
+      quests: areaContent.geometry
+        ? quests.filter((q) => isPointInsideGeometry(q.gpsLng, q.gpsLat, areaContent.geometry)).length
+        : quests.length,
+    };
+  }, [activeArea, areaContent, quests, spots]);
 
   return (
     <Navigation fullBleed>
@@ -1186,6 +1219,7 @@ export default function QuestMapPage() {
                     };
                   });
                 }}
+                onAreaContentLoaded={setAreaContent}
                 onSelectSpot={(spot) => handleSelectSpot(spot)}
                 onClearArea={handleClearActiveArea}
                 pinPlacementActive={pinPlacementActive}
@@ -1584,9 +1618,9 @@ export default function QuestMapPage() {
                   </span>
                   <div className="grid grid-cols-4 gap-1 bg-[#FAF9F5] p-1 rounded-xl border border-[#E3DFD5]">
                     {[
-                      { id: 'all', label: 'All', count: quests.length + spots.length },
-                      { id: 'quests', label: 'Quests', count: quests.length },
-                      { id: 'spots', label: 'Spots', count: spots.length },
+                      { id: 'all', label: 'All', count: scopedCounts.quests + scopedCounts.spots },
+                      { id: 'quests', label: 'Quests', count: scopedCounts.quests },
+                      { id: 'spots', label: 'Spots', count: scopedCounts.spots },
                       { id: 'saved', label: 'Saved', count: savedLibrary.spots.length + savedLibrary.quests.length },
                     ].map((f) => (
                       <button
