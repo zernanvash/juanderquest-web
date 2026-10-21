@@ -652,6 +652,13 @@ export default function ExplorePage() {
               </div>
             )}
           </div>
+
+          {/* Right column: reserved, intentionally empty (future sponsored slot). */}
+          <aside
+            aria-hidden="true"
+            data-testid="explore-side-slot"
+            className="hidden lg:block lg:order-2"
+          />
         </div>
       </div>
 
