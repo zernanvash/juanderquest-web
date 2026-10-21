@@ -7,7 +7,6 @@ import { useAuth, adminHandoffUrl } from '@/lib/auth';
 import {
   Compass,
   MapPin,
-  Route,
   Zap,
   ShoppingBag,
   Vote,
@@ -385,7 +384,6 @@ export const Navigation: React.FC<{
         { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
         { label: 'Explore Feed', href: '/explore', icon: Compass },
         { label: 'Map', href: '/map', icon: MapPin },
-        { label: 'The Trail', href: '/trail', icon: Route },
         { label: 'Eco-Quests', href: '/quests', icon: Zap, hasNews: true },
         { label: 'JuanChoice', href: '/choice', icon: Award, hasNews: true },
       ],
