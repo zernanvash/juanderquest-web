@@ -265,6 +265,10 @@ function QuestsContent() {
               )}
             </div>
             <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-[var(--color-brand-accent)] text-[var(--color-brand-brown)] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
+                <Award className="w-3.5 h-3.5" />
+                <span>{formatPoints(quest.rewardPoints, { signed: true })}</span>
+              </div>
               <button
                 type="button"
                 onClick={() => toggleSaved('quests', quest.id)}
@@ -275,12 +279,8 @@ function QuestsContent() {
                     : 'border-white/60 bg-white/90 text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)]'
                 }`}
               >
-                <Bookmark className={`h-3.5 w-3.5 ${isSaved('quests', quest.id) ? 'fill-current text-[#B45309]' : ''}`} />
+                <Bookmark className={`h-4 w-4 ${isSaved('quests', quest.id) ? 'fill-current text-[#B45309]' : ''}`} />
               </button>
-              <div className="flex items-center gap-1 bg-[var(--color-brand-accent)] text-[var(--color-brand-brown)] text-xs font-black px-2.5 py-1 rounded-md shadow-xs">
-                <Award className="w-3.5 h-3.5" />
-                <span>{formatPoints(quest.rewardPoints, { signed: true })}</span>
-              </div>
             </div>
           </div>
 
@@ -312,7 +312,7 @@ function QuestsContent() {
         <div className="mt-4 pt-3 border-t border-[var(--color-border-subtle)] flex items-center justify-between gap-2">
           <Link
             href={`/navigate?name=${encodeURIComponent(quest.locationName)}&lat=${quest.gpsLat}&lng=${quest.gpsLng}&address=${encodeURIComponent(quest.locationName)}`}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] transition py-1"
+            className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--color-text-muted)] hover:text-[var(--color-brand-primary)] transition py-1"
           >
             <MapPin className="w-3.5 h-3.5" />
             <span>Directions</span>
