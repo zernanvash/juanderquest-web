@@ -534,8 +534,8 @@ export default function LoginPage() {
         {/* Local dev wallet sign-in: dev builds only, and only when the API is in local wallet mode. */}
         <DevWalletLogin mode={mode} rememberMe={rememberMe} onFinish={finish} />
 
-        {/* Web3 EVM Option (Active in Production; Disabled in Local Dev by default) */}
-        {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_DISABLE_WALLET_LOGIN !== 'true' && (
+        {/* Web3 EVM Option */}
+        {process.env.NEXT_PUBLIC_DISABLE_WALLET_LOGIN !== 'true' && (
           <>
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
