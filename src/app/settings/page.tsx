@@ -39,9 +39,10 @@ import {
 } from '@/lib/badges';
 import { UserBadgeChip, UserNametag } from '@/components/Badges';
 import { ChainReadiness } from '@/components/ChainReadiness';
+import { OnChainBadges } from '@/components/OnChainBadges';
 
 export default function SettingsPage() {
-  const { user, wallet, logout } = useAuth();
+  const { user, wallet, logout, refreshProfile } = useAuth();
 
   // Profile data state
   const [profileData, setProfileData] = useState<AuthenticatedUserProfile | null>(null);
@@ -812,6 +813,8 @@ export default function SettingsPage() {
               </section>
 
               {/* Collapsible Advanced / Developer Telemetry */}
+              <OnChainBadges onWalletChanged={() => void refreshProfile()} />
+
               <details className="bg-white rounded-2xl border border-[var(--color-border-default)] p-5 sm:p-6 shadow-xs group">
                 <summary className="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-black text-[var(--color-brand-brown)]">
                   <span>Advanced &amp; Verification Telemetry</span>
