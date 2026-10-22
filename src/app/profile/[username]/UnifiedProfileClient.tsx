@@ -725,21 +725,22 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </>
                   )}
                 </div>
-
-                {/* Follow List Modal */}
-                {modalType && (
-                  <FollowListModal
-                    isOpen={Boolean(modalType)}
-                    onClose={() => setModalType(null)}
-                    userId={profile.id}
-                    userName={displayName}
-                    type={modalType}
-                    ownerView={false}
-                  />
-                )}
               </div>
-            );
-          })()}
+
+              {/* Follow List Modal */}
+              {modalType && (
+                <FollowListModal
+                  isOpen={Boolean(modalType)}
+                  onClose={() => setModalType(null)}
+                  userId={profile.id}
+                  userName={displayName}
+                  type={modalType}
+                  ownerView={false}
+                />
+              )}
+            </div>
+          );
+        })()}
 
           {/* ======================================================== */}
           {/* CASE 5: Own Profile — Exclusive Passport & Showcase (Widescreen) */}
@@ -1052,29 +1053,17 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
 
                       {/* Unique Destinations */}
                       <div className="theme-card p-4 text-center">
-                        <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
-                          <Compass className="w-4 h-4 text-blue-700" />
+                        <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Compass className="w-4 h-4 text-purple-700" />
                         </div>
-                        <div className="text-xl font-black text-blue-950">
-                          {user.completedQuests?.length ?? 0}
+                        <div className="text-xl font-black text-purple-950">
+                          {engagement?.impact.unique_destinations ?? approvedCategories.size}
                         </div>
                         <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                          Spots Visited
+                          Destinations
                         </div>
                       </div>
                     </div>
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
-                        <Compass className="w-4 h-4 text-purple-700" />
-                      </div>
-                      <div className="text-xl font-black text-purple-950">
-                        {engagement?.impact.unique_destinations ?? approvedCategories.size}
-                      </div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Destinations
-                      </div>
-                    </div>
-                  </div>
 
                   {/* SUBPAGE PANEL: Badges View */}
                   {activePanel === 'badges' && (
@@ -1388,21 +1377,22 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </>
                   )}
                 </div>
-
-                {/* Follow List Modal */}
-                {modalType && (
-                  <FollowListModal
-                    isOpen={Boolean(modalType)}
-                    onClose={() => setModalType(null)}
-                    userId={user.id}
-                    userName={displayName}
-                    type={modalType}
-                    ownerView={true}
-                  />
-                )}
               </div>
-            );
-          })()}
+
+              {/* Follow List Modal */}
+              {modalType && (
+                <FollowListModal
+                  isOpen={Boolean(modalType)}
+                  onClose={() => setModalType(null)}
+                  userId={user.id}
+                  userName={displayName}
+                  type={modalType}
+                  ownerView={true}
+                />
+              )}
+            </div>
+          );
+        })()}
 
           {/* ======================================================== */}
           {/* Badge Inspection & Nametag Customization Modal */}
