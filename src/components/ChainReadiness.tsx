@@ -72,7 +72,7 @@ export function ChainReadiness({ signedInSeedId }: { signedInSeedId?: string }) 
     <section className="theme-card p-5 space-y-3" aria-labelledby="jdq-chain-heading">
       <div>
         <h2 id="jdq-chain-heading" className="text-base font-black text-[var(--color-brand-brown)]">{JDQ_CHAIN.name} test network</h2>
-        <p className="text-xs text-[var(--color-text-muted)]">Test network — no real money. JuanDerQuest's test token and badge contracts live here; your points, votes and rewards in the app stay off-chain.</p>
+        <p className="text-xs text-[var(--color-text-muted)]">Test network — no real money. The JuanDerQuest test token and badge contracts live here; your points, votes and rewards in the app stay off-chain.</p>
       </div>
       {!mounted ? (
         <p role="status" className="text-sm">Checking browser wallet…</p>
