@@ -305,7 +305,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
           )}
 
           {/* ======================================================== */}
-          {/* CASE 4: Other Traveler — Public Passport Display (Widescreen) */}
+          {/* CASE 4: Other Traveler — Public Passport Display */}
           {/* ======================================================== */}
           {!authLoading && !isMine && !loadingPublic && publicResult?.kind === 'success' && (() => {
             const profile = publicResult.profile;
@@ -323,22 +323,24 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
             const scoutLevelProgress = Math.min(100, Math.round((repInLevel / 100) * 100));
 
             return (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Left Column: Sticky Traveler Identity Sidebar (4 cols) */}
-                <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
-                  {/* Expedition Cover & Identity Card */}
-                  <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
-                    <div className="relative h-32 sm:h-36 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
-                      <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
-                      <div className="absolute bottom-2.5 right-3 flex items-center gap-1.5 text-white/90 text-[10px] font-bold uppercase tracking-wider bg-black/35 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-                        <Compass className="h-3 w-3 text-[#FFB703]" />
-                        <span>Member since {joinedYear}</span>
-                      </div>
+              <div className="space-y-6">
+                {/* Facebook-style Top Cover & Header Card */}
+                <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
+                  {/* Cover Photo */}
+                  <div className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
+                    <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
+                    <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+                      <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
+                      <span>Member since {joinedYear}</span>
                     </div>
+                  </div>
 
-                    <div className="px-5 pb-5 sm:px-6 sm:pb-6">
-                      <div className="-mt-12 sm:-mt-14 flex items-end justify-between gap-3">
-                        <div className="relative flex h-24 w-24 sm:h-26 sm:w-26 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-2xl font-black text-[#582F0E] shadow-md ring-2 ring-[#2D6A4F]/20 overflow-hidden">
+                  {/* Header Details: Avatar overlapping cover, name, follow CTA */}
+                  <div className="px-5 pb-6 sm:px-8">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20">
+                      {/* Avatar + Main Identity Info */}
+                      <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-5">
+                        <div className="relative flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-3xl sm:text-4xl font-black text-[#582F0E] shadow-lg ring-2 ring-[#2D6A4F]/20 overflow-hidden bg-white">
                           {profile.avatar_url ? (
                             <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
                           ) : (
@@ -346,161 +348,194 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                           )}
                         </div>
 
-                        {/* Follow Button */}
-                        <div className="pb-1">
-                          <FollowButton
-                            targetUserId={profile.id}
-                            targetDisplayName={displayName}
-                          />
+                        <div className="space-y-1.5 pt-1 sm:pt-0 sm:pb-2">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2C221E] tracking-tight">
+                              {displayName}
+                            </h1>
+                            <UserBadgesRow userIdOrName={profile.id || displayName} size="md" />
+                          </div>
+
+                          <div className="flex items-center gap-2.5 flex-wrap text-xs sm:text-sm">
+                            {profile.handle && (
+                              <span className="font-bold text-[#2D6A4F]">@{profile.handle}</span>
+                            )}
+                            <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black uppercase text-[#2D6A4F]">
+                              Public Traveler
+                            </span>
+                            <span className="text-[#837560]">•</span>
+                            <button
+                              type="button"
+                              onClick={() => setModalType('followers')}
+                              className="font-bold text-stone-700 hover:text-[#2D6A4F] cursor-pointer"
+                            >
+                              <strong className="text-[#2D6A4F]">{profile.follower_count || 0}</strong> followers
+                            </button>
+                            <span className="text-[#837560]">•</span>
+                            <button
+                              type="button"
+                              onClick={() => setModalType('following')}
+                              className="font-bold text-stone-700 hover:text-[#2D6A4F] cursor-pointer"
+                            >
+                              <strong className="text-[#2D6A4F]">{profile.following_count || 0}</strong> following
+                            </button>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Name, Nametag Badges & Handle */}
-                      <div className="mt-3 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h1 className="truncate text-lg sm:text-xl font-black text-[#2C221E]">
-                            {displayName}
-                          </h1>
-                          <UserBadgesRow userIdOrName={profile.id || displayName} size="sm" />
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap text-xs">
-                          {profile.handle && (
-                            <span className="font-bold text-[#2D6A4F]">@{profile.handle}</span>
-                          )}
-                          <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.2 text-[9px] font-black uppercase text-[#2D6A4F]">
-                            Public Traveler
-                          </span>
-                        </div>
+                      {/* Header Actions */}
+                      <div className="flex items-center gap-2.5 self-start sm:self-end pb-1 sm:pb-2">
+                        <FollowButton
+                          targetUserId={profile.id}
+                          targetDisplayName={displayName}
+                        />
                       </div>
+                    </div>
 
-                      {/* Bio & Status Display */}
-                      <div className="mt-4 space-y-2 border-t border-[#F2EFE9] pt-3.5">
+                    {/* Bio & Status Bar */}
+                    <div className="mt-5 pt-4 border-t border-[#F2EFE9] flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs sm:text-sm">
+                      <div className="max-w-2xl space-y-1.5">
                         {profile.status_text && (
-                          <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5]/60 text-xs font-semibold text-[#582F0E] italic flex items-start gap-1.5">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-semibold text-[#582F0E] italic">
                             <span className="text-[#FFB703] font-serif text-sm leading-none">&ldquo;</span>
                             <span>{profile.status_text}</span>
                             <span className="text-[#FFB703] font-serif text-sm leading-none">&rdquo;</span>
                           </div>
                         )}
                         {profile.bio ? (
-                          <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                          <p className="text-[var(--color-text-secondary)] leading-relaxed">
                             {profile.bio}
                           </p>
                         ) : (
-                          <p className="text-xs text-[var(--color-text-muted)] italic">
+                          <p className="text-[var(--color-text-muted)] italic text-xs">
                             This traveler has not added a public bio yet.
                           </p>
                         )}
                       </div>
 
-                      {/* Level Progress Gauge */}
-                      <div className="mt-4 p-3 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] space-y-1.5">
+                      {/* Compact Level Gauge */}
+                      <div className="p-3 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] min-w-[220px] space-y-1.5 shrink-0">
                         <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="flex items-center gap-1.5 text-[#582F0E]">
+                          <span className="flex items-center gap-1 text-[#582F0E]">
                             <Award className="w-3.5 h-3.5 text-[#FFB703]" />
                             <span>Level {scoutLevel} Scout</span>
                           </span>
                           <span className="text-[11px] text-[#2D6A4F] font-black">
-                            {scoutRep} Rep ({scoutLevelProgress}%)
+                            {scoutRep} Rep
                           </span>
                         </div>
-                        <div className="w-full bg-[#E3DFD5]/70 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-[#E3DFD5]/70 h-1.5 rounded-full overflow-hidden">
                           <div
-                            className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-2 rounded-full transition-all duration-500"
+                            className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-1.5 rounded-full transition-all duration-500"
                             style={{ width: `${Math.max(6, scoutLevelProgress)}%` }}
                           />
                         </div>
                       </div>
-
-                      {/* Social Followers & Following Count Buttons */}
-                      <div className="mt-4 pt-3.5 border-t border-[#F2EFE9] grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setModalType('followers')}
-                          className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700 transition cursor-pointer"
-                        >
-                          <Users className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                          <span className="text-[#2D6A4F]">{profile.follower_count || 0}</span>
-                          <span className="text-[11px]">Followers</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setModalType('following')}
-                          className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700 transition cursor-pointer"
-                        >
-                          <UserCheck className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                          <span className="text-[#2D6A4F]">{profile.following_count || 0}</span>
-                          <span className="text-[11px]">Following</span>
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Explorer Credentials & Metadata Card */}
-                  <div className="theme-card p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#582F0E] uppercase tracking-wider">
-                      <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
-                      <span>Explorer Credentials</span>
-                    </div>
-                    <div className="divide-y divide-[#F2EFE9] text-xs">
-                      <div className="py-2 flex items-center justify-between">
-                        <span className="text-[#837560]">Base Region</span>
-                        <span className="font-bold text-[#2C221E]">Pangasinan, Region 1</span>
-                      </div>
-                      <div className="py-2 flex items-center justify-between">
-                        <span className="text-[#837560]">Verification Engine</span>
-                        <span className="font-bold text-[#2D6A4F] flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Haversine GPS (&le;100m)
-                        </span>
-                      </div>
-                      <div className="py-2 flex items-center justify-between">
-                        <span className="text-[#837560]">Explorer Status</span>
-                        <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">
-                          Active &amp; Verified
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column: Showcase, Badges & Journey (8 cols) */}
-                <div className="lg:col-span-8 space-y-6">
-                  {/* Top Metrics Ribbon */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
-                        <Sparkles className="w-4 h-4" />
-                      </div>
-                      <div className="text-xl font-black text-[#2D6A4F]">{scoutRep}</div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Scout Reputation</div>
                     </div>
 
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                    {/* Navigation tabs row (Facebook style) */}
+                    <div className="mt-4 pt-3 border-t border-[#F2EFE9] flex items-center gap-2 overflow-x-auto">
+                      <Link
+                        href={`/profile/${cleanParam}`}
+                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
+                          activePanel === 'overview'
+                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
+                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
+                        }`}
+                      >
+                        <Compass className="w-4 h-4" />
+                        <span>Overview</span>
+                      </Link>
+
+                      <Link
+                        href={`/profile/${cleanParam}?tab=badges`}
+                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
+                          activePanel === 'badges'
+                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
+                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
+                        }`}
+                      >
                         <Award className="w-4 h-4" />
-                      </div>
-                      <div className="text-xl font-black text-[#582F0E]">Lv. {scoutLevel}</div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Explorer Tier</div>
-                    </div>
-
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
-                        <Users className="w-4 h-4" />
-                      </div>
-                      <div className="text-xl font-black text-blue-900">{profile.follower_count || 0}</div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Traveler Friends</div>
-                    </div>
-
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
-                        <Compass className="w-4 h-4 text-purple-700" />
-                      </div>
-                      <div className="text-xl font-black text-purple-900">{sharedBadges?.length || 3}</div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Badges Earned</div>
+                        <span>Badges &amp; Achievements</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-200/60 text-stone-700">
+                          {SAMPLE_USER_BADGES.length}
+                        </span>
+                      </Link>
                     </div>
                   </div>
+                </section>
+
+                {/* Sub-body Content: Left Intro & Right Feed (Facebook style 4:8) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left Column: Intro & Credentials (4 cols) */}
+                  <div className="lg:col-span-4 space-y-5">
+                    {/* Intro / Credentials Card */}
+                    <div className="theme-card p-5 space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#582F0E] uppercase tracking-wider">
+                        <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
+                        <span>Intro &amp; Credentials</span>
+                      </div>
+                      <div className="divide-y divide-[#F2EFE9] text-xs">
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Base Region</span>
+                          <span className="font-bold text-[#2C221E]">Pangasinan, Region 1</span>
+                        </div>
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Verification Engine</span>
+                          <span className="font-bold text-[#2D6A4F] flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Haversine GPS (&le;100m)
+                          </span>
+                        </div>
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Explorer Status</span>
+                          <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">
+                            Active &amp; Verified
+                          </span>
+                        </div>
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Joined JuanDerQuest</span>
+                          <span className="font-bold text-[#2C221E]">{joinedYear}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Dynamic Feed / Subpage Panels (8 cols) */}
+                  <div className="lg:col-span-8 space-y-6">
+                    {/* Top Metrics Ribbon */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div className="text-xl font-black text-[#2D6A4F]">{scoutRep}</div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Scout Reputation</div>
+                      </div>
+
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Award className="w-4 h-4" />
+                        </div>
+                        <div className="text-xl font-black text-[#582F0E]">Lv. {scoutLevel}</div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Explorer Tier</div>
+                      </div>
+
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <div className="text-xl font-black text-blue-900">{profile.follower_count || 0}</div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Traveler Friends</div>
+                      </div>
+
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Compass className="w-4 h-4 text-purple-700" />
+                        </div>
+                        <div className="text-xl font-black text-purple-900">{sharedBadges?.length || 3}</div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Badges Earned</div>
+                      </div>
+                    </div>
 
                   {/* SUBPAGE PANEL: Badges View */}
                   {activePanel === 'badges' && (
@@ -732,23 +767,24 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
             );
 
             return (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Left Column: Sticky Identity Passport Sidebar (4 cols) */}
-                <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
-                  {/* Passport Cover Banner & Header Card */}
-                  <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
-                    <div className="relative h-32 sm:h-36 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
-                      <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
-                      <div className="absolute bottom-2.5 right-3 flex items-center gap-1.5 text-white/90 text-[10px] font-bold uppercase tracking-wider bg-black/35 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-                        <Compass className="h-3 w-3 text-[#FFB703]" />
-                        <span>Your Passport · Member {joinedYear}</span>
-                      </div>
+              <div className="space-y-6">
+                {/* Facebook-style Top Cover & Identity Card */}
+                <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
+                  {/* Cover Photo */}
+                  <div className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
+                    <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
+                    <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+                      <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
+                      <span>Your Passport · Member {joinedYear}</span>
                     </div>
+                  </div>
 
-                    <div className="px-5 pb-5 sm:px-6 sm:pb-6">
-                      <div className="-mt-12 sm:-mt-14 flex items-end justify-between gap-3">
-                        {/* Avatar */}
-                        <div className="relative flex h-24 w-24 sm:h-26 sm:w-26 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-2xl font-black text-[#582F0E] shadow-md ring-2 ring-[#2D6A4F]/20 overflow-hidden">
+                  {/* Header Details: Avatar overlapping cover, name, actions */}
+                  <div className="px-5 pb-6 sm:px-8">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20">
+                      {/* Avatar + Main Identity Info */}
+                      <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-5">
+                        <div className="relative flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-3xl sm:text-4xl font-black text-[#582F0E] shadow-lg ring-2 ring-[#2D6A4F]/20 overflow-hidden bg-white">
                           {user.avatarUrl ? (
                             <img src={user.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                           ) : (
@@ -756,66 +792,109 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                           )}
                         </div>
 
-                        {/* Edit in Settings Button */}
-                        <div className="pb-1">
-                          <Link
-                            href="/settings"
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)] text-xs font-extrabold text-[var(--color-brand-brown)] shadow-xs transition cursor-pointer hover:bg-[var(--color-bg-subtle)]"
-                          >
-                            <Settings className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                            <span>Edit Profile</span>
-                          </Link>
-                        </div>
-                      </div>
+                        <div className="space-y-1.5 pt-1 sm:pt-0 sm:pb-2">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2C221E] tracking-tight">
+                              {displayName}
+                            </h1>
+                            <UserBadgesRow isCurrentUser size="md" />
+                          </div>
 
-                      {/* Display Name + Nametag Badges Row */}
-                      <div className="mt-3 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h1 className="truncate text-lg sm:text-xl font-black text-[#2C221E]">
-                            {displayName}
-                          </h1>
-                          <UserBadgesRow isCurrentUser size="sm" />
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap text-xs">
-                          <span className="font-bold text-[var(--color-brand-primary)]">
-                            @{cleanHandleText}
-                          </span>
-                          {isAutoGuestHandle && (
-                            <Link
-                              href="/settings"
-                              className="text-[11px] font-bold text-[#B45309] hover:underline"
+                          <div className="flex items-center gap-2.5 flex-wrap text-xs sm:text-sm">
+                            <span className="font-bold text-[var(--color-brand-primary)]">
+                              @{cleanHandleText}
+                            </span>
+                            {isAutoGuestHandle && (
+                              <Link
+                                href="/settings"
+                                className="text-[11px] font-bold text-[#B45309] hover:underline"
+                              >
+                                Set your username →
+                              </Link>
+                            )}
+                            <span
+                              className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase border ${
+                                myProfile?.is_public
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : 'bg-stone-100 text-stone-600 border-stone-200'
+                              }`}
                             >
-                              Set your username →
-                            </Link>
-                          )}
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-0.2 text-[9px] font-black uppercase border ${
-                              myProfile?.is_public
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                : 'bg-stone-100 text-stone-600 border-stone-200'
-                            }`}
-                          >
-                            {myProfile?.is_public ? 'Public' : 'Private'}
-                          </span>
+                              {myProfile?.is_public ? 'Public' : 'Private'}
+                            </span>
+                            {myProfile && (
+                              <>
+                                <span className="text-[#837560]">•</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setModalType('followers')}
+                                  className="font-bold text-stone-700 hover:text-[var(--color-brand-primary)] cursor-pointer"
+                                >
+                                  <strong className="text-[var(--color-brand-primary)]">{myProfile.follower_count}</strong> followers
+                                </button>
+                                <span className="text-[#837560]">•</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setModalType('following')}
+                                  className="font-bold text-stone-700 hover:text-[var(--color-brand-primary)] cursor-pointer"
+                                >
+                                  <strong className="text-[var(--color-brand-primary)]">{myProfile.following_count}</strong> following
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Bio & Status Bubble */}
-                      <div className="mt-4 space-y-2 border-t border-[#F2EFE9] pt-3.5">
+                      {/* Header Actions */}
+                      <div className="flex items-center gap-2.5 self-start sm:self-end pb-1 sm:pb-2">
+                        <Link
+                          href="/settings"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)] text-xs font-extrabold text-[var(--color-brand-brown)] shadow-xs transition cursor-pointer hover:bg-[var(--color-bg-subtle)]"
+                        >
+                          <Settings className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
+                          <span>Edit Profile</span>
+                        </Link>
+
+                        {adminDashboardUrl && (
+                          <a
+                            href={adminDashboardUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs font-bold text-amber-900 transition"
+                          >
+                            <span>Admin</span>
+                            <span className="text-[10px]">↗</span>
+                          </a>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => void logout()}
+                          className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-stone-100 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-transparent text-xs font-bold text-stone-700 transition cursor-pointer"
+                          title="Sign Out"
+                        >
+                          <LogOut className="w-3.5 h-3.5 text-red-600" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bio & Status Bar */}
+                    <div className="mt-5 pt-4 border-t border-[#F2EFE9] flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs sm:text-sm">
+                      <div className="max-w-2xl space-y-1.5">
                         {myProfile?.status_text && (
-                          <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5]/60 text-xs font-semibold text-[#582F0E] italic flex items-start gap-1.5">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5] text-xs font-semibold text-[#582F0E] italic">
                             <span className="text-[#FFB703] font-serif text-sm leading-none">&ldquo;</span>
                             <span>{myProfile.status_text}</span>
                             <span className="text-[#FFB703] font-serif text-sm leading-none">&rdquo;</span>
                           </div>
                         )}
                         {myProfile?.bio ? (
-                          <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                          <p className="text-[var(--color-text-secondary)] leading-relaxed">
                             {myProfile.bio}
                           </p>
                         ) : (
-                          <p className="text-xs text-[var(--color-text-muted)] italic">
+                          <p className="text-[var(--color-text-muted)] italic text-xs">
                             No public bio set. Go to{' '}
                             <Link href="/settings" className="font-bold text-[var(--color-brand-primary)] underline">
                               Settings
@@ -825,129 +904,165 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                         )}
                       </div>
 
-                      {/* Visual Level XP Bar */}
-                      <div className="mt-4 p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] space-y-2">
+                      {/* Compact Level Gauge */}
+                      <div className="p-3 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] min-w-[220px] space-y-1.5 shrink-0">
                         <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="flex items-center gap-1.5 text-[#582F0E]">
+                          <span className="flex items-center gap-1 text-[#582F0E]">
                             <Award className="w-3.5 h-3.5 text-[#FFB703]" />
                             <span>Level {currentLevel} Explorer</span>
                           </span>
                           <span className="text-[11px] text-[#2D6A4F] font-black">
-                            {formatXp(currentXp)} ({nextLevelProgress}% to Lv. {currentLevel + 1})
+                            {formatXp(currentXp)}
                           </span>
                         </div>
-                        <div className="w-full bg-[#E3DFD5]/70 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-[#E3DFD5]/70 h-1.5 rounded-full overflow-hidden">
                           <div
-                            className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-2 rounded-full transition-all duration-500"
+                            className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-1.5 rounded-full transition-all duration-500"
                             style={{ width: `${Math.max(6, nextLevelProgress)}%` }}
                           />
                         </div>
-                        <p className="text-[10px] text-[#837560]">
-                          Earn XP by verifying destination visits and completing Eco-Quests.
-                        </p>
-                      </div>
-
-                      {/* Social Followers & Following */}
-                      {myProfile && (
-                        <div className="mt-4 pt-3.5 border-t border-[#F2EFE9] grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setModalType('followers')}
-                            className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700 transition cursor-pointer"
-                          >
-                            <Users className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                            <span className="text-[var(--color-brand-primary)]">{myProfile.follower_count}</span>
-                            <span className="text-[11px]">Followers</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setModalType('following')}
-                            className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700 transition cursor-pointer"
-                          >
-                            <UserCheck className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                            <span className="text-[var(--color-brand-primary)]">{myProfile.following_count}</span>
-                            <span className="text-[11px]">Following</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Quick Settings & Sign Out Row */}
-                      <div className="mt-4 pt-3.5 border-t border-[#F2EFE9] flex items-center justify-between gap-2">
-                        <Link
-                          href="/settings"
-                          className="text-xs font-bold text-[var(--color-brand-brown)] hover:text-[var(--color-brand-primary)] flex items-center gap-1.5 transition"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                          <span>Account Settings</span>
-                        </Link>
-                        {adminDashboardUrl && (
-                          <a
-                            href={adminDashboardUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-bold text-amber-800 hover:underline"
-                          >
-                            Admin ↗
-                          </a>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => void logout()}
-                          className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition cursor-pointer"
-                        >
-                          <LogOut className="w-3.5 h-3.5" />
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-
-                {/* Right Column: Passport Showcase, Badges & Activity (8 cols) */}
-                <div className="lg:col-span-8 space-y-6">
-                  {/* Top 4 Metrics Ribbon: Points · XP · Streak · Destinations */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                    {/* Points Balance */}
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
-                        <Wallet className="w-4 h-4" />
-                      </div>
-                      <div className="text-xl font-black text-[#2D6A4F]">
-                        {wallet ? formatPoints(wallet.balanceMjdq) : formatPoints(0)}
-                      </div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        {COPY.points.balanceLabel}
                       </div>
                     </div>
 
-                    {/* XP */}
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                    {/* Navigation tabs row (Facebook style) */}
+                    <div className="mt-4 pt-3 border-t border-[#F2EFE9] flex items-center gap-2 overflow-x-auto">
+                      <Link
+                        href={`/profile/${cleanParam}`}
+                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
+                          activePanel === 'overview'
+                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
+                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
+                        }`}
+                      >
+                        <Compass className="w-4 h-4" />
+                        <span>Overview</span>
+                      </Link>
+
+                      <Link
+                        href={`/profile/${cleanParam}?tab=badges`}
+                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
+                          activePanel === 'badges'
+                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
+                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
+                        }`}
+                      >
                         <Award className="w-4 h-4" />
+                        <span>Badges &amp; Achievements</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-200/60 text-stone-700">
+                          {SAMPLE_USER_BADGES.length}
+                        </span>
+                      </Link>
+
+                      <Link
+                        href="/history"
+                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-[#837560] hover:text-[#2C221E] hover:bg-stone-50 transition flex items-center gap-1.5 shrink-0"
+                      >
+                        <History className="w-4 h-4" />
+                        <span>Submissions &amp; GPS Proof</span>
+                      </Link>
+
+                      <Link
+                        href="/settings"
+                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-[#837560] hover:text-[#2C221E] hover:bg-stone-50 transition flex items-center gap-1.5 shrink-0 ml-auto"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Settings</span>
+                      </Link>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Sub-body Content: Left Intro & Right Feed (Facebook style 4:8) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left Column: Intro & Quick Info (4 cols) */}
+                  <div className="lg:col-span-4 space-y-5">
+                    {/* Intro / Credentials Card */}
+                    <div className="theme-card p-5 space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#582F0E] uppercase tracking-wider">
+                        <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
+                        <span>Intro &amp; Passport</span>
                       </div>
-                      <div className="text-xl font-black text-[#582F0E]">
-                        {formatXp(currentXp)}
-                      </div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        {COPY.xp.unit} · Lv. {currentLevel}
+                      <div className="divide-y divide-[#F2EFE9] text-xs">
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Base Region</span>
+                          <span className="font-bold text-[#2C221E]">Pangasinan, Region 1</span>
+                        </div>
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Verification Engine</span>
+                          <span className="font-bold text-[#2D6A4F] flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Haversine GPS (&le;100m)
+                          </span>
+                        </div>
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Profile Visibility</span>
+                          <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${myProfile?.is_public ? 'text-emerald-800 bg-emerald-50' : 'text-stone-700 bg-stone-100'}`}>
+                            {myProfile?.is_public ? 'Public to Travelers' : 'Private'}
+                          </span>
+                        </div>
+                        <div className="py-2.5 flex items-center justify-between">
+                          <span className="text-[#837560]">Joined JuanDerQuest</span>
+                          <span className="font-bold text-[#2C221E]">{joinedYear}</span>
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Streak */}
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
-                        <Flame className="w-4 h-4 text-orange-600" />
+                  {/* Right Column: Passport Showcase, Badges & Activity (8 cols) */}
+                  <div className="lg:col-span-8 space-y-6">
+                    {/* Top 4 Metrics Ribbon: Points · XP · Streak · Destinations */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                      {/* Points Balance */}
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Wallet className="w-4 h-4" />
+                        </div>
+                        <div className="text-xl font-black text-[#2D6A4F]">
+                          {wallet ? formatPoints(wallet.balanceMjdq) : formatPoints(0)}
+                        </div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                          {COPY.points.balanceLabel}
+                        </div>
                       </div>
-                      <div className="text-xl font-black text-orange-950">
-                        {engagement?.streak.current ?? 0} Days
+
+                      {/* XP */}
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Award className="w-4 h-4" />
+                        </div>
+                        <div className="text-xl font-black text-[#582F0E]">
+                          {formatXp(currentXp)}
+                        </div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                          {COPY.xp.unit} · Lv. {currentLevel}
+                        </div>
                       </div>
-                      <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Streak
+
+                      {/* Streak */}
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Flame className="w-4 h-4 text-orange-600" />
+                        </div>
+                        <div className="text-xl font-black text-orange-950">
+                          {engagement?.streak.current ?? 0} Days
+                        </div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                          Streak
+                        </div>
+                      </div>
+
+                      {/* Unique Destinations */}
+                      <div className="theme-card p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                          <Compass className="w-4 h-4 text-blue-700" />
+                        </div>
+                        <div className="text-xl font-black text-blue-950">
+                          {user.completedQuests?.length ?? 0}
+                        </div>
+                        <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                          Spots Visited
+                        </div>
                       </div>
                     </div>
-
-                    {/* Unique Destinations */}
                     <div className="theme-card p-4 text-center">
                       <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
                         <Compass className="w-4 h-4 text-purple-700" />
