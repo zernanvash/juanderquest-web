@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, adminHandoffUrl } from '@/lib/auth';
 import { api, isUnauthorizedError, normalizeSubmission, type SubmissionModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
@@ -43,6 +43,7 @@ import {
   ExternalLink,
   Check,
   X,
+  ArrowLeft,
   Flame,
   Crown,
   ChevronRight,
@@ -68,8 +69,24 @@ interface UnifiedProfileClientProps {
 
 export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, wallet, token, logout, isLoading: authLoading } = useAuth();
   const adminDashboardUrl = user?.role === 'admin' ? adminHandoffUrl() : null;
+
+  // Active panel tab ('overview' | 'badges' | 'history' | 'journey')
+  const rawTabParam = (
+    searchParams.get('tab') ||
+    searchParams.get('panel') ||
+    searchParams.get('view') ||
+    (searchParams.has('badges') ? 'badges' : '') ||
+    (searchParams.has('history') ? 'history' : '') ||
+    (searchParams.has('journey') ? 'journey' : '') ||
+    'overview'
+  ).toLowerCase();
+
+  const activePanel = ['badges', 'history', 'journey'].includes(rawTabParam)
+    ? (rawTabParam as 'badges' | 'history' | 'journey')
+    : 'overview';
 
   // Normalize query param
   const cleanParam = decodeURIComponent(username).trim().toLowerCase().replace(/^@/, '');
@@ -485,132 +502,193 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
                   </div>
 
-                  {/* Interactive Badges Showcase */}
-                  <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
-                          <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
-                            {COPY.badge.titlePlural}
-                          </h2>
+                  {/* SUBPAGE PANEL: Badges View */}
+                  {activePanel === 'badges' && (
+                    <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/profile/${cleanParam}`}
+                              className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 transition"
+                              title="Back to profile overview"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                            </Link>
+                            <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
+                            <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
+                              All Badges &amp; Achievements
+                            </h2>
+                          </div>
+                          <p className="text-xs text-[var(--color-text-muted)] mt-1 ml-8">
+                            Verified destination achievements and Eco-Quest milestones. Click any badge to inspect requirements.
+                          </p>
                         </div>
-                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          Verified destination achievements and Eco-Quest milestones. Click any badge to inspect.
-                        </p>
+
+                        {/* Filter tabs */}
+                        <div className="flex items-center gap-1 p-1 bg-[#FAF9F5] border border-[#E3DFD5] rounded-xl self-start sm:self-center">
+                          {(['all', 'nft', 'achievement', 'civic'] as const).map((tab) => (
+                            <button
+                              key={tab}
+                              type="button"
+                              onClick={() => setBadgeFilterTab(tab)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition capitalize cursor-pointer ${
+                                badgeFilterTab === tab
+                                  ? 'bg-[var(--color-brand-primary)] text-white shadow-2xs'
+                                  : 'text-[#837560] hover:text-[#2C221E]'
+                              }`}
+                            >
+                              {tab === 'all' ? 'All' : tab === 'nft' ? 'Featured' : tab === 'civic' ? 'Civic' : 'Eco-Quests'}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
-                      {/* Filter tabs */}
-                      <div className="flex items-center gap-1 p-1 bg-[#FAF9F5] border border-[#E3DFD5] rounded-xl self-start sm:self-center">
-                        {(['all', 'nft', 'achievement', 'civic'] as const).map((tab) => (
-                          <button
-                            key={tab}
-                            type="button"
-                            onClick={() => setBadgeFilterTab(tab)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition capitalize cursor-pointer ${
-                              badgeFilterTab === tab
-                                ? 'bg-[var(--color-brand-primary)] text-white shadow-2xs'
-                                : 'text-[#837560] hover:text-[#2C221E]'
-                            }`}
+                      {/* Full Badges Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                        {filteredBadges.map((badge) => (
+                          <div
+                            key={badge.id}
+                            onClick={() => setSelectedBadgeModal(badge)}
+                            className="p-4 rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F] bg-white hover:bg-[#FAF9F5]/70 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 relative overflow-hidden group"
                           >
-                            {tab === 'all' ? 'All' : tab === 'nft' ? 'Featured' : tab === 'civic' ? 'Civic' : 'Eco-Quests'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Badges Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
-                      {filteredBadges.map((badge) => (
-                        <div
-                          key={badge.id}
-                          onClick={() => setSelectedBadgeModal(badge)}
-                          className="p-4 rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F] bg-white hover:bg-[#FAF9F5]/70 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 relative overflow-hidden group"
-                        >
-                          {badge.isNft && (
-                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[badge-glint_2s_ease-in-out_infinite] pointer-events-none" />
-                          )}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs`}>
-                              <span>{badge.icon}</span>
+                            {badge.isNft && (
+                              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[badge-glint_2s_ease-in-out_infinite] pointer-events-none" />
+                            )}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs`}>
+                                <span>{badge.icon}</span>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                  badge.rarity === 'legendary'
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                    : badge.rarity === 'epic'
+                                    ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                                    : badge.rarity === 'rare'
+                                    ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                                    : 'bg-stone-100 text-stone-700 border border-stone-200'
+                                }`}>
+                                  {badge.rarity}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                badge.rarity === 'legendary'
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                  : badge.rarity === 'epic'
-                                  ? 'bg-purple-100 text-purple-900 border border-purple-300'
-                                  : badge.rarity === 'rare'
-                                  ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                                  : 'bg-stone-100 text-stone-700 border border-stone-200'
-                              }`}>
-                                {badge.rarity}
+
+                            <div className="mt-3">
+                              <h4 className="text-xs sm:text-sm font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
+                                {badge.name}
+                              </h4>
+                              <p className="text-[11px] text-[#837560] line-clamp-2 mt-1 leading-relaxed">
+                                {badge.description}
+                              </p>
+                            </div>
+
+                            <div className="mt-3 pt-2.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] font-bold text-[#2D6A4F]">
+                              <span>{badge.network || 'Verified'}</span>
+                              <span className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                                Inspect <ChevronRight className="w-3 h-3" />
                               </span>
                             </div>
                           </div>
-
-                          <div className="mt-3">
-                            <h4 className="text-xs sm:text-sm font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
-                              {badge.name}
-                            </h4>
-                            <p className="text-[11px] text-[#837560] line-clamp-2 mt-1 leading-relaxed">
-                              {badge.description}
-                            </p>
-                          </div>
-
-                          <div className="mt-3 pt-2.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] font-bold text-[#2D6A4F]">
-                            <span>{badge.network || 'Verified'}</span>
-                            <span className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                              Inspect <ChevronRight className="w-3 h-3" />
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  {/* Public Verified Badges (From Social API) */}
-                  <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs">
-                    <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-default)]">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-[var(--color-brand-primary)]" />
-                        <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
-                          Verified Eco-Quest Accomplishments
-                        </h2>
-                      </div>
-                      <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">
-                        Check-in History
-                      </span>
-                    </div>
-
-                    {loadingBadges ? (
-                      <div className="py-6 flex items-center justify-center text-xs text-stone-400">
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        <span>Checking verified achievements...</span>
-                      </div>
-                    ) : sharedBadges && sharedBadges.length > 0 ? (
-                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {sharedBadges.map((b) => (
-                          <div key={b.id} className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-200 flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                              <Sparkles className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-xs font-black text-emerald-950 truncate">{b.name}</div>
-                              <div className="text-[10px] text-emerald-700 capitalize">{b.category} Eco-Quest</div>
-                            </div>
-                          </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="py-6 text-center text-stone-400">
-                        <Lock className="w-6 h-6 mx-auto mb-1 text-stone-300" />
-                        <p className="text-xs font-semibold">
-                          This traveler has chosen to keep their achievements private.
-                        </p>
-                      </div>
-                    )}
-                  </section>
+                    </section>
+                  )}
+
+                  {/* OVERVIEW MODE: Compact Badges Card + Activity + Journey */}
+                  {activePanel === 'overview' && (
+                    <>
+                      {/* Compact Badges Teaser Card */}
+                      <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-6 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-default)]">
+                          <div className="flex items-center gap-2">
+                            <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
+                            <div>
+                              <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
+                                {COPY.badge.titlePlural}
+                              </h2>
+                              <p className="text-[11px] text-[var(--color-text-muted)]">
+                                {sharedBadges?.length || 3} verified badges collected
+                              </p>
+                            </div>
+                          </div>
+                          <Link
+                            href={`/profile/${cleanParam}?tab=badges`}
+                            className="text-xs font-bold text-[var(--color-brand-primary)] hover:underline flex items-center gap-1 group"
+                          >
+                            <span>View All Badges ({SAMPLE_USER_BADGES.length})</span>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          </Link>
+                        </div>
+
+                        {/* Top 3-4 Badges Compact Preview */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {SAMPLE_USER_BADGES.slice(0, 3).map((badge) => (
+                            <div
+                              key={badge.id}
+                              onClick={() => setSelectedBadgeModal(badge)}
+                              className="p-3 rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F] bg-white hover:bg-[#FAF9F5]/80 transition cursor-pointer flex items-center gap-2.5 group"
+                            >
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs`}>
+                                <span>{badge.icon}</span>
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
+                                  {badge.name}
+                                </h4>
+                                <span className="text-[10px] text-[#837560] capitalize font-medium">
+                                  {badge.rarity}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      {/* Public Verified Badges (From Social API) */}
+                      <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-6 shadow-xs">
+                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-default)]">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-[var(--color-brand-primary)]" />
+                            <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
+                              Verified Eco-Quest Accomplishments
+                            </h2>
+                          </div>
+                          <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">
+                            Check-in History
+                          </span>
+                        </div>
+
+                        {loadingBadges ? (
+                          <div className="py-6 flex items-center justify-center text-xs text-stone-400">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            <span>Checking verified achievements...</span>
+                          </div>
+                        ) : sharedBadges && sharedBadges.length > 0 ? (
+                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {sharedBadges.map((b) => (
+                              <div key={b.id} className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-200 flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                                  <Sparkles className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-black text-emerald-950 truncate">{b.name}</div>
+                                  <div className="text-[10px] text-emerald-700 capitalize">{b.category} Eco-Quest</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="py-6 text-center text-stone-400">
+                            <Lock className="w-6 h-6 mx-auto mb-1 text-stone-300" />
+                            <p className="text-xs font-semibold">
+                              This traveler has chosen to keep their achievements private.
+                            </p>
+                          </div>
+                        )}
+                      </section>
+                    </>
+                  )}
                 </div>
 
                 {/* Follow List Modal */}
@@ -883,239 +961,317 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
                   </div>
 
-                  {/* Interactive Badges Showcase (Earned vs Locked) */}
-                  <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
-                          <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
-                            {COPY.badge.titlePlural}
-                          </h2>
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200">
-                            Earned ({earnedBadgeSet.size}) · Locked ({SAMPLE_USER_BADGES.length - earnedBadgeSet.size})
-                          </span>
-                        </div>
-                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          {earnedBadgeSet.size === 0
-                            ? 'Complete your first Eco-Quest or destination check-in to unlock your first badge.'
-                            : 'Tap any badge to inspect achievement requirements and pin up to 3 badges to your nametag.'}
-                        </p>
-                      </div>
-
-                      {/* Filter tabs */}
-                      <div className="flex items-center gap-1 p-1 bg-[#FAF9F5] border border-[#E3DFD5] rounded-xl self-start sm:self-center">
-                        {(['all', 'nft', 'achievement', 'civic'] as const).map((tab) => (
-                          <button
-                            key={tab}
-                            type="button"
-                            onClick={() => setBadgeFilterTab(tab)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition capitalize cursor-pointer ${
-                              badgeFilterTab === tab
-                                ? 'bg-[var(--color-brand-primary)] text-white shadow-2xs'
-                                : 'text-[#837560] hover:text-[#2C221E]'
-                            }`}
-                          >
-                            {tab === 'all' ? 'All' : tab === 'nft' ? 'Featured' : tab === 'civic' ? 'Civic' : 'Eco-Quests'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Badges Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
-                      {filteredBadges.map((badge) => {
-                        const isPinned = activeBadgeIds.includes(badge.id);
-                        const isUnlocked = earnedBadgeSet.has(badge.id);
-                        return (
-                          <div
-                            key={badge.id}
-                            onClick={() => setSelectedBadgeModal(badge)}
-                            className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 relative overflow-hidden group ${
-                              isPinned
-                                ? 'bg-amber-50/40 border-amber-300 ring-1 ring-amber-400/30'
-                                : isUnlocked
-                                ? 'bg-white border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-[#FAF9F5]/70'
-                                : 'bg-stone-50/75 border-[#E3DFD5] opacity-80 hover:opacity-100'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs ${!isUnlocked ? 'grayscale' : ''}`}>
-                                <span>{badge.icon}</span>
-                              </div>
-                              <div className="flex flex-col items-end gap-1">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                  badge.rarity === 'legendary'
-                                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                    : badge.rarity === 'epic'
-                                    ? 'bg-purple-100 text-purple-900 border border-purple-300'
-                                    : badge.rarity === 'rare'
-                                    ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                                    : 'bg-stone-100 text-stone-700 border border-stone-200'
-                                }`}>
-                                  {badge.rarity}
-                                </span>
-                                {!isUnlocked && (
-                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-stone-500">
-                                    <Lock className="w-2.5 h-2.5" /> Locked
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="mt-3">
-                              <h4 className="text-xs sm:text-sm font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
-                                {badge.name}
-                              </h4>
-                              <p className="text-[11px] text-[#837560] line-clamp-2 mt-1 leading-relaxed">
-                                {isUnlocked ? badge.description : badge.howToEarn || badge.description}
-                              </p>
-                            </div>
-
-                            <div className="mt-3 pt-2.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] font-bold">
-                              {isPinned ? (
-                                <span className="text-amber-800 flex items-center gap-1 font-extrabold">
-                                  <Check className="w-3 h-3 text-emerald-600" /> Active on Nametag
-                                </span>
-                              ) : (
-                                <span className="text-[#837560]">
-                                  {isUnlocked ? 'Tap to pin' : 'How to unlock'}
-                                </span>
-                              )}
-                              <span className="text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                                Details <ChevronRight className="w-3 h-3" />
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-
-                  {/* Community Journey & Active Challenges */}
-                  {engagement && (
-                    <section className="theme-card p-6 space-y-4">
-                      <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-subtle)]">
+                  {/* SUBPAGE PANEL: Badges View */}
+                  {activePanel === 'badges' && (
+                    <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
                         <div>
-                          <h2 className="text-base font-black text-[var(--color-brand-brown)]">
-                            Your Community Journey
-                          </h2>
-                          <p className="text-xs text-[var(--color-text-muted)]">
-                            Participation status from finalized voting rounds and verified GPS visits.
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/profile/${cleanParam}`}
+                              className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 transition"
+                              title="Back to profile overview"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                            </Link>
+                            <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
+                            <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
+                              All Badges &amp; Achievements
+                            </h2>
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200">
+                              Earned ({earnedBadgeSet.size}) · Locked ({SAMPLE_USER_BADGES.length - earnedBadgeSet.size})
+                            </span>
+                          </div>
+                          <p className="text-xs text-[var(--color-text-muted)] mt-1 ml-8">
+                            {earnedBadgeSet.size === 0
+                              ? 'Complete your first Eco-Quest or destination check-in to unlock your first badge.'
+                              : 'Tap any badge to inspect achievement requirements and pin up to 3 badges to your nametag.'}
                           </p>
                         </div>
-                        <span className="text-[10px] font-bold text-[var(--color-brand-primary)] uppercase bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          Owner View
-                        </span>
-                      </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                        <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
-                          <strong className="block text-xl text-[var(--color-brand-primary)]">{engagement.streak.current}</strong>
-                          <span className="text-[11px] text-[var(--color-text-muted)]">Current streak</span>
-                        </div>
-                        <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
-                          <strong className="block text-xl text-[var(--color-brand-brown)]">{engagement.streak.longest}</strong>
-                          <span className="text-[11px] text-[var(--color-text-muted)]">Longest streak</span>
-                        </div>
-                        <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
-                          <strong className="block text-xl text-[#B45309]">{engagement.impact.unique_destinations}</strong>
-                          <span className="text-[11px] text-[var(--color-text-muted)]">Destinations</span>
-                        </div>
-                        <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
-                          <strong className="block text-xl text-purple-700">{engagement.impact.finalized_participations}</strong>
-                          <span className="text-[11px] text-[var(--color-text-muted)]">Votes completed</span>
-                        </div>
-                      </div>
-
-                      {engagement.challenges && engagement.challenges.length > 0 && (
-                        <div className="space-y-2 pt-2 border-t border-[var(--color-border-subtle)]">
-                          <span className="text-xs font-bold text-[var(--color-brand-brown)] block">Active Expedition Challenges</span>
-                          {engagement.challenges.slice(0, 3).map((ch) => (
-                            <div key={ch.id} className="text-xs flex items-center justify-between p-2.5 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-subtle)]">
-                              <span className="flex items-center gap-1.5 font-medium">
-                                {ch.complete ? (
-                                  <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
-                                ) : (
-                                  <span className="w-4 h-4 rounded-full border border-stone-300 inline-block" />
-                                )}
-                                {ch.title}
-                              </span>
-                              <span className="font-bold text-[var(--color-brand-primary)]">
-                                {ch.progress}/{ch.target}
-                              </span>
-                            </div>
+                        {/* Filter tabs */}
+                        <div className="flex items-center gap-1 p-1 bg-[#FAF9F5] border border-[#E3DFD5] rounded-xl self-start sm:self-center">
+                          {(['all', 'nft', 'achievement', 'civic'] as const).map((tab) => (
+                            <button
+                              key={tab}
+                              type="button"
+                              onClick={() => setBadgeFilterTab(tab)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition capitalize cursor-pointer ${
+                                badgeFilterTab === tab
+                                  ? 'bg-[var(--color-brand-primary)] text-white shadow-2xs'
+                                  : 'text-[#837560] hover:text-[#2C221E]'
+                              }`}
+                            >
+                              {tab === 'all' ? 'All' : tab === 'nft' ? 'Featured' : tab === 'civic' ? 'Civic' : 'Eco-Quests'}
+                            </button>
                           ))}
                         </div>
-                      )}
+                      </div>
+
+                      {/* Full Badges Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                        {filteredBadges.map((badge) => {
+                          const isPinned = activeBadgeIds.includes(badge.id);
+                          const isUnlocked = earnedBadgeSet.has(badge.id);
+                          return (
+                            <div
+                              key={badge.id}
+                              onClick={() => setSelectedBadgeModal(badge)}
+                              className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 relative overflow-hidden group ${
+                                isPinned
+                                  ? 'bg-amber-50/40 border-amber-300 ring-1 ring-amber-400/30'
+                                  : isUnlocked
+                                  ? 'bg-white border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-[#FAF9F5]/70'
+                                  : 'bg-stone-50/75 border-[#E3DFD5] opacity-80 hover:opacity-100'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs ${!isUnlocked ? 'grayscale' : ''}`}>
+                                  <span>{badge.icon}</span>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                    badge.rarity === 'legendary'
+                                      ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                      : badge.rarity === 'epic'
+                                      ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                                      : badge.rarity === 'rare'
+                                      ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                                      : 'bg-stone-100 text-stone-700 border border-stone-200'
+                                  }`}>
+                                    {badge.rarity}
+                                  </span>
+                                  {!isUnlocked && (
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-stone-500">
+                                      <Lock className="w-2.5 h-2.5" /> Locked
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="mt-3">
+                                <h4 className="text-xs sm:text-sm font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
+                                  {badge.name}
+                                </h4>
+                                <p className="text-[11px] text-[#837560] line-clamp-2 mt-1 leading-relaxed">
+                                  {isUnlocked ? badge.description : badge.howToEarn || badge.description}
+                                </p>
+                              </div>
+
+                              <div className="mt-3 pt-2.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] font-bold">
+                                {isPinned ? (
+                                  <span className="text-amber-800 flex items-center gap-1 font-extrabold">
+                                    <Check className="w-3 h-3 text-emerald-600" /> Active on Nametag
+                                  </span>
+                                ) : (
+                                  <span className="text-[#837560]">
+                                    {isUnlocked ? 'Tap to pin' : 'How to unlock'}
+                                  </span>
+                                )}
+                                <span className="text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                                  Details <ChevronRight className="w-3 h-3" />
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </section>
                   )}
 
-                  {/* Submission & Proof History */}
-                  <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs">
-                    <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-default)]">
-                      <div className="flex items-center gap-2">
-                        <History className="w-5 h-5 text-[var(--color-brand-primary)]" />
-                        <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
-                          Submission &amp; GPS Proof History
-                        </h2>
-                      </div>
-                      <Link
-                        href="/history"
-                        className="text-xs font-bold text-[var(--color-brand-primary)] hover:underline flex items-center gap-1"
-                      >
-                        <span>Full History</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-
-                    {loadingSubmissions ? (
-                      <div className="py-6 flex items-center justify-center text-xs text-stone-400">
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        <span>Loading your proof logs...</span>
-                      </div>
-                    ) : submissions.length === 0 ? (
-                      <div className="py-8 text-center text-stone-400">
-                        <Compass className="w-8 h-8 mx-auto mb-1.5 text-stone-300" />
-                        <p className="text-xs font-semibold text-stone-600">No submissions yet</p>
-                        <p className="text-[11px] text-stone-400 max-w-xs mx-auto mt-0.5">
-                          Visit destinations and check in with GPS proof to submit your explorer photos.
-                        </p>
-                        <Link
-                          href="/explore"
-                          className="inline-flex items-center gap-1 mt-3 px-3.5 py-1.5 rounded-xl bg-[var(--color-brand-primary)] text-white text-xs font-bold hover:bg-[var(--color-brand-primary-hover)] transition"
-                        >
-                          Explore Pangasinan
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="mt-3 divide-y divide-[var(--color-border-default)]/60">
-                        {submissions.slice(0, 5).map((sub) => (
-                          <div key={sub.id} className="py-3 flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-[var(--color-brand-brown)] truncate">
-                                {sub.questTitle || 'Pangasinan Destination Proof'}
-                              </div>
-                              <div className="text-[10px] text-stone-400 mt-0.5">
-                                {new Date(sub.createdAt).toLocaleDateString()} · {sub.category}
-                              </div>
+                  {/* OVERVIEW MODE: Compact Badges Card + Journey + Submissions */}
+                  {activePanel === 'overview' && (
+                    <>
+                      {/* Compact Badges Teaser Card */}
+                      <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-6 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-default)]">
+                          <div className="flex items-center gap-2">
+                            <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
+                            <div>
+                              <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
+                                {COPY.badge.titlePlural}
+                              </h2>
+                              <p className="text-[11px] text-[var(--color-text-muted)]">
+                                Earned ({earnedBadgeSet.size}) · Locked ({SAMPLE_USER_BADGES.length - earnedBadgeSet.size})
+                              </p>
                             </div>
-                            <span
-                              className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                                sub.status === 'approved'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : sub.status === 'rejected'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {sub.status}
+                          </div>
+                          <Link
+                            href={`/profile/${cleanParam}?tab=badges`}
+                            className="text-xs font-bold text-[var(--color-brand-primary)] hover:underline flex items-center gap-1 group"
+                          >
+                            <span>View All Badges ({SAMPLE_USER_BADGES.length})</span>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          </Link>
+                        </div>
+
+                        {/* Top 3-4 Badges Compact Preview */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {SAMPLE_USER_BADGES.slice(0, 3).map((badge) => {
+                            const isPinned = activeBadgeIds.includes(badge.id);
+                            const isUnlocked = earnedBadgeSet.has(badge.id);
+                            return (
+                              <div
+                                key={badge.id}
+                                onClick={() => setSelectedBadgeModal(badge)}
+                                className={`p-3 rounded-2xl border transition cursor-pointer flex items-center gap-2.5 group ${
+                                  isPinned
+                                    ? 'bg-amber-50/50 border-amber-300'
+                                    : isUnlocked
+                                    ? 'bg-white border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-[#FAF9F5]/80'
+                                    : 'bg-stone-50/80 border-[#E3DFD5] opacity-80 hover:opacity-100'
+                                }`}
+                              >
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs ${!isUnlocked ? 'grayscale' : ''}`}>
+                                  <span>{badge.icon}</span>
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="text-xs font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
+                                    {badge.name}
+                                  </h4>
+                                  <div className="flex items-center gap-1 text-[10px]">
+                                    <span className="text-[#837560] capitalize font-medium">
+                                      {badge.rarity}
+                                    </span>
+                                    {isPinned && (
+                                      <span className="text-[9px] font-black text-amber-700 bg-amber-100 px-1 py-0.2 rounded">
+                                        Pinned
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </section>
+
+                      {/* Community Journey & Active Challenges */}
+                      {engagement && (
+                        <section className="theme-card p-6 space-y-4">
+                          <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-subtle)]">
+                            <div>
+                              <h2 className="text-base font-black text-[var(--color-brand-brown)]">
+                                Your Community Journey
+                              </h2>
+                              <p className="text-xs text-[var(--color-text-muted)]">
+                                Participation status from finalized voting rounds and verified GPS visits.
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-bold text-[var(--color-brand-primary)] uppercase bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              Owner View
                             </span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                            <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
+                              <strong className="block text-xl text-[var(--color-brand-primary)]">{engagement.streak.current}</strong>
+                              <span className="text-[11px] text-[var(--color-text-muted)]">Current streak</span>
+                            </div>
+                            <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
+                              <strong className="block text-xl text-[var(--color-brand-brown)]">{engagement.streak.longest}</strong>
+                              <span className="text-[11px] text-[var(--color-text-muted)]">Longest streak</span>
+                            </div>
+                            <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
+                              <strong className="block text-xl text-[#B45309]">{engagement.impact.unique_destinations}</strong>
+                              <span className="text-[11px] text-[var(--color-text-muted)]">Destinations</span>
+                            </div>
+                            <div className="rounded-2xl bg-[var(--color-bg-subtle)] p-3">
+                              <strong className="block text-xl text-purple-700">{engagement.impact.finalized_participations}</strong>
+                              <span className="text-[11px] text-[var(--color-text-muted)]">Votes completed</span>
+                            </div>
+                          </div>
+
+                          {engagement.challenges && engagement.challenges.length > 0 && (
+                            <div className="space-y-2 pt-2 border-t border-[var(--color-border-subtle)]">
+                              <span className="text-xs font-bold text-[var(--color-brand-brown)] block">Active Expedition Challenges</span>
+                              {engagement.challenges.slice(0, 3).map((ch) => (
+                                <div key={ch.id} className="text-xs flex items-center justify-between p-2.5 rounded-xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-subtle)]">
+                                  <span className="flex items-center gap-1.5 font-medium">
+                                    {ch.complete ? (
+                                      <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+                                    ) : (
+                                      <span className="w-4 h-4 rounded-full border border-stone-300 inline-block" />
+                                    )}
+                                    {ch.title}
+                                  </span>
+                                  <span className="font-bold text-[var(--color-brand-primary)]">
+                                    {ch.progress}/{ch.target}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      )}
+
+                      {/* Submission & Proof History */}
+                      <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs">
+                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-default)]">
+                          <div className="flex items-center gap-2">
+                            <History className="w-5 h-5 text-[var(--color-brand-primary)]" />
+                            <h2 className="text-sm sm:text-base font-black text-[var(--color-brand-brown)]">
+                              Submission &amp; GPS Proof History
+                            </h2>
+                          </div>
+                          <Link
+                            href="/history"
+                            className="text-xs font-bold text-[var(--color-brand-primary)] hover:underline flex items-center gap-1"
+                          >
+                            <span>Full History</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
+
+                        {loadingSubmissions ? (
+                          <div className="py-6 flex items-center justify-center text-xs text-stone-400">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            <span>Loading your proof logs...</span>
+                          </div>
+                        ) : submissions.length === 0 ? (
+                          <div className="py-8 text-center text-stone-400">
+                            <Compass className="w-8 h-8 mx-auto mb-1.5 text-stone-300" />
+                            <p className="text-xs font-semibold text-stone-600">No submissions yet</p>
+                            <p className="text-[11px] text-stone-400 max-w-xs mx-auto mt-0.5">
+                              Visit destinations and check in with GPS proof to submit your explorer photos.
+                            </p>
+                            <Link
+                              href="/explore"
+                              className="inline-flex items-center gap-1 mt-3 px-3.5 py-1.5 rounded-xl bg-[var(--color-brand-primary)] text-white text-xs font-bold hover:bg-[var(--color-brand-primary-hover)] transition"
+                            >
+                              Explore Pangasinan
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="mt-3 divide-y divide-[var(--color-border-default)]/60">
+                            {submissions.slice(0, 5).map((sub) => (
+                              <div key={sub.id} className="py-3 flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-[var(--color-brand-brown)] truncate">
+                                    {sub.questTitle || 'Pangasinan Destination Proof'}
+                                  </div>
+                                  <div className="text-[10px] text-stone-400 mt-0.5">
+                                    {new Date(sub.createdAt).toLocaleDateString()} · {sub.category}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                    sub.status === 'approved'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : sub.status === 'rejected'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}
+                                >
+                                  {sub.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+                    </>
+                  )}
                 </div>
 
                 {/* Follow List Modal */}

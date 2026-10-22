@@ -401,13 +401,26 @@ export function DashboardClient() {
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
 
-                  <Link
-                    href="/vote"
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-bold transition border border-stone-200/80 group cursor-pointer"
-                  >
-                    <span>View Archived Proposals</span>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100" />
-                  </Link>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href="/vote"
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-bold transition border border-stone-200/80 group cursor-pointer"
+                    >
+                      <span className="truncate">Proposals</span>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 shrink-0" />
+                    </Link>
+
+                    <Link
+                      href={`/profile/${user?.handle ? user.handle.replace(/^@/, '') : (user?.seedId || 'me')}?tab=badges`}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100/80 text-amber-900 text-xs font-bold transition border border-amber-200/80 group cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5 truncate">
+                        <Award className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                        <span className="truncate">Badges</span>
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-amber-700 opacity-60 group-hover:opacity-100 shrink-0" />
+                    </Link>
+                  </div>
                 </div>
               </div>
 
