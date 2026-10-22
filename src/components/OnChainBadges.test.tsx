@@ -23,13 +23,13 @@ describe('OnChainBadges', () => {
     respond(WALLET, [badge({}), badge({ awardId: 'a2', title: 'Pangasinan Pioneer', state: 'minting', tokenUrl: null }),
       badge({ awardId: 'a3', title: 'QA', state: 'test_only' })]);
     render(<OnChainBadges />);
-    expect(await screen.findByText('First Footstep')).toBeInTheDocument();
-    expect(screen.getByText('On-chain')).toBeInTheDocument();
-    expect(screen.getByText('Minting…')).toBeInTheDocument();
-    expect(screen.queryByText('QA')).not.toBeInTheDocument();
-    expect(screen.getByText('1 / 2 on-chain')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /View on Polygonscan/ })).toHaveAttribute('href', 'https://amoy.polygonscan.com/nft/0xc/1');
-    expect(screen.getByRole('button', { name: /Unlink/ })).toBeInTheDocument();
+    expect(await screen.findByText('First Footstep')).toBeTruthy();
+    expect(screen.getByText('On-chain')).toBeTruthy();
+    expect(screen.getByText('Minting…')).toBeTruthy();
+    expect(screen.queryByText('QA')).toBeNull();
+    expect(screen.getByText('1 / 2 on-chain')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /View on Polygonscan/ }).getAttribute('href')).toBe('https://amoy.polygonscan.com/nft/0xc/1');
+    expect(screen.getByRole('button', { name: /Unlink/ })).toBeTruthy();
   });
 
   it('links a wallet with a signed challenge and reloads', async () => {
@@ -44,12 +44,12 @@ describe('OnChainBadges', () => {
       ? { data: { data: { message: 'Sign in to JuanDerQuest' } } } : { data: { success: true } });
     const changed = vi.fn();
     render(<OnChainBadges onWalletChanged={changed} />);
-    expect(await screen.findByText('Link a wallet', { selector: 'span' })).toBeInTheDocument();
+    expect(await screen.findByText('Link a wallet', { selector: 'span' })).toBeTruthy();
     respond(WALLET, [badge({ state: 'queued', tokenUrl: null, txUrl: null })]);
     fireEvent.click(screen.getByRole('button', { name: /Link wallet/ }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/auth/wallet/bind', { address: WALLET, signature: '0xsig' }));
     expect(request).toHaveBeenCalledWith({ method: 'personal_sign', params: ['Sign in to JuanDerQuest', WALLET] });
-    expect(await screen.findByText(/Wallet linked/)).toBeInTheDocument();
+    expect(await screen.findByText(/Wallet linked/)).toBeTruthy();
     expect(changed).toHaveBeenCalled();
   });
 
@@ -57,10 +57,10 @@ describe('OnChainBadges', () => {
     respond(null, []);
     render(<OnChainBadges />);
     fireEvent.click(await screen.findByRole('button', { name: /Link wallet/ }));
-    expect(await screen.findByText(/No browser wallet found/)).toBeInTheDocument();
+    expect(await screen.findByText(/No browser wallet found/)).toBeTruthy();
     (window as { ethereum?: unknown }).ethereum = { request: vi.fn(async () => { throw { code: 4001 }; }) };
     fireEvent.click(screen.getByRole('button', { name: /Link wallet/ }));
-    expect(await screen.findByText(/cancelled in your wallet/)).toBeInTheDocument();
+    expect(await screen.findByText(/cancelled in your wallet/)).toBeTruthy();
     expect(post).not.toHaveBeenCalled();
   });
 
@@ -73,6 +73,6 @@ describe('OnChainBadges', () => {
     });
     render(<OnChainBadges />);
     fireEvent.click(await screen.findByRole('button', { name: /Link wallet/ }));
-    expect(await screen.findByText(/already linked to another/)).toBeInTheDocument();
+    expect(await screen.findByText(/already linked to another/)).toBeTruthy();
   });
 });
