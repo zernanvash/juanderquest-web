@@ -38,7 +38,7 @@ import {
   UserBadge,
 } from '@/lib/badges';
 import { UserBadgeChip, UserNametag } from '@/components/Badges';
-import { BaseSepoliaReadiness } from '@/components/BaseSepoliaReadiness';
+import { ChainReadiness } from '@/components/ChainReadiness';
 
 export default function SettingsPage() {
   const { user, wallet, logout } = useAuth();
@@ -828,7 +828,7 @@ export default function SettingsPage() {
                       <span className="font-bold text-[var(--color-brand-primary)]">{activeBadgeIds.length} / 3 Selected</span>
                     </div>
                   </div>
-                  <BaseSepoliaReadiness signedInSeedId={user?.seedId} />
+                  <ChainReadiness signedInSeedId={user?.seedId} />
                 </div>
               </details>
             </div>
