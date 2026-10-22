@@ -202,15 +202,41 @@ export default function LoginPage() {
       const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
       const walletAddress = accounts[0];
       if (!walletAddress) throw new Error('No wallet account selected');
+      
       const challenge = await api.post('/auth/wallet/challenge', { address: walletAddress });
+      if (!challenge.data?.success || !challenge.data?.data?.message) {
+        throw new Error(challenge.data?.error?.message || 'Failed to request challenge nonce from server.');
+      }
       const message = challenge.data.data.message as string;
-      const signature = (await window.ethereum.request({
-        method: 'personal_sign',
-        params: [message, walletAddress],
-      })) as string;
-      finish(await loginWithWallet(walletAddress, signature, rememberMe));
-    } catch {
-      setError('The wallet connection was rejected or could not be completed.');
+      
+      // Request signature with standard params: [message, address] (some wallets expect hex-encoded message or direct string)
+      let signature: string;
+      try {
+        signature = (await window.ethereum.request({
+          method: 'personal_sign',
+          params: [message, walletAddress],
+        })) as string;
+      } catch (signErr: any) {
+        // Fallback for wallets that strictly require hex-encoded UTF-8 messages for personal_sign
+        if (signErr?.code === 4001 || signErr?.message?.includes('User rejected')) {
+          throw new Error('Signature request was rejected in your wallet.');
+        }
+        const hexMessage = '0x' + Array.from(new TextEncoder().encode(message)).map(b => b.toString(16).padStart(2, '0')).join('');
+        signature = (await window.ethereum.request({
+          method: 'personal_sign',
+          params: [hexMessage, walletAddress],
+        })) as string;
+      }
+
+      const ok = await loginWithWallet(walletAddress, signature, rememberMe);
+      finish(ok);
+    } catch (err: any) {
+      console.error('Wallet connection error:', err);
+      if (err?.code === 4001 || err?.message?.includes('User rejected')) {
+        setError('Wallet connection or signature was rejected.');
+      } else {
+        setError(err?.response?.data?.error?.message || err?.message || 'The wallet connection was rejected or could not be completed.');
+      }
     }
   };
 
