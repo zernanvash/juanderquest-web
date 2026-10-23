@@ -30,7 +30,10 @@ function playCelebratoryChime(type: CelebrationType = 'poppers') {
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
+      const resumePromise = ctx.resume();
+      if (resumePromise !== undefined && typeof resumePromise.catch === 'function') {
+        resumePromise.catch(() => {});
+      }
     }
 
     const now = ctx.currentTime;

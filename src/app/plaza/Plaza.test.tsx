@@ -260,4 +260,27 @@ describe('PlazaPage Component', () => {
       expect(within(feed).getByRole('link', { name: 'Find explorers to follow' })).toBeDefined();
     });
   });
+
+  it('renders gracefully when signed-in user has no town preference on My Town board', async () => {
+    mockGetStandings.mockResolvedValueOnce({
+      board: 'town',
+      period: 'weekly',
+      week: { id: '2026-W41', starts_at: '2026-10-12T00:00:00Z', ends_at: '2026-10-19T00:00:00Z', resets_in_seconds: 120000 },
+      me: null,
+      podium: [],
+      entries: [],
+      rivals: { above: [], below: [] },
+      town: null,
+      total: 0,
+      next_after_rank: null,
+    });
+
+    render(<PlazaPage />);
+    const townBtn = screen.getByRole('button', { name: /my town/i });
+    fireEvent.click(townBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('No home town set for this traveler yet')).toBeDefined();
+    });
+  });
 });

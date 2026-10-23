@@ -13,6 +13,7 @@ import { useSavedLibrary } from '@/lib/saved-library';
 import { appRoutes } from '@/lib/routes';
 import { COPY, formatPoints } from '@/lib/copy';
 import { DestinationMedia } from '@/components/DestinationMedia';
+import { QuestMarkerMedia } from '@/components/QuestMarkerMedia';
 import {
   Compass,
   MapPin,
@@ -227,7 +228,6 @@ function QuestsContent() {
   ];
 
   const renderQuestCard = (quest: QuestModel) => {
-    const hasPhoto = isUsableQuestImage(quest.markerImageUrl);
     return (
       <article
         key={quest.id}
@@ -235,25 +235,13 @@ function QuestsContent() {
       >
         <div className="space-y-3">
           <div className="relative w-full h-36 rounded-xl overflow-hidden bg-stone-100 shrink-0">
-            {hasPhoto ? (
-              <img
-                src={quest.markerImageUrl!}
-                alt={quest.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/illustrations/nature-coast.svg';
-                }}
-              />
-            ) : (
-              <DestinationMedia
-                destinationName={quest.title}
-                alt={quest.title}
-                category={quest.category}
-                municipality={quest.locationName}
-                variant="illustration"
-                className="w-full h-full"
-              />
-            )}
+            <QuestMarkerMedia
+              markerImageUrl={quest.markerImageUrl}
+              title={quest.title}
+              category={quest.category}
+              locationName={quest.locationName}
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+            />
             <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
               <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-md bg-white/95 text-[var(--color-brand-primary)] border border-white/40 shadow-xs backdrop-blur-xs">
                 {quest.category.replace('_', ' ')}

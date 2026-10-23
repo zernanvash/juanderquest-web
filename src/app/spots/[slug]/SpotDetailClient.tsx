@@ -572,6 +572,15 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                     src={backdropStillUrl}
                     alt=""
                     aria-hidden="true"
+                    onError={(event) => {
+                      const image = event.currentTarget;
+                      if (image.dataset.fallbackApplied !== 'true' && !image.src.endsWith('/bg_landscape.png')) {
+                        image.dataset.fallbackApplied = 'true';
+                        image.src = '/bg_landscape.png';
+                        return;
+                      }
+                      image.style.visibility = 'hidden';
+                    }}
                     className="h-9 w-9 shrink-0 rounded-lg object-cover border border-[#E2DDD3]"
                   />
                   <div className="min-w-0">
@@ -1388,6 +1397,15 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                   <img
                     src={currentSlideUrl}
                     alt={`${spot.name} - Photo ${activeSlide + 1}`}
+                    onError={(event) => {
+                      const image = event.currentTarget;
+                      if (image.dataset.fallbackApplied !== 'true' && !image.src.endsWith('/bg_landscape.png')) {
+                        image.dataset.fallbackApplied = 'true';
+                        image.src = '/bg_landscape.png';
+                        return;
+                      }
+                      image.style.visibility = 'hidden';
+                    }}
                     className="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl select-none"
                   />
                 )}
