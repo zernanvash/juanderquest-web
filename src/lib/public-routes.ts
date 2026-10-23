@@ -52,14 +52,17 @@ export function isPublicPage(pathname: string | null | undefined): boolean {
     }
   }
 
-  // /spots/:slug is public
+  // /spots/:slug is public, except /spots/:slug/quests/new (author quest builder)
   if (normalized.startsWith('/spots/')) {
+    if (/\/quests\/new(\/|$)/.test(normalized)) {
+      return false;
+    }
     return true;
   }
 
-  // /quests/:id is public, except /quests/:id/play or /quests/create
+  // /quests/:id is public, except /quests/:id/play, /quests/:id/edit, or /quests/create
   if (normalized.startsWith('/quests/')) {
-    if (/^\/quests\/[^/]+\/play(\/|$)/.test(normalized)) {
+    if (/^\/quests\/[^/]+\/(play|edit)(\/|$)/.test(normalized)) {
       return false;
     }
     return true;

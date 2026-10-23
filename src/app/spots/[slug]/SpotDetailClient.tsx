@@ -990,18 +990,13 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                           As the creator of this destination, you can attach an official {COPY.quest.singular} checkpoint for travelers to discover and earn {COPY.points.plural} and {COPY.xp.label}.
                         </p>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setQuestTitle(`Explore ${spot.name}`);
-                            setQuestDescription(`Visit ${spot.name}, explore the grounds, and verify your coordinates within the geofence.`);
-                            setIsQuestModalOpen(true);
-                          }}
+                        <Link
+                          href={`/spots/${spot.slug}/quests/new`}
                           className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black shadow-md transition active:scale-98 cursor-pointer"
                         >
                           <PlusCircle className="w-4 h-4" />
-                          <span>{spot.questId ? 'Add Another Eco-Quest' : 'Create Eco-Quest for this Spot'}</span>
-                        </button>
+                          <span>{spot.questId ? 'Build Another Multi-Task Quest' : 'Launch Quest Builder for this Spot'}</span>
+                        </Link>
                       </div>
                     )}
 
