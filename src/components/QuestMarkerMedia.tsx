@@ -39,7 +39,9 @@ export const QuestMarkerMedia: React.FC<QuestMarkerMediaProps> = ({
   className = 'w-full h-full object-cover',
   aspectRatio = 'card',
 }) => {
-  const [hasFailed, setHasFailed] = useState(false);
+  // Remember which URL failed, so a reused component retries a new quest's image.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const hasFailed = failedUrl !== null && failedUrl === markerImageUrl;
   const usable = isUsableQuestImage(markerImageUrl);
 
   if (!usable || hasFailed) {
@@ -64,7 +66,7 @@ export const QuestMarkerMedia: React.FC<QuestMarkerMediaProps> = ({
       data-testid="quest-marker-image"
       onError={() => {
         // Switch state so the component cleanly swaps to the branded illustration fallback
-        setHasFailed(true);
+        setFailedUrl(markerImageUrl ?? null);
       }}
     />
   );
