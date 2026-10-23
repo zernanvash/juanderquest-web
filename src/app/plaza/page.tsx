@@ -253,6 +253,14 @@ function PlazaContent() {
         </div>
       )}
 
+      {/* Town Board without home town notice */}
+      {board === 'town' && !standingsData?.town && !standingsLoading && (
+        <div className="rounded-2xl border border-[var(--color-border-default)] bg-amber-50/80 p-5 text-center text-xs text-[var(--color-brand-brown)] shadow-xs">
+          <p className="font-bold">No home town set for this traveler yet</p>
+          <p className="mt-1 text-[var(--color-text-muted)]">Complete verified quests or check-ins in your municipality to establish your town standing.</p>
+        </div>
+      )}
+
       {/* My Current Rank Card */}
       <MyRankCard me={me} user={user} rivalAbove={rivalAbove} />
 

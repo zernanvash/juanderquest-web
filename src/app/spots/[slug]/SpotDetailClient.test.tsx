@@ -154,6 +154,30 @@ describe('SpotDetailClient saved-place action', () => {
     expect(screen.getByRole('button', { name: /open fullscreen photo gallery/i })).toBeTruthy();
   });
 
+  it('safely falls back to branded landscape on image load error', async () => {
+    apiMock.get.mockImplementation((url: string) => Promise.resolve({
+      data: {
+        data: url.endsWith('/alternatives') ? [] : {
+          ...spot,
+          imageUrl: 'https://images.example/spot-photo.jpg',
+          photos: ['https://images.example/spot-photo.jpg'],
+        },
+      },
+    }));
+
+    render(<SpotDetailClient slug="spot-1" />);
+
+    await screen.findByRole('region', { name: /destination showcase for test beach/i });
+    const backdrop = document.querySelector('.spot-backdrop') as HTMLImageElement;
+    expect(backdrop).not.toBeNull();
+    expect(backdrop.src).toContain('https://images.example/spot-photo.jpg');
+
+    // Trigger onError on backdrop image
+    fireEvent.error(backdrop);
+    expect(backdrop.src).toContain('/bg_landscape.png');
+    expect(backdrop.dataset.fallbackApplied).toBe('true');
+  });
+
   it('renders stage presence, scrubber line, and chapter navigation anchors', async () => {
     const scrollIntoView = vi.fn();
     window.HTMLElement.prototype.scrollIntoView = scrollIntoView;

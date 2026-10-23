@@ -74,7 +74,7 @@ export const TownBoard: React.FC<TownBoardProps> = ({ towns }) => {
                 <span className="font-black text-emerald-700">
                   {t.score_sum.toLocaleString()} pts
                 </span>
-                {t.top_explorer && (
+                {t.top_explorer?.display_name && (
                   <span className="text-[10px] text-gray-500 truncate max-w-[80px]" title={`Top explorer: ${t.top_explorer.display_name}`}>
                     👑 {t.top_explorer.display_name}
                   </span>
