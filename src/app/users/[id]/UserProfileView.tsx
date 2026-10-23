@@ -5,6 +5,8 @@ import Link from 'next/link';
 import type { PublicUserProfile } from '@/lib/search';
 import { FollowButton } from '@/components/FollowButton';
 import { FollowListModal } from '@/components/FollowListModal';
+import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
+import { DisplayName } from '@/components/cosmetics/DisplayName';
 import {
   Award,
   Compass,
@@ -97,17 +99,13 @@ export function UserProfileView({ profile }: UserProfileViewProps) {
             {/* Avatar + Primary Identity Info */}
             <div className="flex min-w-0 flex-col gap-3.5 sm:flex-row sm:items-end">
               <div className="relative flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-2xl sm:text-3xl font-black text-[#582F0E] shadow-md ring-2 ring-[#2D6A4F]/20 overflow-hidden">
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span>{initials || 'TR'}</span>
-                )}
+                <CosmeticAvatar src={profile.avatar_url} name={profile.display_name || initials || 'TR'} frame={profile.cosmetics?.frame} size="xl" />
               </div>
 
               <div className="min-w-0 pb-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl sm:text-3xl font-black text-[#2C221E] tracking-tight">
-                    {profile.display_name}
+                    <DisplayName name={profile.display_name} title={profile.cosmetics?.title} nameColor={profile.cosmetics?.nameColor} />
                   </h1>
                   <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-[#2D6A4F] border border-emerald-200">
                     Level {scoutLevel}

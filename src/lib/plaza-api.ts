@@ -34,6 +34,7 @@ export interface ActivityItem {
     display_name: string;
     handle: string;
     avatar_url: string;
+    cosmetics?: import('./api').CosmeticRenderData;
     is_following: boolean;
   };
   subject: {
@@ -73,6 +74,7 @@ export interface StandingEntry {
   display_name: string;
   handle: string;
   avatar_url: string;
+  cosmetics?: import('./api').CosmeticRenderData;
   score: number;
   quests: number;
   home_town: string | null;

@@ -86,7 +86,11 @@ export interface UserModel {
   role: 'user' | 'admin' | 'qa';
   points: number; // demo_points
   handle?: string | null;
+  cosmetics?: CosmeticRenderData;
 }
+
+export type CosmeticRenderItem = { id:string; kind:string; asset:Record<string,unknown> } | null;
+export type CosmeticRenderData = { banner:CosmeticRenderItem; frame:CosmeticRenderItem; title:CosmeticRenderItem; nameColor:CosmeticRenderItem };
 
 export interface QuestModel {
   id: string;
@@ -367,6 +371,7 @@ type BackendUser = {
   role: 'user' | 'admin';
   demo_points: number;
   handle?: string | null;
+  cosmetics?: CosmeticRenderData;
 };
 
 export function normalizeUser(raw: BackendUser): UserModel {
@@ -379,6 +384,7 @@ export function normalizeUser(raw: BackendUser): UserModel {
     role: raw.role,
     points: Number(raw.demo_points) || 0,
     handle: raw.handle || null,
+    cosmetics: raw.cosmetics,
   };
 }
 

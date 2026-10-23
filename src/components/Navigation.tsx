@@ -34,6 +34,8 @@ import { CelebrationEffects, triggerCelebration } from '@/components/Celebration
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { fetchMerchantMe } from '@/lib/api';
 import { getNotifications, markAllNotificationsRead, markNotificationRead, type DurableNotification } from '@/lib/notifications-api';
+import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
+import { DisplayName } from '@/components/cosmetics/DisplayName';
 
 export interface NavigationNotification {
   id: string;
@@ -908,17 +910,11 @@ export const Navigation: React.FC<{
                 aria-label="View your traveler passport"
               >
                 <div className={`flex items-center ${isDesktopDrawerCollapsed ? '' : 'gap-2.5'}`}>
-                  <div className="relative w-8 h-8 rounded-full bg-[var(--color-brand-primary)] text-white flex items-center justify-center text-xs font-black overflow-hidden shrink-0 shadow-xs">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
-                    ) : (
-                      <span>{user.displayName.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
+                  <CosmeticAvatar src={user.avatarUrl} name={user.displayName} frame={user.cosmetics?.frame} size="xs" />
                   {!isDesktopDrawerCollapsed && (
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] truncate">
-                        {user.displayName}
+                        <DisplayName name={user.displayName} title={user.cosmetics?.title} nameColor={user.cosmetics?.nameColor} />
                       </p>
                       <p className="text-[10px] text-[var(--color-brand-primary)] font-semibold truncate">
                         Level {currentLevel} · {currentPoints.toLocaleString()} XP
@@ -1074,17 +1070,11 @@ export const Navigation: React.FC<{
                     onClick={() => setDrawerOpen(false)}
                     className="flex items-center gap-2.5 group"
                   >
-                    <div className="relative w-10 h-10 rounded-full bg-[var(--color-brand-primary)] text-white flex items-center justify-center text-sm font-black overflow-hidden shrink-0 shadow-xs">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
-                      ) : (
-                        <span>{user.displayName.charAt(0).toUpperCase()}</span>
-                      )}
-                    </div>
+                    <CosmeticAvatar src={user.avatarUrl} name={user.displayName} frame={user.cosmetics?.frame} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <div className="text-xs font-extrabold text-[var(--color-brand-brown)] group-hover:text-[var(--color-brand-primary)] transition truncate">
-                          {user.displayName}
+                          <DisplayName name={user.displayName} title={user.cosmetics?.title} nameColor={user.cosmetics?.nameColor} />
                         </div>
                         {user.role === 'admin' && (
                           <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-700 border border-amber-500/30 shrink-0">

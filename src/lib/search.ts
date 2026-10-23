@@ -176,6 +176,7 @@ export interface PublicUserProfile {
   follower_count?: number;
   following_count?: number;
   created_at: string;
+  cosmetics?: import('./api').CosmeticRenderData;
 }
 
 export type FetchUserProfileResult =

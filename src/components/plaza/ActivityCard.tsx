@@ -4,6 +4,8 @@ import { MessageSquare, MoreHorizontal, EyeOff, MapPin } from 'lucide-react';
 import type { ActivityItem } from '@/lib/plaza-api';
 import { formatActivityText } from './activityText';
 import { CommentThread } from './CommentThread';
+import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
+import { DisplayName } from '@/components/cosmetics/DisplayName';
 
 interface ActivityCardProps {
   activity: ActivityItem;
@@ -84,17 +86,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 border border-[var(--color-border-default)] flex items-center justify-center font-black text-amber-900 shrink-0 overflow-hidden shadow-2xs">
-            {activity.actor.avatar_url ? (
-              <img
-                src={activity.actor.avatar_url}
-                alt={activity.actor.display_name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              activity.actor.display_name.charAt(0)
-            )}
-          </div>
+          <CosmeticAvatar src={activity.actor.avatar_url} name={activity.actor.display_name} frame={activity.actor.cosmetics?.frame} size="sm" />
 
           {/* Actor & Reason Chip */}
           <div className="min-w-0 flex-1">
@@ -104,11 +96,11 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                   href={`/profile/${activity.actor.handle}`}
                   className="text-xs sm:text-sm font-bold text-[var(--color-brand-brown)] hover:text-[var(--color-brand-primary)] transition truncate"
                 >
-                  {activity.actor.display_name}
+                  <DisplayName name={activity.actor.display_name} title={activity.actor.cosmetics?.title} nameColor={activity.actor.cosmetics?.nameColor} />
                 </Link>
               ) : (
                 <span className="text-xs sm:text-sm font-bold text-[var(--color-brand-brown)] truncate">
-                  {activity.actor.display_name}
+                  <DisplayName name={activity.actor.display_name} title={activity.actor.cosmetics?.title} nameColor={activity.actor.cosmetics?.nameColor} />
                 </span>
               )}
 

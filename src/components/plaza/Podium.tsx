@@ -2,6 +2,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Crown, MapPin } from 'lucide-react';
 import type { StandingEntry } from '@/lib/plaza-api';
+import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
+import { DisplayName } from '@/components/cosmetics/DisplayName';
 
 interface PodiumProps {
   podium: StandingEntry[];
@@ -25,11 +27,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
 
           <div className="text-center space-y-2.5 pt-2">
             <div className="w-16 h-16 rounded-full mx-auto bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-slate-300 flex items-center justify-center text-xl font-black text-slate-700 shadow-inner overflow-hidden">
-              {second.avatar_url ? (
-                <img src={second.avatar_url} alt={second.display_name} className="w-full h-full object-cover" />
-              ) : (
-                second.display_name.charAt(0)
-              )}
+              <CosmeticAvatar src={second.avatar_url} name={second.display_name} frame={second.cosmetics?.frame} size="md" />
             </div>
             <div>
               <div className="flex items-center justify-center gap-1.5 flex-wrap">
@@ -42,7 +40,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
                   </Link>
                 ) : (
                   <span className="text-base font-black text-[var(--color-brand-brown)]">
-                    {second.display_name}
+                    <DisplayName name={second.display_name} title={second.cosmetics?.title} nameColor={second.cosmetics?.nameColor} />
                   </span>
                 )}
               </div>
@@ -90,7 +88,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
                 </Link>
               ) : (
                 <span className="text-lg sm:text-xl font-black text-[var(--color-brand-brown)]">
-                  {first.display_name}
+                  <DisplayName name={first.display_name} title={first.cosmetics?.title} nameColor={first.cosmetics?.nameColor} />
                 </span>
               )}
             </div>
@@ -118,11 +116,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
 
           <div className="text-center space-y-2.5 pt-2">
             <div className="w-16 h-16 rounded-full mx-auto bg-gradient-to-br from-orange-100 to-orange-200 border-2 border-orange-300 flex items-center justify-center text-xl font-black text-orange-800 shadow-inner overflow-hidden">
-              {third.avatar_url ? (
-                <img src={third.avatar_url} alt={third.display_name} className="w-full h-full object-cover" />
-              ) : (
-                third.display_name.charAt(0)
-              )}
+              <CosmeticAvatar src={third.avatar_url} name={third.display_name} frame={third.cosmetics?.frame} size="md" />
             </div>
             <div>
               <div className="flex items-center justify-center gap-1.5 flex-wrap">
@@ -135,7 +129,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
                   </Link>
                 ) : (
                   <span className="text-base font-black text-[var(--color-brand-brown)]">
-                    {third.display_name}
+                    <DisplayName name={third.display_name} title={third.cosmetics?.title} nameColor={third.cosmetics?.nameColor} />
                   </span>
                 )}
               </div>

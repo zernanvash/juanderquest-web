@@ -58,6 +58,7 @@ export interface AuthenticatedUserProfile {
   following_count: number;
   created_at: string;
   updated_at: string;
+  cosmetics?: import('./api').CosmeticRenderData;
 }
 
 /**

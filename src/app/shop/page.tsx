@@ -1,363 +1,49 @@
 'use client';
+import React,{Suspense,useCallback,useEffect,useMemo,useState} from 'react';
+import {usePathname,useRouter,useSearchParams} from 'next/navigation';
+import {Coins,ShoppingBag,Ticket,Sparkles,UserRound,Check,Lock,Loader2} from 'lucide-react';
+import {api,uuid} from '@/lib/api';
+import {useAuth,useRequireAuth} from '@/lib/auth';
+import {Navigation} from '@/components/Navigation';
+import {ProfileBanner} from '@/components/cosmetics/ProfileBanner';
+import {CosmeticAvatar} from '@/components/cosmetics/CosmeticAvatar';
+import {DisplayName} from '@/components/cosmetics/DisplayName';
+import {VoucherRippingOverlay} from '@/components/VoucherRippingOverlay';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth, useRequireAuth } from '@/lib/auth';
-import { api, normalizeVoucher, normalizeRedemption, uuid, VoucherModel, RedemptionModel } from '@/lib/api';
-import { fetchWithCache } from '@/lib/cache';
-import { Navigation } from '@/components/Navigation';
-import { VoucherCardSkeleton } from '@/components/Skeleton';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import {
-  ShoppingBag,
-  Award,
-  Coins,
-  CheckCircle2,
-  Ticket,
-  Sparkles,
-  Gift,
-  AlertCircle,
-  Loader2,
-  Tag,
-  Copy,
-  ExternalLink,
-} from 'lucide-react';
-import Link from 'next/link';
-import { formatPoints, COPY } from '@/lib/copy';
-import { VoucherRippingOverlay } from '@/components/VoucherRippingOverlay';
-import { AnimatedCounter } from '@/components/AnimatedCounter';
-
-export default function ShopPage() {
-  const { user, refreshProfile } = useAuth();
-  const { isReady } = useRequireAuth();
-  const [vouchers, setVouchers] = useState<VoucherModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // In-Page Active Redemption State
-  const [activeUnwrapVoucherId, setActiveUnwrapVoucherId] = useState<string | null>(null);
-  const [redemption, setRedemption] = useState<RedemptionModel | null>(null);
-  const [claimedVoucher, setClaimedVoucher] = useState<{
-    voucher: VoucherModel;
-    redemption: RedemptionModel;
-  } | null>(null);
-  const [redeeming, setRedeeming] = useState(false);
-  const [redeemError, setRedeemError] = useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = useState(false);
-
-  const fetchVouchers = useCallback(async (forceRefresh = false) => {
-    setLoading(true);
-    setFetchError(null);
-    try {
-      const { data: rawVouchers } = await fetchWithCache(
-        'shop_vouchers',
-        async () => {
-          const res = await api.get('/vouchers');
-          return (res.data.data as Parameters<typeof normalizeVoucher>[0][]).map(normalizeVoucher);
-        },
-        { ttlMs: 60_000, forceRefresh }
-      );
-      setVouchers(rawVouchers);
-    } catch {
-      setFetchError('Could not reach reward servers.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchVouchers();
-  }, [fetchVouchers]);
-
-  const handleRedeem = async (voucher: VoucherModel) => {
-    setRedeeming(true);
-    setRedeemError(null);
-
-    try {
-      const res = await api.post(`/vouchers/${voucher.id}/redeem`, {
-        idempotency_key: uuid(),
-      });
-
-      if (res.data?.success) {
-        const red = normalizeRedemption(res.data.data);
-        setRedemption(red);
-        setClaimedVoucher({ voucher, redemption: red });
-        setActiveUnwrapVoucherId(null);
-        refreshProfile();
-      } else {
-        setRedeemError(res.data?.error?.message || 'Redemption failed');
-      }
-    } catch (e: any) {
-      setRedeemError(e.response?.data?.error?.message || 'Network error during voucher redemption.');
-    }
-    setRedeeming(false);
-  };
-
-  const copyVoucherCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2500);
-  };
-
-  const insufficient = (v: VoucherModel) => !user || user.points < v.costPoints;
-
-  if (!isReady) return null;
-
-  return (
-    <Navigation>
-      <ErrorBoundary fallbackTitle="Unable to display Merchant Shop">
-        <div className="space-y-6 w-full">
-          {/* Header Banner */}
-          <div className="p-6 md:p-8 rounded-3xl bg-white border border-[var(--color-border-default)] shadow-xs relative overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[var(--color-brand-accent)]" />
-                  <span className="text-xs font-black tracking-wider text-[var(--color-brand-accent-dark)] uppercase">
-                    Local Merchant Rewards
-                  </span>
-                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[var(--color-brand-primary)]/10 text-[var(--color-brand-primary)]">
-                    Local Merchant Loot
-                  </span>
-                </div>
-                <h1 className="text-2xl md:text-3xl font-black text-[var(--color-brand-brown)] tracking-tight">
-                  Merchant Voucher Shop
-                </h1>
-                <p className="text-xs md:text-sm text-[var(--color-text-secondary)] max-w-xl leading-relaxed">
-                  Explore local partner rewards as they become available. Complete Eco-Quests across Pangasinan to earn points and redeem merchant perks.
-                </p>
-              </div>
-
-              {/* Balance Widget */}
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)] shrink-0">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--color-brand-accent)]/20 text-[var(--color-brand-accent-dark)] flex items-center justify-center">
-                  <Coins className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Available Points</div>
-                  <div className="text-lg font-black text-[var(--color-brand-brown)]">
-                    <AnimatedCounter value={user?.points ?? 0} suffix=" pts" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Ripping Ticket Celebration Overlay */}
-          {claimedVoucher && (
-            <VoucherRippingOverlay
-              isOpen={Boolean(claimedVoucher)}
-              onClose={() => setClaimedVoucher(null)}
-              voucherTitle={claimedVoucher.voucher.title}
-              merchantName={claimedVoucher.voucher.merchantName}
-              costPoints={claimedVoucher.voucher.costPoints}
-              redemptionCode={claimedVoucher.redemption.code}
-              description={claimedVoucher.voucher.description}
-              userPointsLeft={(user?.points ?? 0) - claimedVoucher.voucher.costPoints}
-            />
-          )}
-
-          {/* Active Unwrapped Voucher Showcase (In-Page Banner) */}
-          {redemption && (
-            <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-emerald-900 to-[#1B4332] text-white shadow-xl space-y-4 animate-fade-in relative overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-white/10 text-emerald-300 flex items-center justify-center shrink-0">
-                    <Gift className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-emerald-300 tracking-wider">
-                      Voucher Successfully Unwrapped!
-                    </span>
-                    <h2 className="text-lg font-black text-white">{redemption.voucherTitle || 'Merchant Voucher'}</h2>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setRedemption(null)}
-                  className="text-xs font-bold text-emerald-200 hover:text-white px-3 py-1.5 rounded-xl bg-white/10 self-start sm:self-auto cursor-pointer"
-                >
-                  Dismiss
-                </button>
-              </div>
-
-              <div className="bg-black/30 backdrop-blur-md p-4 rounded-2xl border border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <span className="text-[10px] text-gray-300 uppercase font-bold block mb-1">
-                    Present Code to Cashier / Merchant:
-                  </span>
-                  <span className="text-xl sm:text-2xl font-mono font-black text-amber-300 tracking-widest select-all">
-                    {redemption.code}
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => copyVoucherCode(redemption.code)}
-                  className="px-5 py-2.5 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer active:scale-95 shadow-md"
-                >
-                  {copiedCode ? <CheckCircle2 className="w-4 h-4 text-[#582F0E]" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedCode ? 'Copied to Clipboard!' : 'Copy Code'}</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Vouchers Grid Layout (Responsive Multi-Column Cards) */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black text-[#582F0E]">
-                Available Local Vouchers ({vouchers.length})
-              </h2>
-              <span className="text-xs font-bold text-gray-500">Instant Redemption</span>
-            </div>
-
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5">
-                <VoucherCardSkeleton />
-                <VoucherCardSkeleton />
-                <VoucherCardSkeleton />
-                <VoucherCardSkeleton />
-              </div>
-            ) : fetchError ? (
-              <div className="bg-white p-8 rounded-3xl border border-red-200 text-center text-xs text-[#BC4749] space-y-4 shadow-xs">
-                <p className="font-bold">{fetchError}</p>
-                <button
-                  onClick={() => fetchVouchers(true)}
-                  className="px-5 py-2.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-black cursor-pointer active:scale-95"
-                >
-                  Retry Loading
-                </button>
-              </div>
-            ) : vouchers.length === 0 ? (
-              <div className="bg-white p-10 sm:p-12 rounded-3xl border border-[#E3DFD5] text-center space-y-4 shadow-xs max-w-lg mx-auto">
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 mx-auto flex items-center justify-center">
-                  <ShoppingBag className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-base font-black text-[#582F0E]">No merchant vouchers listed right now</h3>
-                  <p className="text-xs text-[#837560] leading-relaxed">
-                    Earn points by completing Eco-Quests across Pangasinan, then redeem them for exclusive local discounts and merchant perks.
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                  <Link
-                    href="/quests"
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold transition shadow-2xs"
-                  >
-                    Browse Eco-Quests
-                  </Link>
-                  <Link
-                    href="/affiliate"
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#FAF9F5] hover:bg-stone-100 border border-[#E3DFD5] text-xs font-bold text-[#582F0E] transition"
-                  >
-                    Merchant? Offer a voucher
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5 items-start">
-                {vouchers.map((v) => {
-                  const isUnwrapOpen = activeUnwrapVoucherId === v.id;
-                  const canAfford = user && user.points >= v.costPoints;
-
-                  return (
-                    <article
-                      key={v.id}
-                      className="card-alive bg-white rounded-3xl p-6 border border-[#E3DFD5] hover:border-[#2D6A4F]/40 shadow-xs hover:shadow-md flex flex-col justify-between space-y-5"
-                    >
-                      <div className="space-y-4">
-                        {/* Header Badge */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-amber-50 text-[#7D5800] border border-amber-200 flex items-center gap-1">
-                            <Tag className="w-3 h-3" />
-                            <span>{v.merchantName}</span>
-                          </span>
-                          <span className="text-xs font-black text-[#2D6A4F]">
-                            {v.costPoints} pts
-                          </span>
-                        </div>
-
-                        <div className="space-y-1">
-                          <h3 className="text-base font-black text-[#582F0E]">{v.title}</h3>
-                          <p className="text-xs text-gray-500 font-bold">{v.merchantName}</p>
-                        </div>
-
-                        <p className="text-xs text-[#514532] leading-relaxed line-clamp-3">
-                          {v.description}
-                        </p>
-
-                        {/* Inline Unwrap Confirmation Box (No Modal) */}
-                        {isUnwrapOpen && (
-                          <div className="p-4 rounded-2xl bg-[#FFFDF7] border-2 border-[#E8DCB8] space-y-3 animate-fade-in shadow-inner">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-black text-[#582F0E]">
-                                Unwrap for {v.costPoints} pts?
-                              </span>
-                              <span className="text-[11px] text-gray-500">
-                                Balance: {user?.points ?? 0} pts
-                              </span>
-                            </div>
-
-                            {redeemError && (
-                              <div className="p-2 rounded-lg bg-red-50 text-red-700 text-[11px]">
-                                {redeemError}
-                              </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-2 pt-1">
-                              <button
-                                type="button"
-                                onClick={() => setActiveUnwrapVoucherId(null)}
-                                className="btn-tactile py-2 px-3 rounded-xl border border-[#D5C4AC] text-xs font-bold text-gray-600 hover:bg-white cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRedeem(v)}
-                                disabled={redeeming}
-                                className="btn-tactile btn-sheen py-2 px-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-black shadow-xs cursor-pointer disabled:opacity-50"
-                              >
-                                {redeeming ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirm'}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Card Action Button */}
-                      {!isUnwrapOpen && (
-                        <div>
-                          <button
-                            onClick={() => {
-                              setRedeemError(null);
-                              setActiveUnwrapVoucherId(v.id);
-                            }}
-                            disabled={!canAfford}
-                            className={`btn-tactile w-full py-3.5 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
-                              canAfford
-                                ? 'btn-sheen bg-[#2D6A4F] hover:bg-[#1B4332] text-white'
-                                : 'bg-[#FAF9F5] text-gray-400 border border-[#E3DFD5] cursor-not-allowed'
-                            }`}
-                          >
-                            <Ticket className="w-4 h-4" />
-                            <span>
-                              {!user
-                                ? 'Log in to Redeem'
-                                : user.points < v.costPoints
-                                ? `Need ${v.costPoints - user.points} more pts`
-                                : 'Unwrap Voucher'}
-                            </span>
-                          </button>
-                        </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </ErrorBoundary>
-    </Navigation>
-  );
+type Tab='cosmetics'|'vouchers'|'coming-soon'|'my-items';
+type Cosmetic={id:string;kind:'banner'|'frame'|'title'|'name_color';name:string;description?:string;rarity:string;pricePoints:number|null;priceTjdq:number|null;unlock?:{achievementId:string;title:string};asset:any;owned:boolean;equipped:boolean;buyable:boolean;lockedReason?:string};
+type Voucher={id:string;title:string;description:string;cost_points:number;merchant_name:string;availability?:'live'|'preview';partnerLabel?:string|null;iconKey?:string|null;redeemable?:boolean};
+type Teaser={id:string;title:string;description:string;iconKey:string;etaText?:string};
+type Owned={id:string;kind:Cosmetic['kind'];name:string;asset:any;source:string;acquiredAt:string};
+const tabs:{id:Tab;label:string}[]=[{id:'cosmetics',label:'Cosmetics'},{id:'vouchers',label:'Vouchers'},{id:'coming-soon',label:'Coming soon'},{id:'my-items',label:'My items'}];
+const labels:Record<Cosmetic['kind'],string>={banner:'Banner',frame:'Avatar frame',title:'Title',name_color:'Name colour'};
+const slot:Record<Cosmetic['kind'],string>={banner:'banner_id',frame:'frame_id',title:'title_id',name_color:'name_color_id'};
+function ShopContent(){
+ const {user,refreshProfile}=useAuth(); const {isReady}=useRequireAuth(); const params=useSearchParams(); const router=useRouter();const pathname=usePathname();
+ const tab=(tabs.some(t=>t.id===params.get('tab'))?params.get('tab'):'cosmetics') as Tab;
+ const [items,setItems]=useState<Cosmetic[]>([]),[vouchers,setVouchers]=useState<Voucher[]>([]),[teasers,setTeasers]=useState<Teaser[]>([]),[owned,setOwned]=useState<Owned[]>([]),[loadout,setLoadout]=useState<Record<string,string|null>>({});
+ const [busy,setBusy]=useState(true),[error,setError]=useState(''),[filter,setFilter]=useState<'all'|Cosmetic['kind']>('all'),[selected,setSelected]=useState<Cosmetic|null>(null),[confirm,setConfirm]=useState(false),[purchasing,setPurchasing]=useState(false),[notice,setNotice]=useState(''),[voucherConfirm,setVoucherConfirm]=useState<Voucher|null>(null),[voucherClaim,setVoucherClaim]=useState<any>(null),[redeeming,setRedeeming]=useState(false);
+ const refresh=useCallback(async()=>{setBusy(true);setError('');try{const [c,v,t,m]=await Promise.all([api.get('/shop/cosmetics'),api.get('/vouchers'),api.get('/shop/teasers'),user?api.get('/me/cosmetics'):Promise.resolve({data:{data:{owned:[],loadout:{}}}})]);setItems(c.data.data||[]);setVouchers(v.data.data||[]);setTeasers(t.data.data||[]);setOwned(m.data.data.owned||[]);setLoadout(m.data.data.loadout||{});}catch(e:any){setError(e.response?.data?.error?.message||'Could not load the shop.');}finally{setBusy(false);}},[user]);
+ useEffect(()=>{void refresh();},[refresh]);
+ const visibleItems=useMemo(()=>items.filter(i=>filter==='all'||i.kind===filter),[items,filter]);
+ const setTab=(next:Tab)=>router.replace(`${pathname}?tab=${next}`,{scroll:false});
+ const buy=async()=>{if(!selected)return;setPurchasing(true);setNotice('');try{const result=await api.post(`/shop/cosmetics/${selected.id}/purchase`,{idempotency_key:uuid()});setNotice(`Purchased ${selected.name}.`);setConfirm(false);await refresh();await refreshProfile();setSelected({...selected,owned:true,equipped:false});void result;}catch(e:any){setNotice(e.response?.data?.error?.message||'Purchase failed.');}finally{setPurchasing(false);}};
+ const equip=async(item:Cosmetic|Owned)=>{try{const key=slot[item.kind];await api.put('/me/cosmetics/loadout',{[key]:loadout[key]===item.id?null:item.id});setLoadout(v=>({...v,[key]:v[key]===item.id?null:item.id}));await refresh();}catch(e:any){setError(e.response?.data?.error?.message||'Could not update your appearance.');}};
+ const redeem=async(v:Voucher)=>{setRedeeming(true);try{const r=await api.post(`/vouchers/${v.id}/redeem`,{idempotency_key:uuid()});if(r.data?.success){setVoucherClaim({voucher:v,redemption:{code:r.data.data.code,voucherTitle:v.title,merchantName:v.merchant_name,costPoints:v.cost_points}});setVoucherConfirm(null);await refreshProfile();}}catch(e:any){setNotice(e.response?.data?.error?.message||'Voucher redemption failed.');}finally{setRedeeming(false);}};
+ if(!isReady)return null;
+ return <Navigation><main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+  <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[#e3dfd5] bg-white p-6 shadow-sm"><div><p className="text-xs font-black uppercase tracking-widest text-emerald-800">Traveler shop</p><h1 className="mt-1 text-3xl font-black text-[#582f0e]">Make your profile yours</h1><p className="mt-2 max-w-xl text-sm text-stone-600">Collect Pangasinan-inspired cosmetics, partner offers, and upcoming experiences.</p></div><div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 font-black text-amber-900"><Coins size={19}/>{user?.points??0} points</div></header>
+  <nav aria-label="Shop sections" className="flex flex-wrap gap-2">{tabs.map(t=><button key={t.id} type="button" aria-current={tab===t.id?'page':undefined} onClick={()=>setTab(t.id)} className={`rounded-full border px-4 py-2 text-sm font-bold ${tab===t.id?'border-emerald-800 bg-emerald-800 text-white':'border-stone-300 bg-white text-stone-700 hover:bg-stone-50'}`}>{t.label}</button>)}</nav>
+  {error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error} <button onClick={()=>void refresh()} className="ml-2 underline">Retry</button></p>}{notice&&<p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
+  {busy?<div role="status" className="rounded-2xl bg-white p-12 text-center text-stone-600"><Loader2 className="mx-auto animate-spin"/>Loading shop…</div>:null}
+  {!busy&&tab==='cosmetics'&&<section aria-label="Cosmetics"><div className="mb-4 flex flex-wrap gap-2">{(['all','banner','frame','title','name_color'] as const).map(k=><button key={k} onClick={()=>setFilter(k)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${filter===k?'bg-amber-300 text-amber-950':'bg-white text-stone-700 ring-1 ring-stone-200'}`}>{k==='all'?'All':k==='name_color'?'Name colours':labels[k]}</button>)}</div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visibleItems.map(i=><button key={i.id} onClick={()=>{setSelected(i);setConfirm(false);setNotice('');}} className="overflow-hidden rounded-2xl border border-stone-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><CosmeticSwatch item={i}/><div className="space-y-2 p-4"><div className="flex items-start justify-between gap-2"><h2 className="font-black text-[#582f0e]">{i.name}</h2><span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black uppercase text-emerald-900">{i.rarity}</span></div><p className="text-xs text-stone-600">{labels[i.kind]}</p><div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold"><span>{i.owned?'Owned':i.pricePoints!=null?`${i.pricePoints} points`:i.priceTjdq!=null?'tJDQ · Coming soon':i.unlock?`Unlock: ${i.unlock.title}`:'Not for sale'}</span>{i.equipped&&<span className="text-emerald-800">Equipped</span>}</div></div></button>)}</div></section>}
+  {!busy&&tab==='vouchers'&&<section aria-label="Vouchers" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{vouchers.map(v=>{const preview=v.availability==='preview';return <article key={v.id} className="relative space-y-3 overflow-hidden rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">{preview&&<div className="-mx-5 -mt-5 mb-4 bg-amber-100 px-5 py-2 text-center text-xs font-black uppercase tracking-wide text-amber-950">Sample offer · partner coming soon</div>}<div className="flex items-center justify-between gap-2"><span aria-label={`Offer icon: ${v.iconKey||'ticket'}`} className="rounded-xl bg-emerald-50 p-2 text-xl">{iconEmoji(v.iconKey)}</span><b className="text-emerald-900">{v.cost_points} points</b></div><h2 className="text-lg font-black text-[#582f0e]">{v.title}</h2><p className="font-bold text-stone-600">{preview?v.partnerLabel||v.merchant_name:v.merchant_name}</p><p className="text-sm text-stone-600">{v.description}</p>{preview?<p className="text-xs font-semibold text-amber-900">Planned offer · not redeemable yet</p>:<><button disabled={!user||Number(user.points)<v.cost_points||!v.redeemable} onClick={()=>setVoucherConfirm(v)} className="w-full rounded-xl bg-emerald-800 px-4 py-3 text-sm font-bold text-white disabled:bg-stone-300">{!user?'Log in to redeem':Number(user.points)<v.cost_points?'Not enough points':'Redeem offer'}</button>{voucherConfirm?.id===v.id&&<div className="flex gap-2"><button onClick={()=>setVoucherConfirm(null)} className="flex-1 rounded-lg border p-2">Cancel</button><button disabled={redeeming} onClick={()=>void redeem(v)} className="flex-1 rounded-lg bg-emerald-800 p-2 font-bold text-white">{redeeming?'Redeeming…':'Confirm'}</button></div>}</>}</article>;})}</section>}
+  {!busy&&tab==='coming-soon'&&<section aria-label="Coming soon" className="grid gap-4 sm:grid-cols-2">{teasers.map(t=><article key={t.id} className="rounded-2xl border border-stone-200 bg-white p-6"><span className="text-3xl" aria-hidden="true">{iconEmoji(t.iconKey)}</span><p className="mt-4 text-xs font-black uppercase text-emerald-800">{t.etaText||'Coming soon'}</p><h2 className="mt-1 text-xl font-black text-[#582f0e]">{t.title}</h2><p className="mt-2 text-sm text-stone-600">{t.description}</p></article>)}</section>}
+  {!busy&&tab==='my-items'&&<section aria-label="My items" className="space-y-6">{(['banner','frame','title','name_color'] as const).map(kind=><div key={kind}><h2 className="mb-3 text-lg font-black text-[#582f0e]">{kind==='name_color'?'Name colours':labels[kind]}s</h2><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{owned.filter(i=>i.kind===kind).map(i=><div key={i.id} className="flex items-center justify-between gap-3 rounded-xl border bg-white p-4"><div className="min-w-0"><p className="truncate font-bold">{i.name}</p><p className="text-xs text-stone-500">{i.source==='achievement'?'Achievement unlock':i.source==='grant'?'Admin grant':'Purchased'}</p></div><button onClick={()=>void equip(i)} className="shrink-0 rounded-lg bg-emerald-800 px-3 py-2 text-xs font-bold text-white">{loadout[slot[kind]]===i.id?'Unequip':'Equip'}</button></div>)}</div></div>)}</section>}
+  {selected&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null);}}><section role="dialog" aria-modal="true" aria-labelledby="cosmetic-title" className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"><ProfileBanner asset={selected.kind==='banner'?selected.asset:undefined} className="flex h-28 items-end p-4"><div className="flex items-end gap-3 text-white"><CosmeticAvatar src={user?.avatarUrl} name={user?.displayName||'Traveler'} frame={selected.kind==='frame'?selected:{asset:{style:'ring',colors:['#d6d3d1'],width:1}}} size="lg"/><div><h2 className="text-lg font-black drop-shadow" id="cosmetic-title">{selected.name}</h2><DisplayName name={user?.displayName||'Traveler'} title={selected.kind==='title'?selected:undefined} nameColor={selected.kind==='name_color'?selected:undefined}/></div></div></ProfileBanner><div className="space-y-4 p-5"><p className="text-sm text-stone-600">{selected.description||labels[selected.kind]} · {selected.rarity}</p><p className="font-bold">{selected.owned?'Already owned':selected.pricePoints!=null?`${selected.pricePoints} points`:selected.priceTjdq!=null?'tJDQ · Coming soon':selected.unlock?`Unlock: ${selected.unlock.title}`:'Not for sale'}</p>{!user&&<p className="text-sm text-stone-600">Log in to purchase cosmetics.</p>}{user&&selected.buyable&&<button disabled={Number(user.points)<Number(selected.pricePoints)} onClick={()=>confirm?void buy():setConfirm(true)} className="w-full rounded-xl bg-emerald-800 px-4 py-3 font-black text-white disabled:bg-stone-300">{purchasing?'Buying…':confirm?`Confirm purchase for ${selected.pricePoints} points`:`Buy for ${selected.pricePoints} points`}</button>}{user&&selected.buyable&&Number(user.points)<Number(selected.pricePoints)&&<p className="text-sm text-red-700">You need {Number(selected.pricePoints)-Number(user.points)} more points.</p>}{selected.owned&&<button onClick={()=>void equip(selected)} className="w-full rounded-xl border border-emerald-800 px-4 py-3 font-bold text-emerald-900">{selected.equipped?'Unequip':'Equip now'}</button>}<button onClick={()=>setSelected(null)} className="w-full rounded-xl border border-stone-300 px-4 py-3 font-bold">Close preview</button></div></section></div>}
+  {voucherClaim&&<VoucherRippingOverlay isOpen onClose={()=>setVoucherClaim(null)} voucherTitle={voucherClaim.voucher.title} merchantName={voucherClaim.voucher.merchant_name} costPoints={voucherClaim.voucher.cost_points} redemptionCode={voucherClaim.redemption.code} description={voucherClaim.voucher.description} userPointsLeft={Number(user?.points??0)-voucherClaim.voucher.cost_points}/>}
+ </main></Navigation>;
 }
+function CosmeticSwatch({item}:{item:Cosmetic}){if(item.kind==='banner')return <div aria-label={`${item.name} banner swatch`} className="h-24" style={{background:`linear-gradient(${item.asset.angle}deg,${item.asset.colors.join(',')})`}}/>;if(item.kind==='frame')return <div aria-label={`${item.name} frame swatch`} className="flex h-24 items-center justify-center bg-stone-50"><span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-2xl" style={{border:`${item.asset.width}px solid ${item.asset.colors[0]}`,boxShadow:`0 0 0 3px ${item.asset.colors[1]||item.asset.colors[0]}`}}>☺</span></div>;if(item.kind==='title')return <div aria-label={`${item.name} title swatch`} className="flex h-24 items-center justify-center bg-stone-50 font-black text-[#582f0e]">{item.asset.text}</div>;return <div aria-label={`${item.name} name colour swatch`} className="flex h-24 items-center justify-center bg-white font-black" style={{color:item.asset.color}}>{item.name}</div>;}
+function iconEmoji(key?:string|null){return ({coffee:'☕',meal:'🍽️',boat:'🚤',souvenir:'🎁',ride:'🛺',ticket:'🎟️',stay:'🏖️',sweets:'🍬',trail:'🧭',sparkles:'✨',users:'👥'} as Record<string,string>)[key||'']||'🎟️';}
+export default function ShopPage(){return <Suspense fallback={<div className="p-8">Loading shop…</div>}><ShopContent/></Suspense>;}

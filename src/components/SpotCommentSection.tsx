@@ -20,6 +20,8 @@ import { useAuth } from '@/lib/auth';
 import { triggerCelebration } from './CelebrationEffects';
 import { UserBadgeChip, UserBadgesRow } from '@/components/Badges';
 import { getActiveNametagBadges, SAMPLE_USER_BADGES } from '@/lib/badges';
+import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
+import { DisplayName } from '@/components/cosmetics/DisplayName';
 
 export interface LocationPin {
   name: string;
@@ -34,6 +36,7 @@ export interface SpotComment {
   author_name: string;
   author_badge?: string;
   author_avatar?: string;
+  author_cosmetics?: import('@/lib/api').CosmeticRenderData;
   content: string;
   image_url?: string;
   location_pin?: LocationPin;
@@ -338,13 +341,7 @@ export function SpotCommentSection({ spotId, spotName, onRequireSignIn }: SpotCo
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E8E5DF] p-3.5 space-y-2.5 shadow-2xs focus-within:border-[#2D6A4F] transition-all">
         {/* User Identity Preview & Input Area */}
         <div className="flex items-start gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] text-[10px] font-black text-white shadow-2xs overflow-hidden mt-0.5">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span>{currentUserInitials || 'ME'}</span>
-            )}
-          </div>
+          <CosmeticAvatar src={user?.avatarUrl} name={user?.displayName || currentUserInitials || 'ME'} frame={user?.cosmetics?.frame} size="xs" />
 
           <div className="flex-1 min-w-0 space-y-2">
             <textarea
@@ -602,18 +599,12 @@ export function SpotCommentSection({ spotId, spotName, onRequireSignIn }: SpotCo
                 {/* Comment Header: Author & Time */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] text-[10px] font-black text-white shadow-2xs overflow-hidden">
-                      {comment.author_avatar ? (
-                        <img src={comment.author_avatar} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span>{initials || 'TR'}</span>
-                      )}
-                    </div>
+                    <CosmeticAvatar src={comment.author_avatar} name={comment.author_name || initials || 'TR'} frame={comment.author_cosmetics?.frame} size="xs" />
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="truncate text-xs font-bold text-[#2C221E]">
-                          {comment.author_name}
+                          <DisplayName name={comment.author_name} title={comment.author_cosmetics?.title} nameColor={comment.author_cosmetics?.nameColor} />
                         </span>
                         <UserBadgesRow
                           userIdOrName={comment.user_id || comment.author_name}

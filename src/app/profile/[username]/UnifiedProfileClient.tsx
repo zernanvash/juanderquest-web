@@ -19,6 +19,8 @@ import {
 } from '@/lib/search';
 import { FollowButton } from '@/components/FollowButton';
 import { FollowListModal } from '@/components/FollowListModal';
+import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
+import { DisplayName } from '@/components/cosmetics/DisplayName';
 import { fetchMyEngagement, type EngagementSummary } from '@/lib/engagement';
 import { COPY, formatPoints, formatXp } from '@/lib/copy';
 import {
@@ -341,17 +343,13 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       {/* Avatar + Main Identity Info */}
                       <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-5">
                         <div className="relative flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-3xl sm:text-4xl font-black text-[#582F0E] shadow-lg ring-2 ring-[#2D6A4F]/20 overflow-hidden bg-white">
-                          {profile.avatar_url ? (
-                            <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{initials}</span>
-                          )}
+                          <CosmeticAvatar src={profile.avatar_url} name={displayName || initials} frame={profile.cosmetics?.frame} size="xl" />
                         </div>
 
                         <div className="space-y-1.5 pt-1 sm:pt-0 sm:pb-2">
                           <div className="flex items-center gap-2.5 flex-wrap">
                             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2C221E] tracking-tight">
-                              {displayName}
+                              <DisplayName name={displayName} title={profile.cosmetics?.title} nameColor={profile.cosmetics?.nameColor} />
                             </h1>
                             <UserBadgesRow userIdOrName={profile.id || displayName} size="md" />
                           </div>
@@ -786,17 +784,13 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       {/* Avatar + Main Identity Info */}
                       <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-5">
                         <div className="relative flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-3xl sm:text-4xl font-black text-[#582F0E] shadow-lg ring-2 ring-[#2D6A4F]/20 overflow-hidden bg-white">
-                          {user.avatarUrl ? (
-                            <img src={user.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{initials || 'ME'}</span>
-                          )}
+                          <CosmeticAvatar src={user.avatarUrl} name={displayName || initials || 'ME'} frame={user.cosmetics?.frame} size="xl" />
                         </div>
 
                         <div className="space-y-1.5 pt-1 sm:pt-0 sm:pb-2">
                           <div className="flex items-center gap-2.5 flex-wrap">
                             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2C221E] tracking-tight">
-                              {displayName}
+                              <DisplayName name={displayName} title={user.cosmetics?.title} nameColor={user.cosmetics?.nameColor} />
                             </h1>
                             <UserBadgesRow isCurrentUser size="md" />
                           </div>
