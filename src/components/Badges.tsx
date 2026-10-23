@@ -10,6 +10,8 @@ import {
   onBadgesUpdated,
 } from '@/lib/badges';
 import { Sparkles, Shield, Award, HelpCircle, CheckCircle2, ExternalLink } from 'lucide-react';
+import { useGSAP, prefersReducedMotion } from '@/lib/animations/gsap';
+import gsap from 'gsap';
 
 // ========================================================================
 // Global Badge Preview Coordinator (Prevents overlapping modals when hovering across adjacent badges)
@@ -105,6 +107,27 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Plan 53: GSAP modal reveal animation (scale 0.92 -> 1 with back.out(1.6), <= 300ms)
+  useGSAP(() => {
+    if (!isOpen || !modalRef.current) return;
+    const isReduced = prefersReducedMotion();
+
+    if (isReduced) {
+      gsap.fromTo(
+        modalRef.current,
+        { opacity: 0.4 },
+        { opacity: 1, duration: 0.12, ease: 'power2.out' }
+      );
+      return;
+    }
+
+    gsap.fromTo(
+      modalRef.current,
+      { scale: 0.92, opacity: 0.6 },
+      { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(1.6)' }
+    );
+  }, { dependencies: [isOpen, badge], scope: modalRef });
 
   if (!isOpen || !mounted) return null;
 
