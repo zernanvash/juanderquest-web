@@ -135,8 +135,9 @@ export function OnChainBadges({ onWalletChanged }: { onWalletChanged?: () => voi
     prevBadgesDataRef.current = data.badges;
   }, [data]);
 
-  // Expose a custom event hook for manual triggers/testing
+  // Expose a custom event hook for manual testing in non-production environments
   useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
     const handleTrigger = (e: Event) => {
       const badgeId = (e as CustomEvent<{ badgeId?: string }>).detail?.badgeId;
       if (badgeId) {
