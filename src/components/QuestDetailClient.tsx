@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { MiniMapPreview } from '@/components/MiniMapPreview';
 import { COPY, formatPoints } from '@/lib/copy';
+import { QuestMarkerMedia } from '@/components/QuestMarkerMedia';
 
 export default function QuestDetailClient() {
   const params = useParams();
@@ -114,15 +115,15 @@ export default function QuestDetailClient() {
               <div className="lg:col-span-7 space-y-6">
                 {/* Hero Banner Header */}
                 <div className="relative rounded-3xl overflow-hidden h-80 sm:h-96 shadow-sm border border-[#E3DFD5] bg-stone-100">
-                  <img
-                    src={quest.markerImageUrl || '/bg_landscape.png'}
-                    alt={quest.title}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/bg_landscape.png';
-                    }}
+                  <QuestMarkerMedia
+                    markerImageUrl={quest.markerImageUrl}
+                    title={quest.title}
+                    category={quest.category}
+                    locationName={quest.locationName}
+                    aspectRatio="banner"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
 
                   <div className="absolute top-4 left-4 flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full bg-[#FFB703] text-[#582F0E] text-xs font-black uppercase tracking-wider shadow-md">
