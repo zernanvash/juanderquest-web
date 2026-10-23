@@ -21,6 +21,7 @@ import { FollowButton } from '@/components/FollowButton';
 import { FollowListModal } from '@/components/FollowListModal';
 import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
 import { DisplayName } from '@/components/cosmetics/DisplayName';
+import { ProfileBanner } from '@/components/cosmetics/ProfileBanner';
 import { fetchMyEngagement, type EngagementSummary } from '@/lib/engagement';
 import { COPY, formatPoints, formatXp } from '@/lib/copy';
 import {
@@ -329,13 +330,13 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                 {/* Facebook-style Top Cover & Header Card */}
                 <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
                   {/* Cover Photo */}
-                  <div className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
+                  <ProfileBanner asset={profile.cosmetics?.banner?.asset} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
                     <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
                     <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
                       <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
                       <span>Member since {joinedYear}</span>
                     </div>
-                  </div>
+                  </ProfileBanner>
 
                   {/* Header Details: Avatar overlapping cover, name, follow CTA */}
                   <div className="px-5 pb-6 sm:px-8">
@@ -770,13 +771,13 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                 {/* Facebook-style Top Cover & Identity Card */}
                 <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
                   {/* Cover Photo */}
-                  <div className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
+                  <ProfileBanner asset={user.cosmetics?.banner?.asset} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
                     <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
                     <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
                       <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
                       <span>Your Passport · Member {joinedYear}</span>
                     </div>
-                  </div>
+                  </ProfileBanner>
 
                   {/* Header Details: Avatar overlapping cover, name, actions */}
                   <div className="px-5 pb-6 sm:px-8">
