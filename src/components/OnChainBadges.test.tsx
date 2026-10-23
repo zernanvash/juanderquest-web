@@ -75,4 +75,49 @@ describe('OnChainBadges', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Link wallet/ }));
     expect(await screen.findByText(/already linked to another/)).toBeTruthy();
   });
+
+  it('triggers the GSAP ceremony on minting -> on_chain transition, but not on initial load', async () => {
+    sessionStorage.clear();
+    // 1. Initial mount with badge in 'minting' state
+    respond(WALLET, [badge({ awardId: 'b-mint', state: 'minting', tokenUrl: null })]);
+    render(<OnChainBadges />);
+    expect(await screen.findByText('Minting…')).toBeTruthy();
+    expect(sessionStorage.getItem('jdq_celebrated_badges_v1')).toBeNull();
+
+    // 2. Poll / reload transitions badge to 'on_chain'
+    respond(WALLET, [badge({ awardId: 'b-mint', state: 'on_chain' })]);
+    // Advance timers or trigger poll
+    fireEvent(window, new CustomEvent('jdq:celebrate-badge', { detail: { badgeId: 'b-mint' } }));
+
+    await waitFor(() => {
+      const stored = sessionStorage.getItem('jdq_celebrated_badges_v1');
+      expect(stored && stored.includes('b-mint')).toBe(true);
+    });
+
+    // 3. New mount with badge already on_chain should not re-celebrate
+    const rawBefore = sessionStorage.getItem('jdq_celebrated_badges_v1');
+    render(<OnChainBadges />);
+    expect(await screen.findByText('On-chain')).toBeTruthy();
+    expect(sessionStorage.getItem('jdq_celebrated_badges_v1')).toBe(rawBefore);
+  });
+
+  it('renders gracefully when prefers-reduced-motion is true', async () => {
+    const origMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    respond(WALLET, [badge({ awardId: 'b-red', state: 'on_chain' })]);
+    render(<OnChainBadges />);
+    expect(await screen.findByText('First Footstep')).toBeTruthy();
+
+    window.matchMedia = origMatchMedia;
+  });
 });

@@ -106,6 +106,42 @@ export const BadgePreviewModal: React.FC<BadgePreviewModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Plan 53: GSAP modal reveal animation (scale 0.92 -> 1 with back.out(1.6), <= 300ms)
+  // Dynamically import GSAP strictly when the modal is open to keep GSAP out of /explore, /profile, and spot bundles
+  useEffect(() => {
+    if (!isOpen || !modalRef.current) return;
+    let cancelled = false;
+
+    void (async () => {
+      const { gsap } = await import('gsap');
+      if (cancelled || !modalRef.current) return;
+
+      const isReduced =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (isReduced) {
+        gsap.fromTo(
+          modalRef.current,
+          { opacity: 0.4 },
+          { opacity: 1, duration: 0.12, ease: 'power2.out' }
+        );
+        return;
+      }
+
+      gsap.fromTo(
+        modalRef.current,
+        { scale: 0.92, opacity: 0.6 },
+        { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(1.6)' }
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, badge]);
+
   if (!isOpen || !mounted) return null;
 
   const isUser = kind === 'user' || 'rarity' in badge;
