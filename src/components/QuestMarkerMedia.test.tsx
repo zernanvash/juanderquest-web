@@ -54,4 +54,16 @@ describe('QuestMarkerMedia', () => {
     expect(screen.queryByTestId('quest-marker-image')).toBeNull();
     expect(screen.getByRole('img', { name: /Balingasay River Clean-up \(Category illustration\)/i })).toBeDefined();
   });
+
+  it('shows the next image again when a reused component gets a new marker URL', () => {
+    const { rerender } = render(
+      <QuestMarkerMedia markerImageUrl="https://example.test/broken.png" title="Quest A" category="eco" />
+    );
+    fireEvent.error(screen.getByTestId('quest-marker-image'));
+    expect(screen.queryByTestId('quest-marker-image')).toBeNull();
+
+    rerender(<QuestMarkerMedia markerImageUrl="https://example.test/working.png" title="Quest B" category="eco" />);
+    const img = screen.getByTestId('quest-marker-image') as HTMLImageElement;
+    expect(img.src).toContain('working.png');
+  });
 });
