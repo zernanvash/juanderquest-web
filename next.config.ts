@@ -44,6 +44,30 @@ if (distDir === ".next-presentation") {
   }
 }
 
+// Local safety: only the production release builds (served from .deploy/web)
+// may talk to the production API. Any other run (next dev, a worktree build or
+// next start) must point API_PROXY_TARGET at a preview API such as :4110/:4120.
+const releaseDistDirs = new Set([".next-alpha-release", ".next-alpha-release-next"]);
+const productionApiHosts = ["api.juanderquest.app", "juanderquest.app"];
+function isProductionApi(value: string | undefined): boolean {
+  if (!value?.trim()) return false;
+  try {
+    const url = new URL(value.trim());
+    return productionApiHosts.includes(url.hostname) ||
+      (["127.0.0.1", "localhost"].includes(url.hostname) && url.port === "4000");
+  } catch {
+    return false;
+  }
+}
+const effectiveProxyTarget = apiProxyTarget || `http://127.0.0.1:${localApiPort}`;
+if (!releaseDistDirs.has(distDir ?? "") &&
+    (isProductionApi(effectiveProxyTarget) || isProductionApi(process.env.NEXT_PUBLIC_API_BASE_URL) || isProductionApi(process.env.INTERNAL_API_URL))) {
+  throw new Error(
+    "Refusing to run against the production API outside the release build. " +
+    "Set API_PROXY_TARGET to your preview API (e.g. http://127.0.0.1:4110) and do not use .env.production.local for local runs.",
+  );
+}
+
 const disableDevIndicators = process.env.DISABLE_DEV_INDICATORS === "true" || process.env.CI === "true";
 
 const nextConfig: NextConfig = {
