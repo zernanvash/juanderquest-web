@@ -17,7 +17,7 @@ export const bangus: BannerGenerator = { create(rng, W, H, c) {
     }
   };
   for(let i=0;i<240;i++)step(1/30);
-  return (ctx,t,dt) => { if(dt)step(dt);let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,c[0]);g.addColorStop(1,c[1]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='lighter';
+  return (ctx,t,dt) => { if(dt)step(dt);const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,c[0]);g.addColorStop(1,c[1]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='lighter';
     for(let i=0;i<5;i++){const x=W*(.1+i*.2)+Math.sin(t*.3+i)*W*.04;ctx.fillStyle=rgba(c[4],.05+.03*Math.sin(t*.7+i*2));ctx.beginPath();ctx.moveTo(x-H*.06,0);ctx.lineTo(x+H*.06,0);ctx.lineTo(x+H*.5,H);ctx.lineTo(x+H*.1,H);ctx.fill();}
     for(const b of bubbles){const y=((b[1]-t*H*.12*b[2])%H+H)%H;ctx.strokeStyle=rgba(c[4],.35);ctx.lineWidth=1;ctx.beginPath();ctx.arc(b[0]+Math.sin(t*2+b[2]*9)*3,y,s*.12*b[2],0,7);ctx.stroke();}ctx.globalCompositeOperation='source-over';
     for(const f of fish){ctx.save();ctx.translate(f.x,f.y);ctx.rotate(Math.atan2(f.vy,f.vx));const w=Math.sin(t*11+f.p)*s*.22;ctx.fillStyle=c[2];ctx.beginPath();ctx.moveTo(-s*1.2,0);ctx.lineTo(-s*2.05,-s*.55+w);ctx.lineTo(-s*1.75,w*.5);ctx.lineTo(-s*2.05,s*.55+w);ctx.fill();ctx.fillStyle=c[3];ctx.beginPath();ctx.ellipse(0,0,s*1.35,s*.4,0,0,7);ctx.fill();ctx.fillStyle=c[2];ctx.beginPath();ctx.ellipse(0,0,s*1.35,s*.4,0,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle='#0b1a22';ctx.beginPath();ctx.arc(s*.95,-s*.08,s*.09,0,7);ctx.fill();ctx.restore();}

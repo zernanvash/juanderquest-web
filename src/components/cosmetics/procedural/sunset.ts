@@ -13,6 +13,6 @@ export const sunset: BannerGenerator = { create(rng, W, H, c) {
     g = ctx.createLinearGradient(0, hz, 0, H); g.addColorStop(0, c[4]); g.addColorStop(1, c[5]); ctx.fillStyle = g; ctx.fillRect(0, hz, W, H - hz);
     for (const [a, b, p] of glitter) { const k = Math.pow(a, 1.5), y = hz + k * (H - hz), w = radius * (.5 + k * 2.2), x = sx + (b - .5) * w * 2, alpha = Math.pow(Math.max(0, Math.sin(t * 2.6 + p)), 3); ctx.fillStyle = rgba(c[3], alpha * .9); ctx.fillRect(x - w * .18, y, w * .36, Math.max(1, H * .006)); }
     ctx.lineWidth = Math.max(1, H * .004);
-    for (const B of bands) { const k = (B.b + 1) / bands.length, y0 = hz + Math.pow(k, 1.7) * (H - hz), a = H * .008 * (1 + k * 2); ctx.strokeStyle = rgba(c[2], .18 + k * .12); ctx.beginPath(); for (let x = 0; x <= W; x += 6) { const y = y0 + a * (Math.sin(x * B.f1 + t * B.s + B.ph) + .5 * Math.sin(x * B.f2 - t * B.s * 1.3)); x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); }
+    for (const B of bands) { const k = (B.b + 1) / bands.length, y0 = hz + Math.pow(k, 1.7) * (H - hz), a = H * .008 * (1 + k * 2); ctx.strokeStyle = rgba(c[2], .18 + k * .12); ctx.beginPath(); for (let x = 0; x <= W; x += 6) { const y = y0 + a * (Math.sin(x * B.f1 + t * B.s + B.ph) + .5 * Math.sin(x * B.f2 - t * B.s * 1.3)); if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke(); }
   };
 } };
