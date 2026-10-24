@@ -89,7 +89,7 @@ export interface UserModel {
   cosmetics?: CosmeticRenderData;
 }
 
-export type CosmeticRenderItem = { id:string; kind:string; asset:Record<string,unknown> } | null;
+export type CosmeticRenderItem = { id:string; kind:string; asset:Record<string,unknown>; seed?:number } | null;
 export type CosmeticRenderData = { banner:CosmeticRenderItem; frame:CosmeticRenderItem; title:CosmeticRenderItem; nameColor:CosmeticRenderItem };
 
 export interface QuestModel {
