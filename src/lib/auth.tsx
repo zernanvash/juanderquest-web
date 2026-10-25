@@ -1,12 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { isAxiosError } from 'axios';
 import type { PreviewStatus } from './preview';
 import { invalidateCache } from './cache';
 import { isTravelerSession } from './traveler-session';
 import { useRouter } from 'next/navigation';
 import { api, ADMIN_URL, isUnauthorizedError, normalizeUser, normalizeWallet, UserModel, WalletModel } from './api';
+import { walletRewardFromBalanceChange } from './wallet-reward';
 
 interface AuthContextType {
   user: UserModel | null;
@@ -89,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserModel | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletModel | null>(null);
+  const previousWalletBalance = useRef<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionUnavailable, setSessionUnavailable] = useState(false);
   const [sessionRetry, setSessionRetry] = useState(0);
@@ -191,24 +193,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await api.get('/wallet');
       if (res.data?.success) {
         const nextWallet = normalizeWallet(res.data.data);
-        setWallet((prev) => {
-          if (prev && nextWallet.balanceMjdq > prev.balanceMjdq) {
-            const diff = nextWallet.balanceMjdq - prev.balanceMjdq;
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(
-                new CustomEvent('jdq:reward-received', {
-                  detail: { diff, total: nextWallet.balanceMjdq },
-                })
-              );
-            }
-          }
-          return nextWallet;
-        });
+        setWallet(nextWallet);
       }
     } catch (e) {
       if (!isUnauthorizedError(e)) console.error('Failed to refresh wallet', e);
     }
   };
+
+  useEffect(() => {
+    const nextBalance = wallet?.balanceMjdq ?? null;
+    const reward = nextBalance === null
+      ? null
+      : walletRewardFromBalanceChange(previousWalletBalance.current, nextBalance);
+    previousWalletBalance.current = nextBalance;
+    if (reward) {
+      window.dispatchEvent(new CustomEvent('jdq:reward-received', { detail: reward }));
+    }
+  }, [wallet]);
 
   useEffect(() => {
     if (!token) return;
