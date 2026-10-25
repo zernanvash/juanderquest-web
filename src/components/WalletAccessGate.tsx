@@ -12,14 +12,14 @@ export function WalletAccessGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading, sessionUnavailable, retrySession } = useAuth();
   const [toastDismissed, setToastDismissed] = useState(false);
   const publicPage = isPublicPage(pathname);
-  const hasWallet = isTravelerSession(user);
+  const hasTravelerSession = isTravelerSession(user);
 
   useEffect(() => {
-    if (!publicPage && !isLoading && !sessionUnavailable && !hasWallet) {
+    if (!publicPage && !isLoading && !sessionUnavailable && !hasTravelerSession) {
       const destination = `${window.location.pathname}${window.location.search}`;
       router.replace(`/login?redirect=${encodeURIComponent(destination)}`);
     }
-  }, [publicPage, isLoading, sessionUnavailable, hasWallet, router]);
+  }, [publicPage, isLoading, sessionUnavailable, hasTravelerSession, router]);
 
   if (publicPage) {
     return (
@@ -70,9 +70,9 @@ export function WalletAccessGate({ children }: { children: React.ReactNode }) {
     </main>;
   }
 
-  if (!publicPage && (isLoading || !hasWallet)) {
+  if (!publicPage && (isLoading || !hasTravelerSession)) {
     return <main id="main-content" className="grid min-h-[60vh] place-items-center p-6 text-sm text-[var(--color-text-secondary)]" role="status">
-      {isLoading ? 'Restoring your wallet session…' : 'Taking you to wallet sign-in…'}
+      {isLoading ? 'Restoring your account session…' : 'Taking you to sign-in…'}
     </main>;
   }
   return <>{children}</>;
