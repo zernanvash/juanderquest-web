@@ -387,6 +387,7 @@ export const Navigation: React.FC<{
         { label: 'Explore Feed', href: '/explore', icon: Compass },
         { label: 'Map', href: '/map', icon: MapPin },
         { label: 'Eco-Quests', href: '/quests', icon: Zap, hasNews: true },
+        { label: 'Trails', href: '/trails', icon: Compass },
         { label: 'JuanChoice', href: '/choice', icon: Award, hasNews: true },
       ],
     },
