@@ -4,6 +4,7 @@ import { Crown, MapPin } from 'lucide-react';
 import type { StandingEntry } from '@/lib/plaza-api';
 import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
 import { DisplayName } from '@/components/cosmetics/DisplayName';
+import { ProfileBanner } from '@/components/cosmetics/ProfileBanner';
 
 interface PodiumProps {
   podium: StandingEntry[];
@@ -21,6 +22,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
       {/* 🥈 Rank 2 - Silver (Left) */}
       {second ? (
         <div className="order-2 md:order-1 bg-white rounded-2xl border-2 border-slate-200 p-5 sm:p-6 flex flex-col justify-between shadow-xs hover:shadow-md transition relative group">
+          {second.cosmetics?.banner && <ProfileBanner asset={second.cosmetics.banner.asset as any} seed={second.cosmetics.banner.seed} motion="still" aspect={4} className="mb-3 h-12 rounded-lg" />}
           <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-slate-100 border border-slate-300 text-slate-700 text-[11px] font-black uppercase tracking-wider shadow-2xs flex items-center gap-1">
             <span>🥈 2nd Place</span>
           </div>
@@ -64,6 +66,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
 
       {/* 🥇 Rank 1 - Gold Champion (Center / Spotlight) */}
       <div className="order-1 md:order-2 bg-gradient-to-b from-amber-50/90 via-white to-white rounded-2xl border-2 border-amber-300 p-6 sm:p-7 flex flex-col justify-between shadow-md hover:shadow-lg transition relative group md:-translate-y-2">
+        {first.cosmetics?.banner && <ProfileBanner asset={first.cosmetics.banner.asset as any} seed={first.cosmetics.banner.seed} motion="still" aspect={4} className="mb-3 h-12 rounded-lg" />}
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5">
           <Crown className="w-3.5 h-3.5 fill-current" />
           <span>1st Place Champion</span>
@@ -110,6 +113,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
       {/* 🥉 Rank 3 - Bronze (Right) */}
       {third ? (
         <div className="order-3 md:order-3 bg-white rounded-2xl border-2 border-orange-200 p-5 sm:p-6 flex flex-col justify-between shadow-xs hover:shadow-md transition relative group">
+          {third.cosmetics?.banner && <ProfileBanner asset={third.cosmetics.banner.asset as any} seed={third.cosmetics.banner.seed} motion="still" aspect={4} className="mb-3 h-12 rounded-lg" />}
           <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-orange-100 border border-orange-300 text-orange-800 text-[11px] font-black uppercase tracking-wider shadow-2xs flex items-center gap-1">
             <span>🥉 3rd Place</span>
           </div>

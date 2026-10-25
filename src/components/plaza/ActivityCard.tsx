@@ -6,6 +6,7 @@ import { formatActivityText } from './activityText';
 import { CommentThread } from './CommentThread';
 import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
 import { DisplayName } from '@/components/cosmetics/DisplayName';
+import { ProfileBanner } from '@/components/cosmetics/ProfileBanner';
 
 interface ActivityCardProps {
   activity: ActivityItem;
@@ -83,6 +84,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       aria-labelledby={`act-heading-${activity.id}`}
       className="bg-white rounded-2xl border border-[var(--color-border-default)] p-4 sm:p-5 shadow-xs hover:shadow-md transition space-y-3"
     >
+      {activity.actor.cosmetics?.banner && <ProfileBanner asset={activity.actor.cosmetics.banner.asset as any} seed={activity.actor.cosmetics.banner.seed} motion="still" aspect={7} className="-mx-4 -mt-4 h-14 rounded-t-2xl sm:-mx-5 sm:-mt-5" />}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Avatar */}

@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Medal, Loader2, ArrowUp } from 'lucide-react';
 import type { StandingEntry } from '@/lib/plaza-api';
+import { ProfileBanner } from '@/components/cosmetics/ProfileBanner';
 
 interface RankListProps {
   entries: StandingEntry[];
@@ -64,6 +65,7 @@ export const RankList: React.FC<RankListProps> = ({
 
               {/* Scout Info */}
               <div className="min-w-0 flex-1">
+                {scout.cosmetics?.banner && <ProfileBanner asset={scout.cosmetics.banner.asset as any} seed={scout.cosmetics.banner.seed} motion="still" aspect={8} className="mb-2 h-8 max-w-48 rounded-md" />}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {scout.handle ? (
                     <Link

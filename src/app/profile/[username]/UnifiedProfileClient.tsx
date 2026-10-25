@@ -330,7 +330,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                 {/* Facebook-style Top Cover & Header Card */}
                 <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
                   {/* Cover Photo */}
-                  <ProfileBanner asset={profile.cosmetics?.banner?.asset} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
+                  <ProfileBanner asset={profile.cosmetics?.banner?.asset as any} seed={profile.cosmetics?.banner?.seed} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
                     <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
                     <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
                       <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
@@ -771,7 +771,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                 {/* Facebook-style Top Cover & Identity Card */}
                 <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
                   {/* Cover Photo */}
-                  <ProfileBanner asset={user.cosmetics?.banner?.asset} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
+                  <ProfileBanner asset={(myProfile?.cosmetics ?? user.cosmetics)?.banner?.asset as any} seed={(myProfile?.cosmetics ?? user.cosmetics)?.banner?.seed} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
                     <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
                     <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
                       <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
@@ -785,13 +785,13 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       {/* Avatar + Main Identity Info */}
                       <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-5">
                         <div className="relative flex h-28 w-28 sm:h-36 sm:w-36 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-3xl sm:text-4xl font-black text-[#582F0E] shadow-lg ring-2 ring-[#2D6A4F]/20 overflow-hidden bg-white">
-                          <CosmeticAvatar src={user.avatarUrl} name={displayName || initials || 'ME'} frame={user.cosmetics?.frame} size="xl" />
+                          <CosmeticAvatar src={user.avatarUrl} name={displayName || initials || 'ME'} frame={(myProfile?.cosmetics ?? user.cosmetics)?.frame} size="xl" />
                         </div>
 
                         <div className="space-y-1.5 pt-1 sm:pt-0 sm:pb-2">
                           <div className="flex items-center gap-2.5 flex-wrap">
                             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#2C221E] tracking-tight">
-                              <DisplayName name={displayName} title={user.cosmetics?.title} nameColor={user.cosmetics?.nameColor} />
+                              <DisplayName name={displayName} title={(myProfile?.cosmetics ?? user.cosmetics)?.title} nameColor={(myProfile?.cosmetics ?? user.cosmetics)?.nameColor} />
                             </h1>
                             <UserBadgesRow isCurrentUser size="md" />
                           </div>
