@@ -41,8 +41,10 @@ export function TrailsClient() {
   const { user, isLoading: authLoading, refreshProfile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedTab = searchParams.get('tab');
-  const [tab, setTab] = useState<Tab>('discover');
+  const [tab, setTab] = useState<Tab>(() => {
+    const requested = searchParams.get('tab');
+    return requested === 'create' || requested === 'mine' ? requested : 'discover';
+  });
   const [trails, setTrails] = useState<TrailCatalogItem[]>([]);
   const [personalGeneration, setPersonalGeneration] = useState<PersonalTrailAllowance|null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,11 +70,6 @@ export function TrailsClient() {
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
   }, []);
-
-  useEffect(() => {
-    if (requestedTab === 'create') setTab(personalGeneration ? 'create' : 'discover');
-    else if (requestedTab === 'mine' || requestedTab === 'discover') setTab(requestedTab);
-  }, [requestedTab, personalGeneration]);
 
   const activeTab: Tab = tab === 'create' && personalGeneration === null ? 'discover' : tab;
 
