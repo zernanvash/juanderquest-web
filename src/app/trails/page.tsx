@@ -2,7 +2,7 @@ import { TrailsClient } from './TrailsClient';
 import { pageMetadata } from '@/lib/page-metadata';
 
 export const metadata = {
-  ...pageMetadata('Discover Trails', 'Explore unlockable Pangasinan routes or build a personal trail around the places and pace you enjoy.', '/trails'),
+  ...pageMetadata('Discover Trails', 'Explore curated Pangasinan routes, unlock trails, and check in at real destinations.', '/trails'),
   robots: { index: false, follow: false },
 };
 

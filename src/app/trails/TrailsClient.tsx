@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Compass, LockKeyhole, MapPin, Sparkles, Clock3, Coins, Loader2, Route, WandSparkles } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { useAuth } from '@/lib/auth';
@@ -40,6 +40,8 @@ function getApiError(error: unknown) {
 export function TrailsClient() {
   const { user, isLoading: authLoading, refreshProfile } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab');
   const [tab, setTab] = useState<Tab>('discover');
   const [trails, setTrails] = useState<TrailCatalogItem[]>([]);
   const [personalGeneration, setPersonalGeneration] = useState<PersonalTrailAllowance|null>(null);
@@ -66,6 +68,13 @@ export function TrailsClient() {
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
   }, []);
+
+  useEffect(() => {
+    if (requestedTab === 'create') setTab(personalGeneration ? 'create' : 'discover');
+    else if (requestedTab === 'mine' || requestedTab === 'discover') setTab(requestedTab);
+  }, [requestedTab, personalGeneration]);
+
+  const activeTab: Tab = tab === 'create' && personalGeneration === null ? 'discover' : tab;
 
   const visible = useMemo(() => tab === 'mine' ? trails.filter(trail => trail.is_unlocked) : trails, [tab, trails]);
   const toggle = (items: string[], setItems: (values: string[]) => void, item: string) => setItems(items.includes(item) ? items.filter(value => value !== item) : [...items, item]);
@@ -106,7 +115,7 @@ export function TrailsClient() {
         <div className="relative max-w-2xl">
           <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-emerald-200"><Compass size={15} /> The Trail</p>
           <h1 className="text-3xl font-black tracking-tight sm:text-5xl">Take the scenic way.</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-emerald-50/85 sm:text-base">Unlock curated routes, check in at real places, or build a personal day out around what you love.</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-emerald-50/85 sm:text-base">Unlock curated routes and check in at real places.</p>
         </div>
         <div className="relative mt-6 flex flex-wrap gap-3 text-xs font-bold text-emerald-50/90">
           <span className="rounded-full bg-white/10 px-3 py-2">Off-chain points only</span><span className="rounded-full bg-white/10 px-3 py-2">Real-world check-ins</span><span className="rounded-full bg-white/10 px-3 py-2">No wallet required</span>
@@ -114,13 +123,13 @@ export function TrailsClient() {
       </header>
 
       <div className="mt-7 flex flex-wrap gap-2 border-b border-stone-200" role="tablist" aria-label="Trail sections">
-        {([['discover','Discover'],['mine','My trails'],['create','Create your trail']] as const).map(([id,label]) =>
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setError(''); }} className={`rounded-t-xl px-4 py-3 text-sm font-black transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${tab === id ? 'border-b-2 border-emerald-700 text-emerald-800' : 'text-stone-500 hover:text-stone-800'}`}>{label}</button>)}
+        {([['discover','Discover'],['mine','My trails'],...(personalGeneration ? [['create','Create your trail'] as const] : [])] as const).map(([id,label]) =>
+          <button key={id} role="tab" aria-selected={activeTab === id} onClick={() => { setTab(id); setError(''); }} className={`rounded-t-xl px-4 py-3 text-sm font-black transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${activeTab === id ? 'border-b-2 border-emerald-700 text-emerald-800' : 'text-stone-500 hover:text-stone-800'}`}>{label}</button>)}
       </div>
 
       {error && <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{error}</div>}
 
-      {tab === 'create' ? <form onSubmit={handleGenerate} className="mx-auto mt-7 max-w-3xl space-y-6 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm sm:p-8">
+      {activeTab === 'create' && personalGeneration ? <form onSubmit={handleGenerate} className="mx-auto mt-7 max-w-3xl space-y-6 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm sm:p-8">
         <div><p className="text-xs font-black uppercase tracking-[.16em] text-emerald-700">Personal route builder</p><h2 className="mt-2 text-2xl font-black text-stone-900">What kind of day do you want?</h2><p className="mt-2 text-sm text-stone-600">Your words help us shape preferences; the route is built only from published destinations in our catalog.</p></div>
         <label className="block text-sm font-bold text-stone-800">Describe your trip <span className="font-normal text-stone-500">(optional, up to 300 characters)</span><textarea value={text} onChange={event => setText(event.target.value.slice(0,300))} maxLength={300} rows={3} placeholder="A relaxed beach day with local food and no long drives" className="mt-2 w-full resize-y rounded-xl border border-stone-300 bg-[#fffefa] px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" /><span className="mt-1 block text-right text-xs text-stone-500">{text.length}/300</span></label>
         <fieldset><legend className="text-sm font-bold text-stone-800">Choose themes</legend><div className="mt-2 flex flex-wrap gap-2">{THEME_CHIPS.map(chip => <button type="button" key={chip} aria-pressed={themes.includes(chip)} onClick={() => toggle(themes,setThemes,chip)} className={`rounded-full border px-3 py-2 text-sm font-bold capitalize ${themes.includes(chip) ? 'border-emerald-700 bg-emerald-50 text-emerald-800' : 'border-stone-300 text-stone-600'}`}>{chip}</button>)}</div></fieldset>
@@ -129,7 +138,7 @@ export function TrailsClient() {
           <label className="text-sm font-bold text-stone-800">Pace<select value={pace} onChange={event => setPace(event.target.value as typeof pace)} className="mt-2 block w-full rounded-xl border border-stone-300 bg-white px-3 py-3"><option value="relaxed">Relaxed · shorter drives</option><option value="balanced">Balanced</option><option value="packed">Packed · see more</option></select></label></div>
         <div className="flex flex-col justify-between gap-4 rounded-2xl bg-emerald-50 p-4 sm:flex-row sm:items-center"><p className="text-sm text-emerald-950">{!user?<strong>Sign in to see your weekly generation allowance.</strong>:personalGeneration?.free_remaining? <><strong>{personalGeneration.free_remaining} free personal trail{personalGeneration.free_remaining===1?'':'s'} left this Manila week.</strong> After that, another costs {personalGeneration.price_points} points.</> : <><strong>Your free weekly generation is used.</strong> Another personal trail costs {personalGeneration?.price_points??100} points.</>} Points stay off-chain.</p><button disabled={generating || authLoading} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white disabled:opacity-60">{generating ? <><Loader2 size={16} className="animate-spin" /> Optimizing route…</> : <><WandSparkles size={16} /> Generate trail</>}</button></div>
       </form> : <section className="mt-7" aria-live="polite">
-        {tab === 'mine' && <div className="mb-5"><h2 className="text-2xl font-black text-stone-900">Your routes</h2><p className="mt-1 text-sm text-stone-600">Personal routes and trails you’ve unlocked.</p></div>}
+        {activeTab === 'mine' && <div className="mb-5"><h2 className="text-2xl font-black text-stone-900">Your routes</h2><p className="mt-1 text-sm text-stone-600">Trails you’ve unlocked and your previously created routes.</p></div>}
         {loading ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0,1,2].map(key => <div key={key} className="h-64 animate-pulse rounded-3xl bg-stone-200" />)}</div>
           : visible.length ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{visible.map(trail => <article key={trail.id} className={`overflow-hidden rounded-3xl border ${tierClass[trail.tier] ?? tierClass.starter} shadow-sm`}>
             <div className="relative h-36 overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-800 to-teal-500 p-4">
@@ -140,7 +149,7 @@ export function TrailsClient() {
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold text-stone-600"><span className="inline-flex items-center gap-1"><MapPin size={14}/>{trail.stop_count} stops</span><span className="inline-flex items-center gap-1"><Clock3 size={14}/>{hasRouteEstimate(trail) ? minutesLabel(trail.total_minutes) : 'Estimate unavailable'}</span><span className="inline-flex items-center gap-1"><Route size={14}/>{trail.municipalities.join(', ') || 'Pangasinan'}</span></div>
               {!trail.is_unlocked && <div className="mt-4 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-stone-600">Mystery stops <span className="ml-1 tracking-[.2em] text-stone-400">? · ? · ?</span></div>}
               <div className="mt-5 flex items-center justify-between gap-3">{trail.is_unlocked ? <Link href={`/trails/${trail.id}`} className="inline-flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-black text-white">Open trail <Compass size={15}/></Link> : <button onClick={() => void handleUnlock(trail)} disabled={busyTrail === trail.id || authLoading} className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-black text-white disabled:opacity-60">{busyTrail === trail.id ? <Loader2 size={15} className="animate-spin"/> : <Coins size={15}/>}Unlock · {unlockCost(trail)}</button>}<span className={`text-[10px] font-black uppercase tracking-wider ${tierColor[trail.tier]}`}>{trail.tier === 'legendary' ? 'Limited' : trail.tier === 'signature' ? 'Signature' : trail.tier === 'personal' ? 'Personal' : 'Explore'}</span></div>
-            </div></article>)}</div> : <div className="rounded-3xl border border-dashed border-stone-300 bg-white px-6 py-14 text-center"><Sparkles size={28} className="mx-auto text-emerald-700"/><h2 className="mt-4 text-xl font-black text-stone-900">{tab === 'mine' ? 'Your first trail is waiting.' : 'New routes are on the way.'}</h2><p className="mx-auto mt-2 max-w-lg text-sm text-stone-600">{tab === 'mine' ? 'Unlock a curated route or create a personal itinerary for your next day out.' : 'There are no published routes in this area yet. Build a personal trail from available destinations.'}</p><button onClick={() => setTab('create')} className="mt-5 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white">Create your trail</button></div>}
+            </div></article>)}</div> : <div className="rounded-3xl border border-dashed border-stone-300 bg-white px-6 py-14 text-center"><Sparkles size={28} className="mx-auto text-emerald-700"/><h2 className="mt-4 text-xl font-black text-stone-900">{activeTab === 'mine' ? 'No saved trails yet.' : 'New routes are on the way.'}</h2><p className="mx-auto mt-2 max-w-lg text-sm text-stone-600">{activeTab === 'mine' ? 'Unlock a curated route from Discover and it will be saved here.' : 'There are no published routes in this area yet. Check back when new curated routes are available.'}</p>{activeTab === 'mine' && <button onClick={() => setTab('discover')} className="mt-5 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white">Discover trails</button>}</div>}
       </section>}
       <p className="mt-8 text-center text-xs text-stone-500">Trail times and distances are route estimates. Check-in rewards are off-chain prototype points and do not represent tokens or cash.</p>
     </main>
