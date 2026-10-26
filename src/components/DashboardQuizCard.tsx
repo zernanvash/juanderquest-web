@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   HelpCircle,
   Sparkles,
@@ -14,6 +15,7 @@ import {
   X,
   RotateCcw,
   BookOpen,
+  Trophy,
 } from 'lucide-react';
 import {
   fetchNearbyQuizzes,
@@ -562,14 +564,13 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => startNearbyQuiz(quiz)}
-                disabled={loading}
-                className="px-3.5 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold shrink-0 shadow-2xs transition active:scale-95 cursor-pointer"
+              <Link
+                href={`/quiz/${encodeURIComponent(quiz.quiz_id)}`}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold shrink-0 shadow-2xs transition active:scale-95"
               >
-                Start Quiz
-              </button>
+                <span>Enter Cabinet</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
           ))}
         </div>
@@ -605,14 +606,24 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
             Takes ~2 mins · Replay anytime
           </span>
 
-          <button
-            type="button"
-            onClick={startStarterQuiz}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold shadow-2xs transition active:scale-95 cursor-pointer"
-          >
-            <span>Take Quiz</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/quiz"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition active:scale-95"
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-700" />
+              <span>Arcade Lobby</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={startStarterQuiz}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold shadow-2xs transition active:scale-95 cursor-pointer"
+            >
+              <span>Quick Play</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
