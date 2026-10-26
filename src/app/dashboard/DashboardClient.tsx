@@ -52,6 +52,8 @@ import { JuanChoiceRail } from '@/components/JuanChoiceRail';
 import { DashboardQuizCard } from '@/components/DashboardQuizCard';
 import { DashboardCalendar } from '@/components/DashboardCalendar';
 import { DashboardQuestProgressPanel } from '@/components/DashboardQuestProgressPanel';
+import { DailyStampsCard } from '@/components/stamps/DailyStampsCard';
+import { QotdCard } from '@/components/stamps/QotdCard';
 import { triggerCelebration } from '@/components/CelebrationEffects';
 import { appRoutes } from '@/lib/routes';
 
@@ -219,7 +221,12 @@ export function DashboardClient() {
           <DashboardCalendar />
 
           {/* ======================================================== */}
-          {/* 2. MAIN 2-COLUMN DASHBOARD GRID */}
+          {/* 2. DAILY PASSPORT STAMPS & REWARDS */}
+          {/* ======================================================== */}
+          <DailyStampsCard />
+
+          {/* ======================================================== */}
+          {/* 3. MAIN 2-COLUMN DASHBOARD GRID */}
           {/* ======================================================== */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left 8-Column Area: Recommendations & Content */}
@@ -357,6 +364,9 @@ export function DashboardClient() {
 
             {/* Right 4-Column Area: Hidden Gems, Voting Status & Recent Activities */}
             <div className="lg:col-span-4 space-y-6">
+              {/* Question of the Day (stamp mission) */}
+              <QotdCard />
+
               {/* Standalone Hidden Gems Discovery Panel */}
               <HiddenGemHighlights />
 

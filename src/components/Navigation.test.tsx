@@ -39,6 +39,7 @@ vi.mock('@/lib/auth', () => ({
 // Mock API
 vi.mock('@/lib/api', () => ({
   fetchMerchantMe: vi.fn().mockResolvedValue({ has_merchant: false }),
+  api: { get: vi.fn().mockResolvedValue({ data: { success: true, data: { balance: 0, items: [] } } }) },
 }));
 
 const notificationsApi = vi.hoisted(() => ({
