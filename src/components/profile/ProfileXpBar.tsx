@@ -22,14 +22,15 @@ export const ProfileXpBar: React.FC<ProfileXpBarProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
-  const targetWidth = Math.max(6, Math.min(100, progressPercent));
+  const visualWidth = Math.max(6, Math.min(100, progressPercent));
+  const realPercent = Math.round(Math.max(0, Math.min(100, progressPercent)));
 
   useGSAP(
     () => {
       if (!barRef.current) return;
       const reduced = prefersReducedMotion();
       if (reduced) {
-        gsap.set(barRef.current, { width: `${targetWidth}%` });
+        gsap.set(barRef.current, { width: `${visualWidth}%` });
         return;
       }
 
@@ -37,7 +38,7 @@ export const ProfileXpBar: React.FC<ProfileXpBarProps> = ({
         barRef.current,
         { width: '0%' },
         {
-          width: `${targetWidth}%`,
+          width: `${visualWidth}%`,
           duration: 0.9,
           ease: 'power2.out',
         }
@@ -66,11 +67,12 @@ export const ProfileXpBar: React.FC<ProfileXpBarProps> = ({
         <div
           ref={barRef}
           role="progressbar"
-          aria-valuenow={targetWidth}
+          aria-label="Level progress"
+          aria-valuenow={realPercent}
           aria-valuemin={0}
           aria-valuemax={100}
           className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-1.5 rounded-full"
-          style={{ width: `${targetWidth}%` }}
+          style={{ width: `${visualWidth}%` }}
         />
       </div>
     </div>

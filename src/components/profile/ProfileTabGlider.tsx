@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useRef, useLayoutEffect, useState } from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { Compass, Award, History, Settings } from 'lucide-react';
-import { gsap, prefersReducedMotion, Flip } from '@/lib/animations/gsap';
+import { gsap, prefersReducedMotion } from '@/lib/animations/gsap';
 
 interface TabItem {
   key: string;
@@ -29,7 +29,7 @@ export const ProfileTabGlider: React.FC<ProfileTabGliderProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gliderRef = useRef<HTMLDivElement>(null);
-  const [prevActive, setPrevActive] = useState(activePanel);
+  const isFirstRender = useRef(true);
 
   const tabs: TabItem[] = [
     {
@@ -68,28 +68,70 @@ export const ProfileTabGlider: React.FC<ProfileTabGliderProps> = ({
   }
 
   useLayoutEffect(() => {
-    if (prevActive === activePanel) return;
-    setPrevActive(activePanel);
+    const container = containerRef.current;
+    const glider = gliderRef.current;
+    if (!container || !glider) return;
 
-    if (!containerRef.current || !gliderRef.current) return;
-    if (prefersReducedMotion()) return;
+    const updateGlider = (animate = true) => {
+      const activeTabEl = container.querySelector<HTMLElement>(`[data-tab-key="${activePanel}"]`);
+      if (!activeTabEl) {
+        // Active panel has no matching tab (e.g. 'journey' or 'history' on public profile)
+        gsap.set(glider, { opacity: 0 });
+        return;
+      }
 
-    const state = Flip.getState(gliderRef.current);
-    const activeTabEl = containerRef.current.querySelector<HTMLElement>(`[data-tab-key="${activePanel}"]`);
-    if (activeTabEl && gliderRef.current) {
-      activeTabEl.appendChild(gliderRef.current);
-      Flip.from(state, {
-        duration: 0.35,
-        ease: 'power2.out',
+      const x = activeTabEl.offsetLeft;
+      const width = activeTabEl.offsetWidth;
+      const reduced = prefersReducedMotion();
+
+      if (!animate || reduced || isFirstRender.current) {
+        gsap.set(glider, {
+          x,
+          width,
+          opacity: 1,
+        });
+        isFirstRender.current = false;
+      } else {
+        gsap.to(glider, {
+          x,
+          width,
+          opacity: 1,
+          duration: 0.35,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      }
+    };
+
+    updateGlider(!isFirstRender.current);
+
+    // Re-measure on resize without animation
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        updateGlider(false);
       });
+      ro.observe(container);
     }
-  }, [activePanel, prevActive]);
+
+    return () => {
+      ro?.disconnect();
+    };
+  }, [activePanel]);
 
   return (
     <div
       ref={containerRef}
       className="mt-4 pt-3 border-t border-[#F2EFE9] flex items-center gap-2 overflow-x-auto relative"
     >
+      {/* Standalone gliding pill */}
+      <div
+        ref={gliderRef}
+        data-testid="tab-glider"
+        className="absolute top-3 bottom-0 my-auto h-[calc(100%-1.5rem)] bg-[var(--color-brand-primary)] rounded-xl shadow-xs pointer-events-none opacity-0"
+        style={{ left: 0 }}
+      />
+
       {tabs.map((tab) => {
         const isActive = activePanel === tab.key;
         return (
@@ -105,13 +147,6 @@ export const ProfileTabGlider: React.FC<ProfileTabGliderProps> = ({
                 : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
             }`}
           >
-            {isActive && (
-              <div
-                ref={gliderRef}
-                data-testid="tab-glider"
-                className="absolute inset-0 bg-[var(--color-brand-primary)] rounded-xl shadow-xs -z-10 pointer-events-none"
-              />
-            )}
             {tab.icon}
             <span>{tab.label}</span>
             {tab.badge}
