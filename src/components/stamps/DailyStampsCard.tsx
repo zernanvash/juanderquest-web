@@ -320,7 +320,7 @@ export function DailyStampsCard() {
               </div>
               <p className="text-[10px] text-[#837560]">
                 {data.chest.earned
-                  ? `+${data.chest.stamps} stamps collected this week`
+                  ? 'Chest earned this week'
                   : `${data.chest.completed_missions}/${data.chest.required} missions · +${data.chest.stamps} stamps`}
               </p>
             </div>
