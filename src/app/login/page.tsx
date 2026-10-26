@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Wallet, ShieldCheck, Mail, Lock, User, KeyRound, Sparkles, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { shouldStayInTravelerApp, useAuth } from '@/lib/auth';
 import { safeReturnPath } from '@/lib/routes';
 import { isTravelerSession } from '@/lib/traveler-session';
 import { DevWalletLogin } from '@/components/DevWalletLogin';
@@ -57,7 +57,7 @@ export default function LoginPage() {
   };
 
   React.useEffect(() => {
-    if (isTravelerSession(user)) router.replace(redirectTarget() ?? '/quests');
+    if (isTravelerSession(user, shouldStayInTravelerApp())) router.replace(redirectTarget() ?? '/quests');
   }, [user, router]);
 
   React.useEffect(() => {

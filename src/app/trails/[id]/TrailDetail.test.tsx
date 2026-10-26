@@ -2,9 +2,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TrailDetailClient } from './TrailDetailClient';
 
-const mocks = vi.hoisted(() => ({ fetchTrail: vi.fn(), unlockTrail: vi.fn(), checkInTrailStop: vi.fn(), refreshProfile: vi.fn(), push: vi.fn() }));
+const mocks = vi.hoisted(() => ({ fetchTrail: vi.fn(), unlockTrail: vi.fn(), checkInTrailStop: vi.fn(), refreshProfile: vi.fn(), push: vi.fn(), user: { id:'traveler', points:500 } as any }));
 vi.mock('@/lib/trails-api', () => mocks);
-vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: { id:'traveler', points:500 }, refreshProfile:mocks.refreshProfile }) }));
+vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: mocks.user, refreshProfile:mocks.refreshProfile }) }));
 vi.mock('@/components/Navigation', () => ({ Navigation: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('@/components/trails/TrailRouteMap', () => ({ TrailRouteMap: () => <div data-testid="route-map"/> }));
 vi.mock('@/components/CelebrationEffects', () => ({ triggerCelebration: vi.fn() }));
@@ -14,7 +14,7 @@ const locked = { id:'route-a',slug:'route-a',title:'Locked Coast',tagline:'Priva
 const unlocked = { ...locked, is_unlocked:true, story:{intro:'A gentle coast route.'}, stops:[{position:1,spot_id:'spot-secret-1',name:'Patar Beach',municipality:'Bolinao',category:'beach',lat:16.32,lng:119.78,narration:'The local story.',arrive_offset_min:0,dwell_min:30,leg_minutes:0,leg_km:0,checkin_radius_m:100,checked_in:false}] };
 
 describe('Trail detail privacy and progress', () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.refreshProfile.mockResolvedValue(undefined); });
+  beforeEach(() => { vi.clearAllMocks(); mocks.user = { id:'traveler', points:500 }; mocks.refreshProfile.mockResolvedValue(undefined); });
 
   it('does not render stop identifiers, coordinates, narration, or route map while locked', async () => {
     mocks.fetchTrail.mockResolvedValue(locked);
@@ -33,6 +33,16 @@ describe('Trail detail privacy and progress', () => {
     fireEvent.click((await screen.findAllByRole('button',{name:/Unlock · 300 points/}))[0]);
     expect((await screen.findByRole('alert')).textContent).toMatch(/does not meet/);
     expect(mocks.unlockTrail).toHaveBeenCalledWith('route-a');
+  });
+
+  it('uses the login page redirect parameter and hides invalid legacy route estimates', async () => {
+    mocks.user = null;
+    mocks.fetchTrail.mockResolvedValue({ ...locked, total_minutes:1, total_km:1 });
+    render(<TrailDetailClient/>);
+    expect(await screen.findByText('Route estimate unavailable')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('1 min');
+    fireEvent.click(screen.getAllByRole('button',{name:/Unlock/})[0]);
+    expect(mocks.push).toHaveBeenCalledWith('/login?redirect=%2Ftrails%2Froute-a');
   });
 
   it('renders unlocked map and records a stop check-in', async () => {

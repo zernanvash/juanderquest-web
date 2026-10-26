@@ -64,14 +64,19 @@ export const DEV_BYPASS_WALLET: WalletModel = {
 // in the URL. The session itself lives in the HttpOnly API cookie.
 export const adminHandoffUrl = () => ADMIN_URL;
 
-export const shouldStayInTravelerApp = (): boolean => {
+export const isTravelerAppView = (): boolean => {
   if (typeof window === 'undefined') return false;
   const searchParams = new URLSearchParams(window.location.search);
-  if (searchParams.get('app_view') === 'true' || searchParams.get('preview') === 'true') {
-    sessionStorage.setItem('jdq_app_view', 'true');
-    return true;
+  return searchParams.get('app_view') === 'true' || searchParams.get('preview') === 'true' || sessionStorage.getItem('jdq_app_view') === 'true';
+};
+
+export const shouldStayInTravelerApp = (): boolean => {
+  if (!isTravelerAppView()) return false;
+  if (typeof window !== 'undefined') {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('app_view') === 'true' || searchParams.get('preview') === 'true') sessionStorage.setItem('jdq_app_view', 'true');
   }
-  return sessionStorage.getItem('jdq_app_view') === 'true';
+  return true;
 };
 
 export const clearStoredSession = (): void => {
@@ -489,7 +494,7 @@ export const useRequireAuth = (): { user: UserModel; token: string; isReady: boo
 
   useEffect(() => {
     if (isAuthBypassEnabled()) return;
-    if (!isLoading && !sessionUnavailable && !isTravelerSession(user)) {
+    if (!isLoading && !sessionUnavailable && !isTravelerSession(user, shouldStayInTravelerApp())) {
       const path = `${window.location.pathname}${window.location.search}`;
       router.replace(`/login?redirect=${encodeURIComponent(path)}`);
     }
@@ -503,5 +508,5 @@ export const useRequireAuth = (): { user: UserModel; token: string; isReady: boo
     };
   }
 
-  return { user: user as UserModel, token: token as string, isReady: !isLoading && !sessionUnavailable && isTravelerSession(user) };
+  return { user: user as UserModel, token: token as string, isReady: !isLoading && !sessionUnavailable && isTravelerSession(user, isTravelerAppView()) };
 };

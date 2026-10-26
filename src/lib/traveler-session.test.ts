@@ -10,6 +10,7 @@ describe('traveler session gate', () => {
     expect(isTravelerSession({ seedId: 'usr-123456', role: 'user' })).toBe(true);
     expect(isTravelerSession({ seedId: 'usr-admin123', role: 'admin' })).toBe(false);
     expect(isTravelerSession({ seedId: 'usr-verified-email', role: 'user' })).toBe(true);
+    expect(isTravelerSession({ seedId: 'admin-1', role: 'admin' }, true)).toBe(true);
   });
   it('does not treat missing or legacy demo accounts as traveler sessions', () => {
     expect(isTravelerSession(null)).toBe(false);

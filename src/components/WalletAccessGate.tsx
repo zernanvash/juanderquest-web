@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth';
+import { isTravelerAppView, shouldStayInTravelerApp, useAuth } from '@/lib/auth';
 import { isPublicPage } from '@/lib/public-routes';
 import { isTravelerSession } from '@/lib/traveler-session';
 
@@ -12,7 +12,9 @@ export function WalletAccessGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading, sessionUnavailable, retrySession } = useAuth();
   const [toastDismissed, setToastDismissed] = useState(false);
   const publicPage = isPublicPage(pathname);
-  const hasTravelerSession = isTravelerSession(user);
+  const hasTravelerSession = isTravelerSession(user, isTravelerAppView());
+
+  useEffect(() => { shouldStayInTravelerApp(); }, []);
 
   useEffect(() => {
     if (!publicPage && !isLoading && !sessionUnavailable && !hasTravelerSession) {
