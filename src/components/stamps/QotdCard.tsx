@@ -127,14 +127,18 @@ export function QotdCard() {
         })}
       </div>
 
-      {answered && answer && (
-        <div className={`rounded-xl border px-3 py-2 text-[10px] leading-relaxed ${
+      {answered && answer ? (
+        <div className={`min-h-[52px] rounded-xl border px-3 py-2 text-[10px] leading-relaxed ${
           answer.correct
             ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
             : 'bg-amber-50 border-amber-200 text-amber-900'
         }`}>
           <span className="font-black">{answer.correct ? 'Correct!' : 'Not quite.'}</span>{' '}
           {answer.explanation}
+        </div>
+      ) : (
+        <div aria-hidden="true" className="min-h-[52px] rounded-xl border border-dashed border-[#E3DFD5] px-3 py-2 text-[10px] text-[#837560] flex items-center">
+          Answer to see the explanation.
         </div>
       )}
 

@@ -11,6 +11,8 @@ import { effectiveJuanChoiceStatus, getJuanChoiceCampaign, getJuanChoiceOverview
 import { getJuanChoicePresentation, isJuanChoiceEnvironmentTrusted } from '@/lib/juanchoice-presentation';
 import { triggerCelebration } from './CelebrationEffects';
 
+const NOT_OPEN_MESSAGE = 'JuanChoice is not open yet. Check back when the pilot begins.';
+
 type PendingVote = { candidateId: string; expectedVersion: number; key: string };
 
 export function JuanChoiceExperience({
@@ -50,7 +52,7 @@ export function JuanChoiceExperience({
       if (!campaignId) { setSelectedId(value.current?.id ?? null); if (!value.current) setDetail(null); }
       setError('');
     }).catch(err => {
-      if (!controller.signal.aborted) setError(juanChoiceErrorCode(err) === 'FEATURE_DISABLED' ? 'JuanChoice is not open yet. Check back when the pilot begins.' : 'Campaigns could not be loaded. Please retry.');
+      if (!controller.signal.aborted) setError(juanChoiceErrorCode(err) === 'FEATURE_DISABLED' ? NOT_OPEN_MESSAGE : 'Campaigns could not be loaded. Please retry.');
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [campaignId]);
@@ -165,7 +167,9 @@ export function JuanChoiceExperience({
       </div>
     )}
     {loading && <p role="status" className="rounded-2xl bg-white p-6 text-[#514532]">Loading the current round…</p>}
-    {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Retry</button></div>}
+    {error && (error === NOT_OPEN_MESSAGE
+      ? <div role="status" className="rounded-2xl border border-[#E3DFD5] bg-white p-5 text-sm text-[#514532]">{error}</div>
+      : <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Retry</button></div>)}
     {!loading && !error && !campaign && <section className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6 space-y-4" aria-labelledby="next-round-heading">
       <div>
         <h2 id="next-round-heading" className="text-xl font-black text-[#2C221E]">{presentation.nextRoundHeading}</h2>

@@ -340,7 +340,7 @@ export default function ExplorePage() {
                       setSelectedCategory('ALL');
                       setSelectedMunicipality('ALL');
                     }}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                    className={`px-3 py-2 min-h-[40px] rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
                       selectedCategory === 'ALL' && selectedMunicipality === 'ALL'
                         ? 'bg-[var(--color-brand-primary)] text-white'
                         : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)]'
@@ -353,7 +353,7 @@ export default function ExplorePage() {
                       key={`cat-${cat}`}
                       type="button"
                       onClick={() => setSelectedCategory((prev) => (prev === cat ? 'ALL' : cat))}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                      className={`px-3 py-2 min-h-[40px] rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
                         selectedCategory === cat
                           ? 'bg-[var(--color-brand-primary)] text-white'
                           : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)]'
@@ -367,7 +367,7 @@ export default function ExplorePage() {
                       key={`muni-${muni}`}
                       type="button"
                       onClick={() => setSelectedMunicipality((prev) => (prev === muni ? 'ALL' : muni))}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
+                      className={`px-3 py-2 min-h-[40px] rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer ${
                         selectedMunicipality === muni
                           ? 'bg-[var(--color-brand-brown)] text-white'
                           : 'bg-[#FAF9F5] text-[#582F0E] border border-[#E3DFD5]'

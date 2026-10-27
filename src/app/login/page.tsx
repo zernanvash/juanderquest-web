@@ -264,7 +264,7 @@ export default function LoginPage() {
               setError('');
               setStatusMessage('');
             }}
-            className={`flex-1 py-2 rounded-lg text-xs font-black transition ${
+            className={`flex-1 py-2 min-h-[44px] rounded-lg text-xs font-black transition ${
               activeTab === 'signin' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -277,7 +277,7 @@ export default function LoginPage() {
               setError('');
               setStatusMessage('');
             }}
-            className={`flex-1 py-2 rounded-lg text-xs font-black transition ${
+            className={`flex-1 py-2 min-h-[44px] rounded-lg text-xs font-black transition ${
               activeTab === 'register' ? 'bg-white shadow-xs text-neutral-900' : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -328,7 +328,7 @@ export default function LoginPage() {
                     setError('');
                     setStatusMessage('');
                   }}
-                  className="text-xs font-bold text-emerald-700 hover:underline"
+                  className="-my-2 py-2 min-h-[40px] text-xs font-bold text-emerald-700 hover:underline"
                 >
                   Forgot password?
                 </button>
