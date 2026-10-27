@@ -2,6 +2,12 @@
 
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import { Flip } from 'gsap/Flip';
+
+// Register Flip plugin
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(Flip);
+}
 
 /**
  * Checks whether user prefers reduced motion (browser or OS level).
@@ -39,4 +45,4 @@ export const GSAP_EASES = {
   smoothInOut: 'power2.inOut',
 } as const;
 
-export { gsap, useGSAP };
+export { gsap, useGSAP, Flip };
