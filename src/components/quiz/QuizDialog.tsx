@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, BookOpen, X } from 'lucide-react';
 import { fetchQuizDetail, QuizDetail } from '@/lib/quizzes';
 import { QuizCabinet } from './QuizCabinet';
@@ -17,7 +18,8 @@ const FOCUSABLE =
 /**
  * Plays one cultural quiz over the page it was opened from: a centered dialog on
  * desktop, a full-height bottom sheet on phones. Focus stays inside while open
- * and returns to the opener on close.
+ * and returns to the opener on close. Rendered into document.body so the app
+ * shell's bottom navigation and banners cannot sit on top of it.
  */
 export function QuizDialog({ quizId, onClose, onPassed }: QuizDialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -89,7 +91,7 @@ export function QuizDialog({ quizId, onClose, onPassed }: QuizDialogProps) {
 
   const title = quiz?.title ?? 'Cultural quiz';
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6">
       <div className="absolute inset-0 bg-[#2C221E]/40" onClick={requestClose} aria-hidden="true" />
       <div
@@ -145,6 +147,7 @@ export function QuizDialog({ quizId, onClose, onPassed }: QuizDialogProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

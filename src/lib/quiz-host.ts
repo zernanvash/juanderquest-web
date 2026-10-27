@@ -1,5 +1,5 @@
 /**
- * Host lines for Apo Lakay in the Juander Quiz Show arcade cabinet.
+ * Host lines for Apo Lakay, the cultural quiz host.
  * Client-side default quips for the 5-question arc.
  */
 
@@ -15,7 +15,7 @@ export interface HostDialogue {
 export const APO_LAKAY_HOST: HostDialogue = {
   welcome: [
     "Welcome to the Juander Quiz Show! I'm your host, Apo Lakay. Let's see if you know our Pangasinan stories!",
-    "Ay apo! Step right up to the cabinet! Five checkpoints stand between you and local glory.",
+    "Ay apo! Five questions stand between you and local glory.",
     "Mabuhay, traveler! Apo Lakay here. Ready your wits, keep your eyes on the board, and let's roll!",
   ],
   questionLeadIn: [
@@ -32,12 +32,12 @@ export const APO_LAKAY_HOST: HostDialogue = {
     "Marked down! Onward to the next.",
   ],
   submissionCheer: [
-    "All five answers locked into the cabinet! Tallying the scorecard...",
+    "All five answers are in! Tallying the scorecard...",
     "That's all five! Let's consult the records of Pangasinan...",
   ],
   passLines: [
-    "Agtan pay! Excellent work! You passed with flying colors and earned your stamp!",
-    "Naimbag! True Pangasinense wisdom! Your XP reward and cultural stamp are well deserved.",
+    "Agtan pay! Excellent work! You passed with flying colors!",
+    "Naimbag! True Pangasinense wisdom! Your XP reward is well deserved.",
     "Look at that score! Apo Lakay is genuinely impressed!",
   ],
   failLines: [
