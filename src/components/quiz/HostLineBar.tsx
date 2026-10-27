@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, MessageSquare } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 interface HostLineBarProps {
   hostName?: string;
@@ -9,30 +9,17 @@ interface HostLineBarProps {
 export function HostLineBar({ hostName = 'Apo Lakay', line }: HostLineBarProps) {
   return (
     <div
-      className="relative flex items-start gap-3 bg-gradient-to-r from-amber-950/70 via-zinc-900/90 to-amber-950/70 border border-amber-500/30 rounded-xl p-3 sm:p-4 shadow-md shadow-amber-950/20"
+      className="flex items-start gap-3 rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5] p-3"
       role="region"
-      aria-label="Quiz Show Host Line"
+      aria-label="Quiz host"
     >
-      <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400">
-        <Bot className="w-5 h-5" />
+      <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
+        <MessageCircle className="w-4 h-4" />
       </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-mono font-bold tracking-wider uppercase text-amber-400">
-            {hostName}
-          </span>
-          <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1">
-            <MessageSquare className="w-3 h-3 text-amber-500/60" />
-            Host Booth
-          </span>
-        </div>
+      <div className="min-w-0">
+        <span className="text-[11px] font-black text-[#2C221E] block">{hostName}</span>
         {/* ARIA live region for screen readers */}
-        <p
-          className="text-sm sm:text-base text-zinc-200 font-medium leading-relaxed font-sans"
-          aria-live="polite"
-          aria-atomic="true"
-        >
+        <p className="text-xs sm:text-sm text-[#5C4F3F] leading-relaxed" aria-live="polite" aria-atomic="true">
           {line || 'Listen closely to the question, traveler...'}
         </p>
       </div>

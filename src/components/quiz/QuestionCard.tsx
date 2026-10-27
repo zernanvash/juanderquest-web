@@ -36,23 +36,11 @@ export function QuestionCard({
           { opacity: 1, duration: 0.15, ease: 'power1.out' }
         );
       } else {
-        // Retro arcade 3D perspective flip-in
+        // Short slide-in for each new question
         gsap.fromTo(
           cardRef.current,
-          {
-            opacity: 0,
-            rotationX: 18,
-            scale: 0.96,
-            y: 16,
-          },
-          {
-            opacity: 1,
-            rotationX: 0,
-            scale: 1,
-            y: 0,
-            duration: 0.45,
-            ease: 'back.out(1.4)',
-          }
+          { opacity: 0, x: 24 },
+          { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }
         );
       }
     },
@@ -60,41 +48,19 @@ export function QuestionCard({
   );
 
   return (
-    <div ref={containerRef} className="perspective-1000 w-full">
-      <div
-        ref={cardRef}
-        className="bg-zinc-900/90 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-6 shadow-2xl shadow-amber-950/40 relative overflow-hidden backdrop-blur-sm"
-      >
-        {/* Subtle scanline effect overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]"
-          aria-hidden="true"
-        />
-
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-amber-500/20">
-          <span className="text-xs sm:text-sm font-mono font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-            Checkpoint {ordinal} of 5
-          </span>
-          <span className="text-xs font-mono text-zinc-400">
-            Keys [1-4] or Click
-          </span>
+    <div ref={containerRef} className="w-full">
+      <div ref={cardRef} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-black text-emerald-800">Question {ordinal} of 5</span>
+          <span className="hidden sm:inline text-[11px] text-[#837560]">Keys 1–4 to choose, Enter to continue</span>
         </div>
 
-        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-zinc-100 mb-6 font-serif leading-snug">
-          {questionText}
-        </h2>
+        <h2 className="text-base sm:text-lg font-bold text-[#2C221E] leading-snug">{questionText}</h2>
 
-        {/* Options grid */}
-        <div
-          className="grid grid-cols-1 gap-3"
-          role="radiogroup"
-          aria-label={`Options for Question ${ordinal}`}
-        >
+        <div className="grid grid-cols-1 gap-2" role="radiogroup" aria-label={`Options for Question ${ordinal}`}>
           {options.map((opt, idx) => {
             const isSelected = selectedOptionId === opt.id;
             const isFocused = focusedOptionIndex === idx;
-            const keyLabel = idx + 1;
 
             return (
               <button
@@ -105,35 +71,21 @@ export function QuestionCard({
                 tabIndex={isFocused || (focusedOptionIndex === 0 && idx === 0) ? 0 : -1}
                 onClick={() => onSelectOption(opt.id)}
                 onFocus={() => onFocusOption(idx)}
-                className={`group relative flex items-center justify-between p-3.5 sm:p-4 rounded-xl border text-left font-medium transition-all duration-150 outline-none ${
+                className={`group min-h-12 w-full flex items-center gap-3 p-3 rounded-2xl border text-left text-sm font-bold transition outline-none focus-visible:ring-2 focus-visible:ring-[#2D6A4F]/50 cursor-pointer ${
                   isSelected
-                    ? 'border-amber-400 bg-amber-500/20 text-amber-200 ring-2 ring-amber-400/40 shadow-md shadow-amber-500/20'
-                    : 'border-zinc-800 bg-zinc-950/60 text-zinc-300 hover:border-amber-500/40 hover:bg-zinc-800/60'
-                } ${isFocused ? 'ring-2 ring-amber-400' : ''}`}
+                    ? 'bg-emerald-50/80 border-[#2D6A4F] text-[#1B4332] shadow-2xs'
+                    : 'bg-[#FAF9F5] border-[#E3DFD5] text-[#3D332A] hover:bg-white hover:border-[#2D6A4F]/40'
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`w-7 h-7 rounded-lg border font-mono text-xs flex items-center justify-center font-bold transition-colors ${
-                      isSelected
-                        ? 'border-amber-400 bg-amber-400 text-zinc-950'
-                        : 'border-zinc-700 bg-zinc-900 text-zinc-400 group-hover:border-amber-500/40 group-hover:text-amber-400'
-                    }`}
-                  >
-                    {keyLabel}
-                  </span>
-                  <span className="text-sm sm:text-base leading-snug text-zinc-100 font-sans">
-                    {opt.option_text}
-                  </span>
-                </div>
-
-                <div
-                  className={`w-3 h-3 rounded-full border transition-all ${
-                    isSelected
-                      ? 'border-amber-400 bg-amber-400 shadow-sm shadow-amber-400'
-                      : 'border-zinc-700 bg-transparent group-hover:border-zinc-500'
+                <span
+                  className={`w-7 h-7 rounded-lg text-xs font-black flex items-center justify-center shrink-0 transition-colors ${
+                    isSelected ? 'bg-[#2D6A4F] text-white' : 'bg-white border border-[#E3DFD5] text-[#837560]'
                   }`}
                   aria-hidden="true"
-                />
+                >
+                  {idx + 1}
+                </span>
+                <span className="leading-snug">{opt.option_text}</span>
               </button>
             );
           })}

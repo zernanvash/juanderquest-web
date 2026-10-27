@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   HelpCircle,
   Sparkles,
@@ -9,23 +8,14 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   ArrowRight,
   ChevronRight,
   X,
   RotateCcw,
   BookOpen,
-  Trophy,
+  LocateFixed,
 } from 'lucide-react';
-import {
-  fetchNearbyQuizzes,
-  startQuizAttempt,
-  submitQuizAttempt,
-  NearbyQuizInvitation,
-  QuizAttemptStartResult,
-  QuizSubmissionResult,
-} from '@/lib/quizzes';
-import { useAuth } from '@/lib/auth';
+import { fetchNearbyQuizzes, NearbyQuizInvitation } from '@/lib/quizzes';
 
 // Curated starter quiz fallback when not physically present at Pangasinan geofences
 const STARTER_PANGASINAN_QUIZ = {
@@ -98,10 +88,16 @@ const STARTER_PANGASINAN_QUIZ = {
   ],
 };
 
-export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void }) {
-  const { user } = useAuth();
+type LocationState = 'checking' | 'ok' | 'denied' | 'unavailable';
+
+interface DashboardQuizCardProps {
+  /** Opens a nearby (server-graded) quiz in the quiz dialog. */
+  onOpenQuiz?: (quizId: string) => void;
+}
+
+export function DashboardQuizCard({ onOpenQuiz }: DashboardQuizCardProps) {
   const [nearbyQuizzes, setNearbyQuizzes] = useState<NearbyQuizInvitation[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [locationState, setLocationState] = useState<LocationState>('checking');
 
   // Active Interactive Quiz Session State
   const [activeSession, setActiveSession] = useState<{
@@ -115,17 +111,14 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
       correct_id?: string;
       explanation?: string;
     }>;
-    attemptId?: string;
   } | null>(null);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizResult, setQuizResult] = useState<{
     passed: boolean;
     score: number;
     total: number;
-    xpAwarded: number;
     breakdown: Array<{
       question_text: string;
       selected: string;
@@ -135,22 +128,29 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
     }>;
   } | null>(null);
 
-  // Try checking nearby quizzes if user gives location
-  useEffect(() => {
-    if (typeof window === 'undefined' || !navigator.geolocation) return;
+  const findNearbyQuizzes = useCallback(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationState('unavailable');
+      return;
+    }
+    setLocationState('checking');
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        setLocationState('ok');
         try {
-          const list = await fetchNearbyQuizzes(pos.coords.latitude, pos.coords.longitude);
-          setNearbyQuizzes(list);
+          setNearbyQuizzes(await fetchNearbyQuizzes(pos.coords.latitude, pos.coords.longitude));
         } catch {
-          // ignore
+          setNearbyQuizzes([]);
         }
       },
-      () => {},
-      { timeout: 5000, maximumAge: 60000 }
+      (err) => setLocationState(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable'),
+      { timeout: 10000, maximumAge: 60000 }
     );
   }, []);
+
+  useEffect(() => {
+    findNearbyQuizzes();
+  }, [findNearbyQuizzes]);
 
   const startStarterQuiz = () => {
     setQuizResult(null);
@@ -162,52 +162,6 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
       xp_reward: STARTER_PANGASINAN_QUIZ.xp_reward,
       questions: STARTER_PANGASINAN_QUIZ.questions,
     });
-  };
-
-  const startNearbyQuiz = async (inv: NearbyQuizInvitation) => {
-    setLoading(true);
-    try {
-      if (typeof window !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            try {
-              const res = await startQuizAttempt({
-                quizId: inv.quiz_id,
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-              });
-              setQuizResult(null);
-              setSelectedAnswers({});
-              setCurrentQuestionIndex(0);
-              setActiveSession({
-                title: inv.title,
-                description: inv.description,
-                xp_reward: inv.xp_reward,
-                attemptId: res.attempt.id,
-                questions: res.questions.map((q) => ({
-                  id: q.id,
-                  question_text: q.question_text,
-                  options: q.options.map((o) => ({ id: o.id, option_text: o.option_text })),
-                })),
-              });
-            } catch (err: any) {
-              alert(err?.message || 'Could not verify geofence for this quiz. Try the Starter Cultural Quiz!');
-            } finally {
-              setLoading(false);
-            }
-          },
-          () => {
-            alert('Location access is required to verify destination geofence.');
-            setLoading(false);
-          }
-        );
-      } else {
-        alert('Geolocation is not supported on this browser.');
-        setLoading(false);
-      }
-    } catch {
-      setLoading(false);
-    }
   };
 
   const handleSelectOption = (optionId: string) => {
@@ -232,67 +186,25 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
     }
   };
 
-  const handleSubmitQuiz = async () => {
+  // Practice runs are graded here and never award XP; rewarded quizzes go through the server.
+  const handleSubmitQuiz = () => {
     if (!activeSession) return;
-    setIsSubmitting(true);
-
-    try {
-      // If it has attemptId, submit to real server API
-      if (activeSession.attemptId) {
-        const payload = activeSession.questions.map((q) => ({
-          question_id: q.id,
-          selected_option_id: selectedAnswers[q.id] || '',
-        }));
-        const graded: QuizSubmissionResult = await submitQuizAttempt(activeSession.attemptId, payload);
-        const res = {
-          passed: graded.passed,
-          score: graded.score,
-          total: graded.total_questions,
-          xpAwarded: graded.xp_awarded,
-          breakdown: graded.breakdown.map((b) => ({
-            question_text: b.question_text,
-            selected: b.selected_option_id,
-            correct: b.correct_option_id,
-            is_correct: b.is_correct,
-            explanation: b.explanation,
-          })),
-        };
-        setQuizResult(res);
-        if (res.passed && onPass) onPass(res.xpAwarded);
-      } else {
-        // Evaluate local starter quiz
-        let score = 0;
-        const breakdown = activeSession.questions.map((q) => {
-          const selected = selectedAnswers[q.id];
-          const isCorrect = selected === q.correct_id;
-          if (isCorrect) score += 1;
-          const selectedOpt = q.options.find((o) => o.id === selected);
-          const correctOpt = q.options.find((o) => o.id === q.correct_id);
-          return {
-            question_text: q.question_text,
-            selected: selectedOpt?.option_text || 'No answer',
-            correct: correctOpt?.option_text || '',
-            is_correct: isCorrect,
-            explanation: q.explanation || '',
-          };
-        });
-
-        const passed = score >= 4;
-        const xp = passed ? activeSession.xp_reward : 0;
-        setQuizResult({
-          passed,
-          score,
-          total: activeSession.questions.length,
-          xpAwarded: xp,
-          breakdown,
-        });
-        if (passed && onPass) onPass(xp);
-      }
-    } catch (err: any) {
-      alert(err?.message || 'Error grading quiz.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    let score = 0;
+    const breakdown = activeSession.questions.map((q) => {
+      const selected = selectedAnswers[q.id];
+      const isCorrect = selected === q.correct_id;
+      if (isCorrect) score += 1;
+      const selectedOpt = q.options.find((o) => o.id === selected);
+      const correctOpt = q.options.find((o) => o.id === q.correct_id);
+      return {
+        question_text: q.question_text,
+        selected: selectedOpt?.option_text || 'No answer',
+        correct: correctOpt?.option_text || '',
+        is_correct: isCorrect,
+        explanation: q.explanation || '',
+      };
+    });
+    setQuizResult({ passed: score >= 4, score, total: activeSession.questions.length, breakdown });
   };
 
   // 1. Result View
@@ -308,7 +220,7 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-[#837560] block">
-                Quiz Summary
+                Practice results
               </span>
               <h3 className="text-sm font-black text-[#2C221E]">{activeSession.title}</h3>
             </div>
@@ -333,25 +245,18 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
         }`}>
           <div>
             <div className="text-base font-black">
-              {quizResult.passed ? '🎉 Congratulations! You Passed!' : 'Nice try! Keep exploring.'}
+              {quizResult.passed ? 'Well done!' : 'Nice try!'}
             </div>
             <p className="text-xs opacity-90 mt-0.5">
-              {quizResult.passed
-                ? `You correctly answered ${quizResult.score} of ${quizResult.total} questions.`
-                : `You scored ${quizResult.score}/${quizResult.total}. Need 4 correct to earn Explorer XP.`}
+              You got {quizResult.score} of {quizResult.total} right. Practice runs don&apos;t give XP; play a quiz at a destination to earn it.
             </p>
           </div>
-          {quizResult.passed && (
-            <div className="px-3 py-1.5 rounded-xl bg-[#2D6A4F] text-white text-xs font-black shrink-0 shadow-xs">
-              +{quizResult.xpAwarded} XP
-            </div>
-          )}
         </div>
 
         {/* Questions Breakdown */}
         <div className="space-y-3 pt-1">
           <div className="text-xs font-black text-[#582F0E] uppercase tracking-wider">
-            Review Answers &amp; Cultural Notes
+            Did you know?
           </div>
           <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
             {quizResult.breakdown.map((item, idx) => (
@@ -385,7 +290,7 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
             onClick={startStarterQuiz}
             className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-[#582F0E] text-xs font-bold transition cursor-pointer"
           >
-            Try Again
+            Play again
           </button>
           <button
             type="button"
@@ -503,17 +408,11 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
               <button
                 type="button"
                 onClick={handleSubmitQuiz}
-                disabled={answeredCount < activeSession.questions.length || isSubmitting}
+                disabled={answeredCount < activeSession.questions.length}
                 className="px-5 py-2.5 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black shadow-sm transition disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
               >
-                {isSubmitting ? (
-                  <span>Grading...</span>
-                ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 text-[#582F0E]" />
-                    <span>Submit Quiz</span>
-                  </>
-                )}
+                <Sparkles className="w-3.5 h-3.5 text-[#582F0E]" />
+                <span>See results</span>
               </button>
             )}
           </div>
@@ -531,24 +430,45 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
             <HelpCircle className="w-5 h-5 text-amber-700" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-[#2C221E]">Cultural Knowledge Quizzes</h3>
+            <h3 className="text-sm font-black text-[#2C221E]">Cultural quizzes</h3>
             <p className="text-[11px] text-[#837560]">
-              Answer 5 destination questions to earn +25 Explorer XP
+              Answer 5 questions at a destination to earn Explorer XP
             </p>
           </div>
         </div>
-
-        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200">
-          Learning Track
-        </span>
       </div>
 
-      {/* If nearby quizzes detected from GPS */}
+      {locationState === 'checking' && (
+        <p className="text-[11px] text-[#837560]" role="status">Looking for quizzes near you…</p>
+      )}
+
+      {(locationState === 'denied' || locationState === 'unavailable') && (
+        <div className="p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2 min-w-0">
+            <LocateFixed className="w-4 h-4 text-[#2D6A4F] shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-xs text-[#5C4F3F]">
+              {locationState === 'denied'
+                ? 'Turn on location to see quizzes near you.'
+                : "We couldn't get your location. Check that GPS is on."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={findNearbyQuizzes}
+            className="px-3 py-1.5 rounded-xl bg-white border border-[#E3DFD5] hover:border-[#2D6A4F]/40 text-[#2D6A4F] text-xs font-bold shrink-0 transition cursor-pointer"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {locationState === 'ok' && nearbyQuizzes.length === 0 && (
+        <p className="text-[11px] text-[#837560]">No quizzes here yet. Visit a destination to find one.</p>
+      )}
+
       {nearbyQuizzes.length > 0 && (
         <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
-            Active Within Your Geofence
-          </span>
+          <span className="text-[11px] font-black text-emerald-800">Near you</span>
           {nearbyQuizzes.map((quiz) => (
             <div
               key={quiz.quiz_id}
@@ -560,17 +480,19 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
                   <span className="text-xs font-black text-[#2C221E] truncate">{quiz.title}</span>
                 </div>
                 <p className="text-[11px] text-[#837560] truncate mt-0.5">
-                  {quiz.destination_name} · {quiz.distance_meters ? `${Math.round(quiz.distance_meters)}m away` : 'Nearby'}
+                  {quiz.destination_name} · {quiz.distance_meters ? `${Math.round(quiz.distance_meters)} m away` : 'Nearby'}
+                  {quiz.is_completed ? ' · Completed' : ` · +${quiz.xp_reward} XP`}
                 </p>
               </div>
 
-              <Link
-                href={`/quiz/${encodeURIComponent(quiz.quiz_id)}`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold shrink-0 shadow-2xs transition active:scale-95"
+              <button
+                type="button"
+                onClick={() => onOpenQuiz?.(quiz.quiz_id)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-extrabold shrink-0 shadow-2xs transition active:scale-95 cursor-pointer"
               >
-                <span>Enter Cabinet</span>
+                <span>{quiz.is_completed ? 'Play again' : 'Play'}</span>
                 <ArrowRight className="w-3 h-3" />
-              </Link>
+              </button>
             </div>
           ))}
         </div>
@@ -582,7 +504,7 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
           <div className="space-y-1">
             <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#2D6A4F] tracking-wide">
               <Sparkles className="w-3 h-3 text-[#FFB703]" />
-              Featured Provincial Challenge
+              Practice quiz · anywhere
             </span>
             <h4 className="text-xs sm:text-sm font-black text-[#2C221E]">
               {STARTER_PANGASINAN_QUIZ.title}
@@ -593,8 +515,8 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
           </div>
 
           <div className="text-right shrink-0">
-            <div className="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 text-xs font-black">
-              +25 XP
+            <div className="px-2.5 py-1 rounded-xl bg-stone-100 text-[#5C4F3F] text-xs font-black">
+              No XP
             </div>
             <span className="text-[9px] text-[#837560] block mt-0.5">5 Questions</span>
           </div>
@@ -603,24 +525,16 @@ export function DashboardQuizCard({ onPass }: { onPass?: (xp: number) => void })
         <div className="pt-2 flex items-center justify-between border-t border-[#EAE6DD]">
           <span className="text-[11px] text-[#837560] flex items-center gap-1">
             <Clock className="w-3 h-3 text-[#837560]" />
-            Takes ~2 mins · Replay anytime
+            About 2 minutes · Play anytime
           </span>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/quiz"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition active:scale-95"
-            >
-              <Trophy className="w-3.5 h-3.5 text-amber-700" />
-              <span>Arcade Lobby</span>
-            </Link>
-
             <button
               type="button"
               onClick={startStarterQuiz}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold shadow-2xs transition active:scale-95 cursor-pointer"
             >
-              <span>Quick Play</span>
+              <span>Practice</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

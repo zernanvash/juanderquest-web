@@ -30,7 +30,7 @@ describe('Quiz Arcade Presentation Components', () => {
       />
     );
 
-    expect(screen.getByText(/Checkpoint 1 of 5/i)).toBeDefined();
+    expect(screen.getByText(/Question 1 of 5/i)).toBeDefined();
     expect(screen.getByText('What is the capital of Pangasinan?')).toBeDefined();
     expect(screen.getByText('Option B')).toBeDefined();
 
@@ -72,10 +72,10 @@ describe('Quiz Arcade Presentation Components', () => {
       />
     );
 
-    expect(screen.getByText('Checkpoints')).toBeDefined();
-    expect(screen.getByText('Checkpoint 1')).toBeDefined();
-    expect(screen.getByText('Checkpoint 2')).toBeDefined();
-    expect(screen.getByText('Checkpoint 3')).toBeDefined();
+    expect(screen.getByText('2/5 answered')).toBeDefined();
+    expect(screen.getByLabelText('Checkpoint 1, answered')).toBeDefined();
+    expect(screen.getByLabelText('Checkpoint 2, answered')).toBeDefined();
+    expect(screen.getByLabelText('Checkpoint 3')).toBeDefined();
 
     // Protocol requirement: never call them "safe"
     expect(container.textContent?.toLowerCase()).not.toContain('safe');

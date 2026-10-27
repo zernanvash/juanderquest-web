@@ -124,7 +124,7 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
 
     render(<QuizCabinet quiz={mockQuiz} />);
 
-    expect(screen.getByText(/Press Start \(Enter\)/i)).toBeDefined();
+    expect(screen.getByText(/Start quiz/i)).toBeDefined();
 
     // Trigger Enter key to start game
     fireEvent.keyDown(window, { key: 'Enter' });
@@ -135,7 +135,7 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
         lat: 16.2081,
         lng: 119.9725,
       });
-      expect(screen.getByText(/Checkpoint 1 of 5/i)).toBeDefined();
+      expect(screen.getByText(/Question 1 of 5/i)).toBeDefined();
     });
   });
 
@@ -160,14 +160,14 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
 
     render(<QuizCabinet quiz={mockQuiz} />);
 
-    fireEvent.click(screen.getByText(/Press Start \(Enter\)/i));
+    fireEvent.click(screen.getByText(/Start quiz/i));
 
     await waitFor(() => {
       expect(startSpy).not.toHaveBeenCalled();
       expect(
-        screen.getByText(/You need to be at Lucap Wharf & Promenade to play this quiz — enable location/i)
+        screen.getByText(/Location is blocked/i)
       ).toBeDefined();
-      expect(screen.getByRole('button', { name: /Retry Geolocation/i })).toBeDefined();
+      expect(screen.getByRole('button', { name: /Try again/i })).toBeDefined();
     });
   });
 
@@ -194,13 +194,13 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
 
     render(<QuizCabinet quiz={mockQuiz} />);
 
-    fireEvent.click(screen.getByText(/Press Start \(Enter\)/i));
+    fireEvent.click(screen.getByText(/Start quiz/i));
 
     await waitFor(() => {
       expect(
         screen.getByText(/You are 12.4 km away from Lucap Wharf & Promenade/i)
       ).toBeDefined();
-      expect(screen.getByRole('button', { name: /Retry Geolocation/i })).toBeDefined();
+      expect(screen.getByRole('button', { name: /Try again/i })).toBeDefined();
     });
   });
 
@@ -224,7 +224,7 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
     };
     vi.stubGlobal('navigator', { ...navigator, geolocation: mockGeolocation });
 
-    fireEvent.click(screen.getByText(/Press Start \(Enter\)/i));
+    fireEvent.click(screen.getByText(/Start quiz/i));
 
     await waitFor(() => {
       expect(screen.getByText('How many islands comprise Hundred Islands at low tide?')).toBeDefined();
@@ -240,7 +240,7 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
     fireEvent.keyDown(window, { key: 'Enter' });
 
     await waitFor(() => {
-      expect(screen.getByText(/Checkpoint 2 of 5/i)).toBeDefined();
+      expect(screen.getByText(/Question 2 of 5/i)).toBeDefined();
     });
 
     expect(
@@ -294,34 +294,34 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
       />
     );
 
-    fireEvent.click(screen.getByText(/Press Start \(Enter\)/i));
+    fireEvent.click(screen.getByText(/Start quiz/i));
 
     // Answer Q1
-    await waitFor(() => screen.getByText(/Checkpoint 1 of 5/i));
+    await waitFor(() => screen.getByText(/Question 1 of 5/i));
     fireEvent.keyDown(window, { key: '1' });
     fireEvent.keyDown(window, { key: 'Enter' });
 
     // Answer Q2
-    await waitFor(() => screen.getByText(/Checkpoint 2 of 5/i));
+    await waitFor(() => screen.getByText(/Question 2 of 5/i));
     fireEvent.keyDown(window, { key: '1' });
     fireEvent.keyDown(window, { key: 'Enter' });
 
     // Answer Q3
-    await waitFor(() => screen.getByText(/Checkpoint 3 of 5/i));
+    await waitFor(() => screen.getByText(/Question 3 of 5/i));
     fireEvent.keyDown(window, { key: '1' });
     fireEvent.keyDown(window, { key: 'Enter' });
 
     // Answer Q4
-    await waitFor(() => screen.getByText(/Checkpoint 4 of 5/i));
+    await waitFor(() => screen.getByText(/Question 4 of 5/i));
     fireEvent.keyDown(window, { key: '1' });
     fireEvent.keyDown(window, { key: 'Enter' });
 
     // Answer Q5 (last question)
-    await waitFor(() => screen.getByText(/Checkpoint 5 of 5/i));
+    await waitFor(() => screen.getByText(/Question 5 of 5/i));
     fireEvent.keyDown(window, { key: '1' });
 
     // Click submit button
-    const submitBtn = screen.getByText(/Submit 5 Checkpoints/i);
+    const submitBtn = screen.getByText(/See results/i);
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -336,20 +336,20 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
 
     // Check results screen
     await waitFor(() => {
-      expect(screen.getByText(/Cultural Milestone Achieved!/i)).toBeDefined();
+      expect(screen.getByText(/You passed!/i)).toBeDefined();
     });
 
     // Click Play Another Round
-    const playAgainBtn = screen.getByText(/Play Another Round/i);
+    const playAgainBtn = screen.getByText(/Play again/i);
     fireEvent.click(playAgainBtn);
 
     // Should return to Title stage
     await waitFor(() => {
-      expect(screen.getByText(/Press Start \(Enter\)/i)).toBeDefined();
+      expect(screen.getByText(/Start quiz/i)).toBeDefined();
     });
 
     // Press start again - must trigger startQuizAttempt cleanly with geolocation!
-    fireEvent.click(screen.getByText(/Press Start \(Enter\)/i));
+    fireEvent.click(screen.getByText(/Start quiz/i));
 
     await waitFor(() => {
       expect(startSpy).toHaveBeenCalledWith({

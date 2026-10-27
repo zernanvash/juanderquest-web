@@ -50,6 +50,7 @@ import { DestinationMedia } from '@/components/DestinationMedia';
 import { HiddenGemHighlights } from '@/components/HiddenGemHighlights';
 import { JuanChoiceRail } from '@/components/JuanChoiceRail';
 import { DashboardQuizCard } from '@/components/DashboardQuizCard';
+import { QuizDialog } from '@/components/quiz/QuizDialog';
 import { DashboardCalendar } from '@/components/DashboardCalendar';
 import { DashboardQuestProgressPanel } from '@/components/DashboardQuestProgressPanel';
 import { DailyStampsCard } from '@/components/stamps/DailyStampsCard';
@@ -83,6 +84,25 @@ export function DashboardClient() {
 
   // 5. XP Toast / Celebrations
   const [bonusXp, setBonusXp] = useState<number>(0);
+
+  // Quiz dialog: opened from the quiz card, or by a deep link (/dashboard?quiz=<id>, /quiz/<id>).
+  const [openQuizId, setOpenQuizId] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linked = params.get('quiz');
+    if (linked) setOpenQuizId(linked);
+    if (linked || window.location.hash === '#quizzes') {
+      requestAnimationFrame(() => document.getElementById('quizzes')?.scrollIntoView({ block: 'start' }));
+    }
+  }, []);
+  const closeQuiz = useCallback(() => {
+    setOpenQuizId(null);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('quiz')) {
+      url.searchParams.delete('quiz');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, []);
 
   // Load Dashboard Data
   useEffect(() => {
@@ -213,6 +233,7 @@ export function DashboardClient() {
 
   return (
     <Navigation>
+      {openQuizId && <QuizDialog quizId={openQuizId} onClose={closeQuiz} onPassed={handleQuizPassed} />}
       <ErrorBoundary fallbackTitle="Unable to load Explorer Dashboard">
         <div className="max-w-7xl 2xl:max-w-[1560px] mx-auto space-y-8 pb-16">
           {/* ======================================================== */}
@@ -351,9 +372,9 @@ export function DashboardClient() {
                 <DashboardQuestProgressPanel />
               </section>
 
-              {/* SECTION: Cultural Knowledge Quizzes (Migrated Here) */}
-              <section className="space-y-4">
-                <DashboardQuizCard onPass={handleQuizPassed} />
+              {/* SECTION: Cultural quizzes (the quiz plays in a dialog over the dashboard) */}
+              <section id="quizzes" className="space-y-4 scroll-mt-20">
+                <DashboardQuizCard onOpenQuiz={setOpenQuizId} />
               </section>
 
               {/* SECTION: JuanChoice Community Spotlight Rail */}

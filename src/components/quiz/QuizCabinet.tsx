@@ -1,17 +1,14 @@
 'use client';
 
 import React, { useReducer, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import {
   Volume2,
   VolumeX,
-  Play,
   ChevronRight,
   ChevronLeft,
   Send,
   AlertTriangle,
-  ArrowLeft,
-  Trophy,
+  MapPin,
   RotateCcw,
 } from 'lucide-react';
 import {
@@ -37,12 +34,21 @@ interface QuizCabinetProps {
   quiz: QuizDetail;
   initialQuestions?: QuizQuestion[];
   initialAttemptId?: string | null;
+  /** Called with the awarded XP when the server grades a pass. */
+  onPassed?: (xp: number) => void;
+  /** Closes the surrounding dialog ("Done" on the results screen). */
+  onClose?: () => void;
+  /** True while a run is underway (questions shown or grading). */
+  onProgressChange?: (inProgress: boolean) => void;
 }
 
 export function QuizCabinet({
   quiz,
   initialQuestions = [],
   initialAttemptId = null,
+  onPassed,
+  onClose,
+  onProgressChange,
 }: QuizCabinetProps) {
   const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(
     initialAttemptId
@@ -50,11 +56,16 @@ export function QuizCabinet({
   const [questions, setQuestions] = React.useState<QuizQuestion[]>(initialQuestions);
   const [starting, setStarting] = React.useState(false);
   const [locationError, setLocationError] = React.useState<string | null>(null);
+  const [welcomeLine] = React.useState(() => getRandomHostLine(APO_LAKAY_HOST.welcome));
 
   const [state, dispatch] = useReducer(
     (s: QuizArcadeState, a: QuizArcadeAction) => quizArcadeReducer(s, a, questions),
     initialQuizArcadeState
   );
+
+  useEffect(() => {
+    onProgressChange?.(state.stage === 'question' || state.stage === 'submitting');
+  }, [state.stage, onProgressChange]);
 
   // Toggle sound
   const handleToggleSound = useCallback(() => {
@@ -79,7 +90,7 @@ export function QuizCabinet({
 
     if (typeof window === 'undefined' || !navigator.geolocation) {
       setLocationError(
-        `Geolocation is not supported by your browser. You must be physically at ${quiz.destination_name} to play.`
+        `Your browser can't share your location. You need to be at ${quiz.destination_name} to play.`
       );
       return;
     }
@@ -117,11 +128,9 @@ export function QuizCabinet({
         setStarting(false);
         const reason =
           geoErr.code === geoErr.PERMISSION_DENIED
-            ? 'Location permission was denied. Please enable location permissions in your browser to verify your physical visit.'
-            : 'Unable to acquire your current GPS coordinates. Please ensure GPS is turned on and try again.';
-        setLocationError(
-          `You need to be at ${quiz.destination_name} to play this quiz — enable location. (${reason})`
-        );
+            ? 'Location is blocked. Allow location for this site in your browser settings, then try again.'
+            : "We couldn't get your location. Check that GPS is on, then try again.";
+        setLocationError(reason);
       },
       { timeout: 10000, enableHighAccuracy: true, maximumAge: 0 }
     );
@@ -169,7 +178,7 @@ export function QuizCabinet({
     if (answersList.some((a) => !a.selected_option_id)) {
       dispatch({
         type: 'SUBMIT_FAILURE',
-        error: 'Please answer all 5 questions before finalizing your run.',
+        error: 'Answer all 5 questions first.',
       });
       return;
     }
@@ -195,14 +204,15 @@ export function QuizCabinet({
         result: res,
         hostLine: hostReview,
       });
+      if (res.passed) onPassed?.(res.xp_awarded);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to submit quiz attempt to the server.';
+      const msg = err instanceof Error ? err.message : "We couldn't submit your answers. Try again.";
       dispatch({
         type: 'SUBMIT_FAILURE',
         error: msg,
       });
     }
-  }, [activeAttemptId, questions, state.answers, state.soundEnabled]);
+  }, [activeAttemptId, questions, state.answers, state.soundEnabled, onPassed]);
 
   // Restart handler - clears attempt ID and questions so a fresh attempt is required
   const handlePlayAgain = useCallback(() => {
@@ -266,231 +276,162 @@ export function QuizCabinet({
     questions.every((q) => Boolean(state.answers[q.id]));
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between selection:bg-amber-500 selection:text-zinc-950 font-sans">
-      {/* Top Arcade Marquee Bar */}
-      <header className="border-b border-amber-500/20 bg-zinc-900/80 backdrop-blur-md px-4 py-3 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/quiz"
-              className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-amber-400 transition-colors"
-              aria-label="Back to Arcade Lobby"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-500 block">
-                JuanDerQuest Heritage Arcade
-              </span>
-              <h1 className="text-sm sm:text-base font-bold text-zinc-100 truncate max-w-[200px] sm:max-w-md font-serif">
-                {quiz.title}
-              </h1>
-            </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-[#837560] truncate">
+          {quiz.destination_name}
+          {quiz.municipality ? ` · ${quiz.municipality}` : ''}
+        </span>
+        <button
+          type="button"
+          onClick={handleToggleSound}
+          className="p-1.5 rounded-lg text-stone-500 hover:text-stone-800 hover:bg-stone-100 transition cursor-pointer"
+          aria-label={state.soundEnabled ? 'Turn sound off' : 'Turn sound on'}
+          aria-pressed={state.soundEnabled}
+        >
+          {state.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {state.stage === 'title' && (
+        <div className="space-y-4">
+          {quiz.description && <p className="text-sm text-[#5C4F3F] leading-relaxed">{quiz.description}</p>}
+
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 font-black">+{quiz.xp_reward} XP</span>
+            <span className="px-2.5 py-1 rounded-xl bg-stone-100 text-[#5C4F3F] font-bold">5 questions</span>
+            <span className="px-2.5 py-1 rounded-xl bg-stone-100 text-[#5C4F3F] font-bold">Pass with 4</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleToggleSound}
-              className={`p-2 rounded-xl border text-xs font-mono flex items-center gap-1.5 transition-colors ${
-                state.soundEnabled
-                  ? 'border-amber-400 bg-amber-500/20 text-amber-300'
-                  : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700'
-              }`}
-              aria-label={state.soundEnabled ? 'Mute arcade sounds' : 'Enable arcade sounds'}
-            >
-              {state.soundEnabled ? (
-                <>
-                  <Volume2 className="w-4 h-4 text-amber-400" />
-                  <span className="hidden sm:inline">Audio ON</span>
-                </>
-              ) : (
-                <>
-                  <VolumeX className="w-4 h-4 text-zinc-500" />
-                  <span className="hidden sm:inline">Audio OFF</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </header>
+          <HostLineBar hostName="Apo Lakay" line={welcomeLine} />
 
-      {/* Main Arcade Frame */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-center">
-        {state.stage === 'title' && (
-          <div className="max-w-xl mx-auto text-center space-y-6 py-6 sm:py-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase">
-              <Trophy className="w-4 h-4" />
-              Heritage Arcade Cabinet
-            </div>
+          <p className="text-[11px] text-[#837560] flex items-start gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0 mt-px" aria-hidden="true" />
+            You need to be at {quiz.destination_name}. We check your location when you start.
+          </p>
 
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-zinc-100 font-serif tracking-tight">
-              {quiz.title}
-            </h2>
-
-            <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-md mx-auto font-sans">
-              {quiz.description}
-            </p>
-
-            <div className="flex items-center justify-center gap-4 text-xs font-mono text-zinc-400">
-              <span>{quiz.municipality}</span>
-              <span>•</span>
-              <span className="text-amber-400">+{quiz.xp_reward} XP Reward</span>
-              <span>•</span>
-              <span>5 Checkpoints</span>
-            </div>
-
-            <HostLineBar
-              hostName="Apo Lakay"
-              line={getRandomHostLine(APO_LAKAY_HOST.welcome)}
-            />
-
-            {locationError && (
-              <div
-                role="alert"
-                className="p-4 rounded-xl border border-rose-500/40 bg-rose-950/40 text-rose-200 text-xs space-y-2.5 font-mono text-left"
-              >
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 leading-relaxed">{locationError}</div>
-                </div>
-                <div className="pt-1 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleStartGame}
-                    disabled={starting}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-bold transition-colors"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Retry Geolocation
-                  </button>
-                </div>
+          {locationError && (
+            <div role="alert" className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-px" />
+                <span className="leading-relaxed">{locationError}</span>
               </div>
-            )}
-
-            {state.error && (
-              <div className="p-3 rounded-xl border border-rose-500/40 bg-rose-950/30 text-rose-300 text-xs flex items-center justify-center gap-2 font-mono">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{state.error}</span>
-              </div>
-            )}
-
-            <div>
               <button
                 type="button"
                 onClick={handleStartGame}
                 disabled={starting}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-base transition-transform active:scale-95 shadow-xl shadow-amber-500/20 inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-rose-200 hover:bg-rose-100 text-rose-800 font-bold transition cursor-pointer disabled:opacity-50"
               >
-                <Play className="w-5 h-5 fill-current" />
-                {starting ? 'Verifying Destination Geofence...' : 'Press Start (Enter)'}
+                <RotateCcw className="w-3.5 h-3.5" />
+                Try again
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {state.stage === 'question' && currentQuestion && (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            {/* Left 8 cols: Host line + Question Card + Bottom Controls */}
-            <div className="md:col-span-8 space-y-4">
-              <HostLineBar
-                hostName="Apo Lakay"
-                line={state.hostLine || APO_LAKAY_HOST.questionLeadIn[state.currentIndex]}
-              />
-
-              <QuestionCard
-                ordinal={currentQuestion.ordinal || state.currentIndex + 1}
-                questionText={currentQuestion.question_text}
-                options={currentQuestion.options}
-                selectedOptionId={state.answers[currentQuestion.id]}
-                onSelectOption={handleSelectOption}
-                focusedOptionIndex={state.focusedOptionIndex}
-                onFocusOption={(idx) => dispatch({ type: 'SET_FOCUS_OPTION', index: idx })}
-              />
-
-              {state.error && (
-                <div className="p-3 rounded-xl border border-rose-500/40 bg-rose-950/30 text-rose-300 text-xs flex items-center gap-2 font-mono">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  <span>{state.error}</span>
-                </div>
-              )}
-
-              {/* Bottom Action Bar */}
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={handlePrev}
-                  disabled={state.currentIndex === 0}
-                  className="px-4 py-2 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 text-xs font-mono flex items-center gap-1.5 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Prev Checkpoint
-                </button>
-
-                {state.currentIndex < questions.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!state.answers[currentQuestion.id]}
-                    className="px-5 py-2.5 rounded-xl bg-amber-500 text-zinc-950 font-bold hover:bg-amber-400 text-xs font-mono flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-amber-500/10 transition-colors"
-                  >
-                    Next Checkpoint (Enter)
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={!allAnswered}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-zinc-950 font-extrabold text-xs font-mono flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none shadow-lg shadow-amber-500/20 transition-all hover:brightness-105"
-                  >
-                    <Send className="w-4 h-4" />
-                    Submit 5 Checkpoints
-                  </button>
-                )}
-              </div>
+          {state.error && (
+            <div role="alert" className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{state.error}</span>
             </div>
+          )}
 
-            {/* Right 4 cols: Progress Ladder */}
-            <div className="md:col-span-4">
-              <QuizProgressLadder
-                totalQuestions={questions.length || 5}
-                currentIndex={state.currentIndex}
-                answers={state.answers}
-                questionIds={questions.map((q) => q.id)}
-              />
-            </div>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={handleStartGame}
+            disabled={starting}
+            className="w-full min-h-12 px-5 py-3 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-sm font-bold shadow-2xs transition flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+          >
+            {starting ? 'Checking your location…' : 'Start quiz'}
+            {!starting && <ChevronRight className="w-4 h-4" />}
+          </button>
+        </div>
+      )}
 
-        {state.stage === 'submitting' && (
-          <div className="max-w-md mx-auto text-center py-16 space-y-4">
-            <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-400 rounded-full animate-spin mx-auto" />
-            <h3 className="text-xl font-bold font-serif text-zinc-200">
-              Consulting the Records of Pangasinan...
-            </h3>
-            <p className="text-sm text-zinc-400 font-mono">
-              Apo Lakay is calculating your official score and XP reward.
-            </p>
-          </div>
-        )}
-
-        {state.stage === 'results' && state.submissionResult && (
-          <ResultsScreen
-            quizTitle={quiz.title}
-            destinationName={quiz.destination_name}
-            municipality={quiz.municipality}
-            result={state.submissionResult}
-            hostLine={state.hostLine}
-            onPlayAgain={handlePlayAgain}
+      {state.stage === 'question' && currentQuestion && (
+        <div className="space-y-4">
+          <QuizProgressLadder
+            totalQuestions={questions.length || 5}
+            currentIndex={state.currentIndex}
+            answers={state.answers}
+            questionIds={questions.map((q) => q.id)}
           />
-        )}
-      </main>
 
-      {/* Retro Arcade Footer info */}
-      <footer className="border-t border-zinc-900 bg-zinc-950/80 px-4 py-2.5 text-center text-[11px] font-mono text-zinc-600">
-        <span>Juander Quiz Show Arcade • Cabinet 1995 • Answers are checked by the JuanderQuest server.</span>
-      </footer>
+          <HostLineBar
+            hostName="Apo Lakay"
+            line={state.hostLine || APO_LAKAY_HOST.questionLeadIn[state.currentIndex]}
+          />
+
+          <QuestionCard
+            ordinal={currentQuestion.ordinal || state.currentIndex + 1}
+            questionText={currentQuestion.question_text}
+            options={currentQuestion.options}
+            selectedOptionId={state.answers[currentQuestion.id]}
+            onSelectOption={handleSelectOption}
+            focusedOptionIndex={state.focusedOptionIndex}
+            onFocusOption={(idx) => dispatch({ type: 'SET_FOCUS_OPTION', index: idx })}
+          />
+
+          {state.error && (
+            <div role="alert" className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{state.error}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-3 border-t border-[#F2EFE9]">
+            <button
+              type="button"
+              onClick={handlePrev}
+              disabled={state.currentIndex === 0}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold text-stone-600 hover:text-stone-900 disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1 cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Previous
+            </button>
+
+            {state.currentIndex < questions.length - 1 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!state.answers[currentQuestion.id]}
+                className="px-4 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold shadow-2xs transition disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
+              >
+                Next
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!allAnswered}
+                className="px-5 py-2.5 rounded-xl bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] text-xs font-black shadow-sm transition disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                See results
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {state.stage === 'submitting' && (
+        <div className="text-center py-10 space-y-3" role="status">
+          <div className="w-8 h-8 border-2 border-[#2D6A4F]/20 border-t-[#2D6A4F] rounded-full animate-spin mx-auto" />
+          <p className="text-sm font-bold text-[#2C221E]">Checking your answers…</p>
+        </div>
+      )}
+
+      {state.stage === 'results' && state.submissionResult && (
+        <ResultsScreen
+          quizTitle={quiz.title}
+          destinationName={quiz.destination_name}
+          municipality={quiz.municipality}
+          result={state.submissionResult}
+          hostLine={state.hostLine}
+          onPlayAgain={handlePlayAgain}
+          onDone={onClose}
+        />
+      )}
     </div>
   );
 }
