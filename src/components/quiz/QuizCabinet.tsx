@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Trophy,
+  RotateCcw,
 } from 'lucide-react';
 import {
   QuizDetail,
@@ -48,6 +49,7 @@ export function QuizCabinet({
   );
   const [questions, setQuestions] = React.useState<QuizQuestion[]>(initialQuestions);
   const [starting, setStarting] = React.useState(false);
+  const [locationError, setLocationError] = React.useState<string | null>(null);
 
   const [state, dispatch] = useReducer(
     (s: QuizArcadeState, a: QuizArcadeAction) => quizArcadeReducer(s, a, questions),
@@ -61,10 +63,12 @@ export function QuizCabinet({
     dispatch({ type: 'TOGGLE_SOUND' });
   }, [state.soundEnabled]);
 
-  // Start attempt from title screen
+  // Request browser geolocation and start attempt from title screen
   const handleStartGame = useCallback(async () => {
+    setLocationError(null);
+
+    // If pre-seeded questions and attempt id are already provided (e.g. initial props)
     if (questions.length === 5 && activeAttemptId) {
-      // If we already have questions and attempt id
       dispatch({
         type: 'START_EPISODE',
         initialHostLine: APO_LAKAY_HOST.questionLeadIn[0],
@@ -73,36 +77,55 @@ export function QuizCabinet({
       return;
     }
 
-    setStarting(true);
-    try {
-      // Use destination GPS to satisfy server geofence
-      const lat = quiz.gps_lat || 16.2085;
-      const lng = quiz.gps_lng || 119.972;
-
-      const res = await startQuizAttempt({
-        quizId: quiz.id,
-        lat,
-        lng,
-      });
-
-      setActiveAttemptId(res.attempt.id);
-      setQuestions(res.questions);
-
-      dispatch({
-        type: 'START_EPISODE',
-        initialHostLine: APO_LAKAY_HOST.questionLeadIn[0],
-      });
-      if (state.soundEnabled) quizAudio.playCheckpointAdvance();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Could not initiate game attempt with server.';
-      dispatch({
-        type: 'SUBMIT_FAILURE',
-        error: msg,
-      });
-    } finally {
-      setStarting(false);
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationError(
+        `Geolocation is not supported by your browser. You must be physically at ${quiz.destination_name} to play.`
+      );
+      return;
     }
-  }, [activeAttemptId, questions.length, quiz.gps_lat, quiz.gps_lng, quiz.id, state.soundEnabled]);
+
+    setStarting(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await startQuizAttempt({
+            quizId: quiz.id,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+
+          setActiveAttemptId(res.attempt.id);
+          setQuestions(res.questions);
+
+          dispatch({
+            type: 'START_EPISODE',
+            initialHostLine: APO_LAKAY_HOST.questionLeadIn[0],
+          });
+          if (state.soundEnabled) quizAudio.playCheckpointAdvance();
+        } catch (err: unknown) {
+          const msg =
+            err instanceof Error
+              ? err.message
+              : `You need to be at ${quiz.destination_name} to play this quiz.`;
+          setLocationError(msg);
+        } finally {
+          setStarting(false);
+        }
+      },
+      (geoErr) => {
+        setStarting(false);
+        const reason =
+          geoErr.code === geoErr.PERMISSION_DENIED
+            ? 'Location permission was denied. Please enable location permissions in your browser to verify your physical visit.'
+            : 'Unable to acquire your current GPS coordinates. Please ensure GPS is turned on and try again.';
+        setLocationError(
+          `You need to be at ${quiz.destination_name} to play this quiz — enable location. (${reason})`
+        );
+      },
+      { timeout: 10000, enableHighAccuracy: true, maximumAge: 0 }
+    );
+  }, [activeAttemptId, questions.length, quiz.destination_name, quiz.id, state.soundEnabled]);
 
   // Select Option
   const handleSelectOption = useCallback((optId: string) => {
@@ -180,6 +203,14 @@ export function QuizCabinet({
       });
     }
   }, [activeAttemptId, questions, state.answers, state.soundEnabled]);
+
+  // Restart handler - clears attempt ID and questions so a fresh attempt is required
+  const handlePlayAgain = useCallback(() => {
+    setActiveAttemptId(null);
+    setQuestions([]);
+    setLocationError(null);
+    dispatch({ type: 'RESTART' });
+  }, []);
 
   // Keyboard navigation [1-4], Enter
   const handleKeyDown = useCallback(
@@ -314,6 +345,29 @@ export function QuizCabinet({
               line={getRandomHostLine(APO_LAKAY_HOST.welcome)}
             />
 
+            {locationError && (
+              <div
+                role="alert"
+                className="p-4 rounded-xl border border-rose-500/40 bg-rose-950/40 text-rose-200 text-xs space-y-2.5 font-mono text-left"
+              >
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 leading-relaxed">{locationError}</div>
+                </div>
+                <div className="pt-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleStartGame}
+                    disabled={starting}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-bold transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Retry Geolocation
+                  </button>
+                </div>
+              </div>
+            )}
+
             {state.error && (
               <div className="p-3 rounded-xl border border-rose-500/40 bg-rose-950/30 text-rose-300 text-xs flex items-center justify-center gap-2 font-mono">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -329,7 +383,7 @@ export function QuizCabinet({
                 className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-base transition-transform active:scale-95 shadow-xl shadow-amber-500/20 inline-flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Play className="w-5 h-5 fill-current" />
-                {starting ? 'Booting Cabinet...' : 'Insert Token & Start (Enter)'}
+                {starting ? 'Verifying Destination Geofence...' : 'Press Start (Enter)'}
               </button>
             </div>
           </div>
@@ -428,14 +482,14 @@ export function QuizCabinet({
             municipality={quiz.municipality}
             result={state.submissionResult}
             hostLine={state.hostLine}
-            onPlayAgain={() => dispatch({ type: 'RESTART' })}
+            onPlayAgain={handlePlayAgain}
           />
         )}
       </main>
 
       {/* Retro Arcade Footer info */}
       <footer className="border-t border-zinc-900 bg-zinc-950/80 px-4 py-2.5 text-center text-[11px] font-mono text-zinc-600">
-        <span>Juander Quiz Show Arcade • Cabinet 1995 • 100% Client Sovereign</span>
+        <span>Juander Quiz Show Arcade • Cabinet 1995 • Answers are checked by the JuanderQuest server.</span>
       </footer>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Trophy,
@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Search,
+  Navigation,
+  RotateCcw,
 } from 'lucide-react';
 import {
   fetchNearbyQuizzes,
@@ -21,51 +23,67 @@ import {
 } from '@/lib/quizzes';
 import { useAuth } from '@/lib/auth';
 
-const STARTER_FALLBACK_QUIZZES: NearbyQuizInvitation[] = [
-  {
-    quiz_id: 'quiz-lucap-wharf',
-    destination_id: 'spot-lucap-wharf',
-    destination_name: 'Lucap Wharf & Lighthouse Promenade',
-    municipality: 'Alaminos City',
-    title: 'Tales of Hundred Islands & Lucap Wharf',
-    description: 'Explore the legends, marine biodiversity, and coastal history of Alaminos City.',
-    radius_meters: 500,
-    distance_meters: 0,
-    xp_reward: 50,
-    time_limit_minutes: 30,
-    is_completed: false,
-  },
-];
-
 export function QuizLobbyClient() {
   const { user } = useAuth();
-  const [quizzes, setQuizzes] = useState<NearbyQuizInvitation[]>(STARTER_FALLBACK_QUIZZES);
+  const [quizzes, setQuizzes] = useState<NearbyQuizInvitation[]>([]);
   const [history, setHistory] = useState<UserQuizHistoryItem[]>([]);
   const [search, setSearch] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [locationStatus, setLocationStatus] = useState<'prompt' | 'granted' | 'denied' | 'unsupported'>('prompt');
+  const [locationMessage, setLocationMessage] = useState<string>('');
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadData() {
-      try {
-        // Center around Alaminos / Lingayen Gulf
-        const list = await fetchNearbyQuizzes(16.2085, 119.972);
-        if (mounted && list && list.length > 0) {
-          setQuizzes(list);
-        }
-
-        if (user) {
-          const hist = await fetchMyQuizHistory();
-          if (mounted && hist) {
-            setHistory(hist);
-          }
-        }
-      } catch {
-        // Fallback already pre-set
-      }
+  const requestLocationAndFetch = useCallback(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('unsupported');
+      setLocationMessage('Geolocation is not supported by your browser.');
+      setLoading(false);
+      return;
     }
 
-    void loadData();
+    setLoading(true);
+    setLocationMessage('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setLocationStatus('granted');
+        try {
+          const list = await fetchNearbyQuizzes(pos.coords.latitude, pos.coords.longitude);
+          setQuizzes(list || []);
+        } catch {
+          setQuizzes([]);
+        } finally {
+          setLoading(false);
+        }
+      },
+      (err) => {
+        setLocationStatus('denied');
+        setQuizzes([]);
+        setLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationMessage('Location permission was denied. Turn on location to see quizzes near you.');
+        } else {
+          setLocationMessage('Unable to determine your GPS location. Please check your connection and retry.');
+        }
+      },
+      { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 }
+    );
+  }, []);
+
+  // Request location on mount
+  useEffect(() => {
+    requestLocationAndFetch();
+  }, [requestLocationAndFetch]);
+
+  // Load user quiz history if signed in
+  useEffect(() => {
+    let mounted = true;
+    if (user) {
+      void fetchMyQuizHistory().then((hist) => {
+        if (mounted && hist) {
+          setHistory(hist);
+        }
+      }).catch(() => {});
+    }
     return () => {
       mounted = false;
     };
@@ -118,17 +136,62 @@ export function QuizLobbyClient() {
             <Sparkles className="w-4 h-4 text-amber-500" />
             Available Cabinets
           </h2>
-          <span className="text-xs font-mono text-zinc-500">
-            {filteredQuizzes.length} {filteredQuizzes.length === 1 ? 'Quiz' : 'Quizzes'} Ready
-          </span>
+          {locationStatus === 'granted' && (
+            <span className="text-xs font-mono text-zinc-500">
+              {filteredQuizzes.length} {filteredQuizzes.length === 1 ? 'Quiz' : 'Quizzes'} Ready
+            </span>
+          )}
         </div>
 
-        {filteredQuizzes.length === 0 ? (
+        {/* Loading state */}
+        {loading && (
+          <div className="p-12 text-center rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-3">
+            <div className="w-8 h-8 border-2 border-amber-500/20 border-t-amber-400 rounded-full animate-spin mx-auto" />
+            <p className="text-sm font-mono text-zinc-400">Detecting your location for nearby heritage cabinets...</p>
+          </div>
+        )}
+
+        {/* Geolocation Denied / Unavailable state */}
+        {!loading && locationStatus !== 'granted' && (
+          <div className="p-8 sm:p-12 text-center rounded-2xl border border-zinc-800 bg-zinc-900/60 space-y-4 max-w-lg mx-auto">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+              <Navigation className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base sm:text-lg font-bold font-serif text-zinc-100">
+                Turn on location to see quizzes near you
+              </h3>
+              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-sans">
+                {locationMessage ||
+                  'Heritage quizzes are unlockable when you visit registered cultural landmarks in Pangasinan. Allow location access in your browser to view active cabinets in range.'}
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={requestLocationAndFetch}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs font-mono transition-transform active:scale-95 shadow-md shadow-amber-500/10"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Enable Location Access
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Location Granted: Empty or List */}
+        {!loading && locationStatus === 'granted' && filteredQuizzes.length === 0 && (
           <div className="p-8 text-center rounded-2xl border border-zinc-800 bg-zinc-900/50 space-y-3">
             <HelpCircle className="w-8 h-8 text-zinc-500 mx-auto" />
-            <p className="text-sm text-zinc-400">No arcade cabinets match your search criteria.</p>
+            <p className="text-sm text-zinc-400">
+              {search
+                ? 'No arcade cabinets match your search criteria.'
+                : 'No active heritage quizzes found within range of your current location.'}
+            </p>
           </div>
-        ) : (
+        )}
+
+        {!loading && locationStatus === 'granted' && filteredQuizzes.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {filteredQuizzes.map((quiz) => {
               const isPastCompleted = history.some(
