@@ -1,5 +1,6 @@
 'use client';
-import { travelerProfileHref } from '@/lib/preview';
+
+import { categoryLabel } from '@/lib/category-label';import { travelerProfileHref } from '@/lib/preview';
 import { appRoutes } from '@/lib/routes';
 
 import React, { useState, useEffect } from 'react';
@@ -358,7 +359,7 @@ export default function ExplorePage() {
                           : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)]'
                       }`}
                     >
-                      {cat}
+                      {categoryLabel(cat)}
                     </button>
                   ))}
                   {municipalities.map((muni) => (
@@ -573,7 +574,7 @@ export default function ExplorePage() {
                             className="w-full h-full object-cover opacity-85"
                           />
                           <span className="absolute right-3 bottom-1.5 px-2 py-0.5 rounded-full bg-stone-950/65 text-white text-[10px] font-bold">
-                            {spot.category || 'Destination'} · Explore →
+                            {categoryLabel(spot.category)} · Explore →
                           </span>
                         </Link>
                       )}

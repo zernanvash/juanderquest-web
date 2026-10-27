@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryLabel } from '@/lib/category-label';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -127,7 +128,7 @@ export default function QuestDetailClient() {
 
                   <div className="absolute top-4 left-4 flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full bg-[#FFB703] text-[#582F0E] text-xs font-black uppercase tracking-wider shadow-md">
-                      {quest.category.replace('_', ' ')} {COPY.quest.singular}
+                      {categoryLabel(quest.category)} {COPY.quest.singular}
                     </span>
                     {quest.isTest && (
                       <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold shadow-xs">
@@ -284,13 +285,16 @@ export default function QuestDetailClient() {
 
                   {/* Actions */}
                   <div className="space-y-3 pt-2">
-                    <Link
-                      href={`/quests/${quest.id}/play`}
+                    {/* Quest play (GPS, QR, camera, AR checks) runs in the Android app; the web has no play screen. */}
+                    <a
+                      href="https://github.com/zernanvash/juanderquest-mobile/releases/latest/download/juanderquest-latest.apk"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="btn-tactile btn-sheen w-full inline-flex items-center justify-center gap-2 bg-[#FFB703] hover:bg-[#F59E0B] text-[#582F0E] font-black py-3.5 px-5 rounded-xl shadow-md text-xs sm:text-sm transition cursor-pointer"
                     >
                       <Compass className="w-4 h-4" />
-                      <span>{COPY.quest.playCta}</span>
-                    </Link>
+                      <span>Play in the Android app</span>
+                    </a>
 
                     <a
                       href="https://github.com/zernanvash/juanderquest-mobile/releases/latest/download/juanderquest-latest.apk"

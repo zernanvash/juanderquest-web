@@ -57,7 +57,7 @@ function PlazaContent() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedCursor, setFeedCursor] = useState<string | null>(null);
-  const [hasMoreFeed, setHasMoreFeed] = useState(true);
+  const [hasMoreFeed, setHasMoreFeed] = useState(false);
 
   // Load standings
   const loadStandings = useCallback(async () => {
@@ -91,7 +91,9 @@ function PlazaContent() {
     async (reset = false) => {
       setFeedLoading(true);
       try {
-        const cursor = reset ? undefined : feedCursor || undefined;
+        // "Load more" before the first page has a cursor would fetch page one again.
+        if (!reset && !feedCursor) return;
+        const cursor = reset ? undefined : feedCursor ?? undefined;
         const res = await getFeed({
           scope: feedScope,
           cursor,
@@ -111,7 +113,10 @@ function PlazaContent() {
           }
           setActivities(res.items);
         } else {
-          setActivities((prev) => [...prev, ...res.items]);
+          setActivities((prev) => {
+            const seen = new Set(prev.map((a) => a.id));
+            return [...prev, ...res.items.filter((a) => !seen.has(a.id))];
+          });
         }
 
         setFeedCursor(res.next_cursor);
