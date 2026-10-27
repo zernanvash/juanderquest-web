@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!isResourceId(slug)) notFound();
   const spot = await loadPublicSpot(slug);
   if (!spot) return {
-    title: 'Destination preview | JuanDerQuest',
+    title: { absolute: 'Destination preview | JuanDerQuest' },
     description: 'Open this destination in JuanDerQuest.',
     robots: { index: false, follow: false },
   };
@@ -57,7 +57,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${spot.name} | JuanDerQuest`;
   const description = spot.description || `Explore ${spot.name} in ${spot.municipality}.`;
   return {
-    title,
+    // The root layout's title template would append the brand a second time.
+    title: { absolute: title },
     description,
     robots: spot.is_test ? { index: false, follow: false } : undefined,
     alternates: { canonical: url },

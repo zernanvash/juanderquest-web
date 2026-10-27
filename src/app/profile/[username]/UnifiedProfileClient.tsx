@@ -501,7 +501,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                         <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
                           <Compass className="w-4 h-4 text-purple-700" />
                         </div>
-                        <div className="text-xl font-black text-purple-900">{sharedBadges?.length || 3}</div>
+                        <div className="text-xl font-black text-purple-900">{sharedBadges?.length ?? 0}</div>
                         <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Badges Earned</div>
                       </div>
                     </div>
@@ -612,7 +612,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                                 {COPY.badge.titlePlural}
                               </h2>
                               <p className="text-[11px] text-[var(--color-text-muted)]">
-                                {sharedBadges?.length || 3} verified badges collected
+                                {sharedBadges?.length ?? 0} verified badges collected
                               </p>
                             </div>
                           </div>
@@ -627,7 +627,11 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
 
                         {/* Top 3-4 Badges Compact Preview */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {SAMPLE_USER_BADGES.slice(0, 3).map((badge) => (
+                          {/* Only badges the server confirmed for this traveler; never the sample catalog. */}
+                          {SAMPLE_USER_BADGES.filter((badge) => sharedBadges?.some((earned) => earned.id === badge.id)).length === 0 && (
+                            <p className="sm:col-span-3 text-xs text-[var(--color-text-muted)]">No verified badges to show yet.</p>
+                          )}
+                          {SAMPLE_USER_BADGES.filter((badge) => sharedBadges?.some((earned) => earned.id === badge.id)).slice(0, 3).map((badge) => (
                             <div
                               key={badge.id}
                               onClick={() => setSelectedBadgeModal(badge)}
