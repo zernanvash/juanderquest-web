@@ -27,7 +27,7 @@ export function WalletAccessGate({ children }: { children: React.ReactNode }) {
     return (
       <>
         {children}
-        {sessionUnavailable && !toastDismissed && (
+        {sessionUnavailable && !toastDismissed && pathname !== '/plaza' && (
           <div
             role="status"
             aria-live="polite"

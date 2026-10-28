@@ -11,6 +11,7 @@ vi.mock('@/lib/auth', () => ({
       email: 'aira@example.com',
       points: 500,
     },
+    sessionUnavailable: false,
   }),
 }));
 
@@ -184,6 +185,20 @@ describe('PlazaPage Component', () => {
       ],
       next_cursor: null,
     });
+  });
+
+  it('shows a friendly connection state and never the raw API error or Guest card', async () => {
+    mockGetStandings.mockRejectedValueOnce(new Error('Request failed with status code 500'));
+    mockGetFeed.mockResolvedValueOnce({ items: [], next_cursor: null });
+    mockGetTowns.mockResolvedValueOnce({ week: { id: '2026-W41' }, towns: [] });
+
+    render(<PlazaPage />);
+
+    expect(await screen.findByText('Connection unavailable')).toBeDefined();
+    expect(screen.queryByText(/Request failed with status code/i)).toBeNull();
+    expect(screen.queryByText('Guest Explorer')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(mockGetStandings).toHaveBeenCalledTimes(2));
   });
 
   it('renders Plaza header, podium, and activity feed', async () => {
