@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { X } from 'lucide-react';
 export const CONSENT_KEY = 'jdq_cookie_consent_v1';
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
@@ -15,9 +16,19 @@ export function CookieConsent() {
     <section
       role="dialog"
       aria-label="Cookie preferences"
-      className="fixed bottom-20 left-3 right-3 z-[70] rounded-xl border border-[#D5C4AC] bg-white p-3 shadow-2xl sm:bottom-4 sm:left-auto sm:right-4 sm:w-80"
+      className="fixed bottom-20 left-3 right-3 z-[60] rounded-xl border border-[#D5C4AC] bg-white p-3 shadow-2xl sm:bottom-4 sm:left-auto sm:right-4 sm:w-80"
     >
-      <p className="text-xs font-black text-[#582F0E]">Your privacy, your choice</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-black text-[#582F0E]">Your privacy, your choice</p>
+        <button
+          type="button"
+          onClick={() => choose('essential')}
+          aria-label="Dismiss cookie notice"
+          className="-mr-1 -mt-1 rounded-lg p-1 text-[#837560] hover:bg-[#F5F3ED] hover:text-[#2C221E] cursor-pointer"
+        >
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
       <p className="mt-1 text-[11px] leading-5 text-[#514532]">
         Essential storage keeps the app working. Optional anonymous usage events help the tourism team improve it.{' '}
         <Link href="/privacy" className="font-bold underline">Privacy policy</Link>
