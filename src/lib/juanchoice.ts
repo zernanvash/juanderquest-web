@@ -5,19 +5,32 @@ export type JuanChoiceStatus = 'draft' | 'scheduled' | 'voting' | 'closed' | 'fi
 export interface JuanChoiceCampaign {
   id: string; slug: string; region: string; theme: string; status: JuanChoiceStatus;
   opens_at: string; closes_at: string; policy_version: string;
+  /** Plan 65 weekly rounds. */
+  round_tier?: 'standard' | 'special_festival'; festival_name?: string | null;
+  tally_hidden?: boolean; tally_hidden_since?: string | null;
+}
+/** A manifesto perk; an unrevealed mystery perk only carries its slot. */
+export interface JuanChoicePerk {
+  key?: string; label?: string; description?: string; domain?: 'quests' | 'trails' | 'stamps_quiz' | 'shop_msme';
+  value?: number; is_anchor?: boolean; is_mystery: boolean; revealed?: boolean;
 }
 export interface JuanChoiceStanding {
-  candidate_id: string; spot_id: string; spot_slug?: string; spot_name?: string; votes: number;
+  candidate_id: string; spot_id: string; spot_slug?: string; spot_name?: string;
+  /** Weighted votes; null while the final-24h tally is hidden. */
+  votes: number | null;
+  voter_count?: number | null; municipality?: string; image_url?: string;
+  manifesto_perks?: JuanChoicePerk[]; prior_loss_streak?: number; unlocked_perk_count?: number;
 }
 export interface JuanChoiceDetail {
   campaign: JuanChoiceCampaign;
   standings: JuanChoiceStanding[];
   result: { co_winner_ids: string[]; valid_ballots: number; finalized_at: string } | null;
 }
-export interface JuanChoiceBallot { candidate_id: string; version: number }
+export interface JuanChoiceBallot { candidate_id: string; version: number; vote_weight?: number; boost_spent_points?: number }
 export interface JuanChoiceReceipt {
   ballot: JuanChoiceBallot;
-  participation: { civic_xp: 25; stamps: 1; token_grant_mjdq: '0' };
+  participation: { civic_xp: 25; stamps: 1; token_grant_mjdq: '0' } | null;
+  boost?: { points_spent: number; civic_xp: number; total_points_spent: number };
   replayed: boolean; policy_version: string; server_time?: string;
 }
 export interface JuanChoiceMyState {
@@ -26,6 +39,19 @@ export interface JuanChoiceMyState {
   can_vote_now: boolean;
   vote_unavailable_reason: string | null;
   server_time: string | null;
+  /** Plan 65 quadratic boosts (weekly rounds only). */
+  boost?: { available: boolean; current_weight: number; next_weight: number | null; next_cost_points: number | null;
+    cost_by_weight: Record<string, number>; civic_xp_per_tier: number };
+}
+export interface JuanChoiceActivePerk extends JuanChoicePerk {
+  role: 'champion' | 'minister'; spot_id: string; municipality: string; reign_ends_at: string;
+}
+export interface JuanChoiceReigning {
+  campaign_id: string; theme: string; round_tier?: string; festival_name?: string | null;
+  reign_starts_at: string; reign_ends_at: string;
+  champions: { candidate_id: string; spot_id: string; spot_slug: string; spot_name: string; municipality: string; image_url?: string }[];
+  minister: { candidate_id: string; spot_id: string; spot_slug: string; spot_name: string; municipality: string; image_url?: string } | null;
+  perks: JuanChoiceActivePerk[]; total_weighted_votes: number; valid_ballots: number;
 }
 export interface JuanChoiceSpotlight {
   kind: 'juanchoice_spotlight'; campaign_id: string; theme: string; region: string;
@@ -40,6 +66,7 @@ export interface JuanChoiceOverview {
   view:'open'|'between';
   availability:{voting_enabled:boolean;reason:string|null};
   current:(JuanChoiceCampaign&{period_start:string})|null;
+  reigning?:JuanChoiceReigning|null;
   next:{opens_at:string;closes_at:string;theme:string|null;schedule_status:'scheduled'|'postponed'}|null;
   previous:{campaign_id:string;period_label:string;opens_at:string;closes_at:string;finalized_at:string;
     theme:string;valid_ballots:number;co_winner_ids:string[];standings:JuanChoiceStanding[]}|null;
@@ -103,9 +130,10 @@ export async function getMyJuanChoiceState(id: string, signal?: AbortSignal): Pr
   const response = await api.get(`/juanchoice/campaigns/${encodeURIComponent(id)}/me`, { signal, timeout: 5000 });
   return normalizeMyJuanChoiceState(response.data.data);
 }
-export async function putJuanChoiceBallot(id: string, candidateId: string, expectedVersion: number, key = uuid()): Promise<JuanChoiceReceipt> {
+export async function putJuanChoiceBallot(id: string, candidateId: string, expectedVersion: number, key = uuid(), targetWeight?: number): Promise<JuanChoiceReceipt> {
   const response = await api.put(`/juanchoice/campaigns/${encodeURIComponent(id)}/ballot`,
-    { candidate_id: candidateId, expected_version: expectedVersion }, { timeout: 12000, headers: { 'Idempotency-Key': key } });
+    { candidate_id: candidateId, expected_version: expectedVersion, ...(targetWeight ? { target_weight: targetWeight } : {}) },
+    { timeout: 12000, headers: { 'Idempotency-Key': key } });
   return response.data.data;
 }
 export function juanChoiceErrorCode(error: unknown): string {

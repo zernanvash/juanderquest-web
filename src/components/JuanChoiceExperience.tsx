@@ -10,10 +10,12 @@ import { effectiveJuanChoiceStatus, getJuanChoiceCampaign, getJuanChoiceOverview
 
 import { getJuanChoicePresentation, isJuanChoiceEnvironmentTrusted } from '@/lib/juanchoice-presentation';
 import { triggerCelebration } from './CelebrationEffects';
+import { BoostBar, PerkPills, ReigningHero } from './JuanChoiceWeekly';
 
 const NOT_OPEN_MESSAGE = 'JuanChoice is not open yet. Check back when the pilot begins.';
 
-type PendingVote = { candidateId: string; expectedVersion: number; key: string };
+/** targetWeight/cost are set for a Plan 65 quadratic boost (points); a plain vote or switch omits them. */
+type PendingVote = { candidateId: string; expectedVersion: number; key: string; targetWeight?: number; cost?: number };
 
 export function JuanChoiceExperience({
   campaignId,
@@ -25,7 +27,7 @@ export function JuanChoiceExperience({
   isPresentation?: boolean;
 }) {
   const presentationBuild = isPresentation ?? (process.env.NEXT_PUBLIC_JDQ_PRESENTATION_MODE === 'true');
-  const { user, isLoading: authLoading, isPreviewActive } = useAuth();
+  const { user, isLoading: authLoading, isPreviewActive, refreshProfile } = useAuth();
   const [overview, setOverview] = useState<(JuanChoiceOverview & { receivedAtMono: number }) | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(campaignId ?? null);
   const [detail, setDetail] = useState<JuanChoiceDetail | null>(null);
@@ -107,8 +109,9 @@ export function JuanChoiceExperience({
       }
       const receivedAtMono = performance.now();
       setOverview({ ...freshOverview, receivedAtMono });
-      const result = await putJuanChoiceBallot(selectedId, pending.candidateId, pending.expectedVersion, pending.key);
+      const result = await putJuanChoiceBallot(selectedId, pending.candidateId, pending.expectedVersion, pending.key, pending.targetWeight);
       setReceipt(result); setBallot(result.ballot); setMyState(null); setPending(null);
+      if (result.boost) void refreshProfile().catch(() => {});
       triggerCelebration({ type: 'poppers', playAudio: true });
       void refresh(selectedId).catch(() => {});
     } catch (err) {
@@ -123,6 +126,11 @@ export function JuanChoiceExperience({
         void refresh(selectedId).catch(() => {});
       } else if (code === 'ROUND_CLOSED') {
         setVoteError('This round has closed. No new ballot was submitted.'); setPending(null);
+        void refresh(selectedId).catch(() => {});
+      } else if (code === 'INSUFFICIENT_POINTS') {
+        setVoteError('Not enough points for this boost yet. Earn points through quests, then try again. Your vote still counts.'); setPending(null);
+      } else if (code === 'INVALID_BOOST_DOWNGRADE' || code === 'BOOSTS_DISABLED' || code === 'BOOST_UNAVAILABLE') {
+        setVoteError('Boosting is not available for this ballot right now. Your current vote still counts.'); setPending(null);
         void refresh(selectedId).catch(() => {});
       } else if (code === 'NOT_ELIGIBLE') {
         setVoteError('Voting unlocks after your account is 72 hours old or you complete one verified visit.'); setPending(null);
@@ -161,6 +169,7 @@ export function JuanChoiceExperience({
       <h1 className="mt-2 text-3xl font-black text-[#582F0E]">{presentation.headerTitle}</h1>
       <p className="mt-3 max-w-2xl text-sm text-[#514532]">{presentation.headerDescription}</p>
     </header>
+    {!presentationBuild && overview?.reigning && <ReigningHero reigning={overview.reigning} nowMs={serverNow} />}
     {presentation.readOnlyNotice && (
       <div role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-900 shadow-xs">
         {presentationBuild ? 'Demo voting is not open yet. You can inspect the presentation round without creating an official ballot.' : presentation.readOnlyNotice}
@@ -198,20 +207,28 @@ export function JuanChoiceExperience({
     {campaign && overview?.next && <p className="rounded-2xl border border-[#E3DFD5] bg-white p-4 text-sm text-[#514532]">{presentation.nextRoundPrefix} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time>.</p>}
     {campaign && <section className="space-y-5" aria-labelledby="round-heading">
       <div className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase text-[#7D5800]">{campaign.region} · {status}</p><h2 id="round-heading" className="mt-1 text-2xl font-black text-[#2C221E]">{campaign.theme}</h2></div><Link href={currentUrl} className="rounded-full border border-[#E3DFD5] px-3 py-2 text-sm font-semibold text-[#3F6653]">Share round</Link></div>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase text-[#7D5800]">{campaign.region} · {status}{campaign.round_tier === 'special_festival' ? ' · 🎉 Special festival election' : ''}</p><h2 id="round-heading" className="mt-1 text-2xl font-black text-[#2C221E]">{campaign.theme}</h2>{campaign.policy_version === 'juanchoice-weekly-v1' && <p className="mt-1 text-xs text-[#514532]">Vote for next week&apos;s Champion. The winner reigns for 7 days with its perks live; the runner-up becomes Minister.</p>}</div><Link href={currentUrl} className="rounded-full border border-[#E3DFD5] px-3 py-2 text-sm font-semibold text-[#3F6653]">Share round</Link></div>
         <p className="mt-3 text-sm text-[#514532]">{presentation.roundWindowLabel}: <time dateTime={status === 'scheduled' ? campaign.opens_at : campaign.closes_at}>{new Date(status === 'scheduled' ? campaign.opens_at : campaign.closes_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT</time></p>
         {isPreviewActive && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Evaluator preview is read-only. Exit preview before voting.</p>}
         {!user && !authLoading && status === 'voting' && presentation.mode === 'write_enabled' && <p className="mt-3 text-sm text-[#514532]">Browse freely; <Link className="font-bold text-[#3F6653] underline" href={`/login?redirect=${encodeURIComponent(currentUrl)}`}>sign in</Link> to vote.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'ACCOUNT_TOO_NEW' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting unlocks after {myState.eligibility.eligible_at ? formatDate(myState.eligibility.eligible_at) : 'your account is 72 hours old'} or after one approved destination visit.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'UNAVAILABLE' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting eligibility could not be confirmed. Please try again later.</p>}
-        {ballot && <p className="mt-3 text-sm font-semibold text-[#2D6A4F]">Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'} · version {ballot.version}</p>}
-        {receipt && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo Civic stamp in the separate test database only' : 'Ballot recorded. +25 Civic XP and +1 Civic stamp earned (not a Passport Stamp)'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</p>}
+        {ballot && <p className="mt-3 text-sm font-semibold text-[#2D6A4F]">Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'}{ballot.vote_weight && ballot.vote_weight > 1 ? ` · counts ${ballot.vote_weight}x` : ''} · version {ballot.version}</p>}
+        {ballot && canVote && user && myState?.boost?.available && (myState.boost.current_weight || 1) < 5 && <BoostBar currentWeight={myState.boost.current_weight || 1}
+          costByWeight={myState.boost.cost_by_weight} xpPerTier={myState.boost.civic_xp_per_tier} balance={user.points} disabled={submitting}
+          onBoost={(weight, cost) => { setVoteError(''); setPending({ candidateId: ballot.candidate_id, expectedVersion: ballot.version, key: uuid(), targetWeight: weight, cost }); }} />}
+        {campaign.tally_hidden && <p role="status" className="mt-3 rounded-xl bg-violet-50 p-3 text-sm font-semibold text-violet-900">🔒 Final 24 hours: vote counts are hidden until the round closes (Monday 00:00 PHT). You can still vote, switch or boost.</p>}
+        {receipt && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{receipt.boost
+          ? `Boost recorded: your vote now counts ${receipt.ballot.vote_weight}x. ${receipt.boost.points_spent} points spent, +${receipt.boost.civic_xp} Civic XP${receipt.replayed ? ' (receipt replayed)' : ''}.`
+          : <>{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo Civic stamp in the separate test database only' : receipt.participation ? 'Ballot recorded. +25 Civic XP and +1 Civic stamp earned (not a Passport Stamp)' : 'Ballot updated'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</>}</p>}
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">{detail.standings.map((item, index) => <article key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`} className={`rounded-2xl border bg-white p-5 flex flex-col justify-between ${focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
         <div>
-          <p className="text-xs font-bold uppercase text-[#837560]">#{index + 1} · {presentationBuild ? 'demo support' : 'community support'}</p><h3 className="mt-1 text-xl font-black text-[#2C221E]">{item.spot_name ?? item.spot_id}</h3>
-          <p className="mt-2 text-sm text-[#514532]">{item.votes} {presentationBuild ? (item.votes === 1 ? 'demo ballot' : 'demo ballots') : (item.votes === 1 ? 'ballot' : 'ballots')} · popularity, not a visitor rating</p>
+          <p className="text-xs font-bold uppercase text-[#837560]">{campaign.tally_hidden ? 'Candidate' : `#${index + 1}`} · {presentationBuild ? 'demo support' : 'community support'}</p><h3 className="mt-1 text-xl font-black text-[#2C221E]">{item.spot_name ?? item.spot_id}</h3>
+          {(item.prior_loss_streak ?? 0) > 0 && <p className="mt-1 inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-900">🔥 Underdog: +{Math.min(2, item.prior_loss_streak ?? 0)} bonus perk{(item.prior_loss_streak ?? 0) > 1 ? 's' : ''} unlocked</p>}
+          <p className="mt-2 text-sm text-[#514532]">{item.votes === null ? '🔒 Votes hidden in the final 24 hours' : <>{item.votes} {presentationBuild ? (item.votes === 1 ? 'demo ballot' : 'demo ballots') : campaign.policy_version === 'juanchoice-weekly-v1' ? (item.votes === 1 ? 'vote' : 'votes') : (item.votes === 1 ? 'ballot' : 'ballots')}{campaign.policy_version === 'juanchoice-weekly-v1' && item.voter_count != null ? ` from ${item.voter_count} ${item.voter_count === 1 ? 'traveler' : 'travelers'}` : ''} · popularity, not a visitor rating</>}</p>
+          <PerkPills perks={item.manifesto_perks} />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">{item.spot_id && <Link href={appRoutes.spot(item.spot_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">View place</Link>}<Link href={appRoutes.choiceCandidate(campaign.id, item.candidate_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">Share</Link>{canVote && user && <button type="button" onClick={event => { returnFocusRef.current=event.currentTarget; setVoteError(''); setPending({candidateId:item.candidate_id,expectedVersion:ballot?.version ?? 0,key:uuid()}); }} className="rounded-lg bg-[#3F6653] px-3.5 py-1.5 text-xs font-bold text-white cursor-pointer active:scale-95">{ballot ? 'Change vote' : 'Vote for this place'}</button>}</div>
       </article>)}</div>
@@ -234,6 +251,6 @@ export function JuanChoiceExperience({
           ? 'Voting has closed. Results are being finalized.'
           : 'Our first round is underway. Results will appear after voting ends and the result is finalized.'}</p>
     </section>}
-    {pending && <div role="dialog" aria-modal="true" aria-labelledby="vote-confirm-title" onKeyDown={event => { if (event.key === 'Escape' && !submitting) setPending(null); if (event.key === 'Tab') { if (event.shiftKey && document.activeElement === confirmRef.current) { event.preventDefault(); cancelRef.current?.focus(); } else if (!event.shiftKey && document.activeElement === cancelRef.current) { event.preventDefault(); confirmRef.current?.focus(); } } }} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 id="vote-confirm-title" className="text-xl font-black text-[#2C221E]">Confirm your JuanChoice ballot</h2><p className="mt-3 text-sm text-[#514532]">Vote for {detail?.standings.find(item => item.candidate_id === pending.candidateId)?.spot_name ?? 'this destination'}? This is free. {presentationBuild ? 'This is a presentation demo: the ballot and participation XP/stamp stay in the separate test database and do not count officially.' : 'Your participation reward is the same regardless of the result.'}</p><div className="mt-5 flex flex-wrap gap-3"><button ref={confirmRef} type="button" onClick={() => void submitVote()} disabled={submitting} className="rounded-lg bg-[#3F6653] px-5 py-3 font-bold text-white disabled:opacity-60">{submitting ? 'Recording…' : voteError ? 'Retry same vote' : 'Confirm vote'}</button><button ref={cancelRef} type="button" disabled={submitting} onClick={() => setPending(null)} className="rounded-lg border border-[#E3DFD5] px-5 py-3 font-semibold text-[#514532]">Cancel</button></div></div></div>}
+    {pending && <div role="dialog" aria-modal="true" aria-labelledby="vote-confirm-title" onKeyDown={event => { if (event.key === 'Escape' && !submitting) setPending(null); if (event.key === 'Tab') { if (event.shiftKey && document.activeElement === confirmRef.current) { event.preventDefault(); cancelRef.current?.focus(); } else if (!event.shiftKey && document.activeElement === cancelRef.current) { event.preventDefault(); confirmRef.current?.focus(); } } }} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 id="vote-confirm-title" className="text-xl font-black text-[#2C221E]">{pending.targetWeight ? 'Confirm your boost' : 'Confirm your JuanChoice ballot'}</h2><p className="mt-3 text-sm text-[#514532]">{pending.targetWeight ? `Spend ${pending.cost ?? 0} points so your vote for ${detail?.standings.find(item => item.candidate_id === pending.candidateId)?.spot_name ?? 'this destination'} counts ${pending.targetWeight}x? Boosts cannot be refunded this round, but they move with your vote if you switch. Points are in-app only; no money is involved.` : <>Vote for {detail?.standings.find(item => item.candidate_id === pending.candidateId)?.spot_name ?? 'this destination'}? This is free.</>} {presentationBuild ? 'This is a presentation demo: the ballot and participation XP/stamp stay in the separate test database and do not count officially.' : 'Your participation reward is the same regardless of the result.'}</p><div className="mt-5 flex flex-wrap gap-3"><button ref={confirmRef} type="button" onClick={() => void submitVote()} disabled={submitting} className="rounded-lg bg-[#3F6653] px-5 py-3 font-bold text-white disabled:opacity-60">{submitting ? 'Recording…' : voteError ? 'Retry same vote' : 'Confirm vote'}</button><button ref={cancelRef} type="button" disabled={submitting} onClick={() => setPending(null)} className="rounded-lg border border-[#E3DFD5] px-5 py-3 font-semibold text-[#514532]">Cancel</button></div></div></div>}
   </div></Navigation>;
 }
