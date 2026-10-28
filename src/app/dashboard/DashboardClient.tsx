@@ -97,6 +97,7 @@ export function DashboardClient() {
   }, []);
   const closeQuiz = useCallback(() => {
     setOpenQuizId(null);
+    document.title = 'Explorer Dashboard | JuanDerQuest';
     const url = new URL(window.location.href);
     if (url.searchParams.has('quiz')) {
       url.searchParams.delete('quiz');

@@ -122,13 +122,13 @@ export const ProfileTabGlider: React.FC<ProfileTabGliderProps> = ({
   return (
     <div
       ref={containerRef}
-      className="mt-4 pt-3 border-t border-[#F2EFE9] flex items-center gap-2 overflow-x-auto relative"
+      className="mt-4 pt-3 border-t border-[#F2EFE9] flex flex-wrap items-center gap-2 relative sm:flex-nowrap sm:overflow-x-auto" aria-label="Profile sections"
     >
       {/* Standalone gliding pill */}
       <div
         ref={gliderRef}
         data-testid="tab-glider"
-        className="absolute top-3 bottom-0 my-auto h-[calc(100%-1.5rem)] bg-[var(--color-brand-primary)] rounded-xl shadow-xs pointer-events-none opacity-0"
+        className="absolute top-3 bottom-0 my-auto hidden h-[calc(100%-1.5rem)] bg-[var(--color-brand-primary)] rounded-xl shadow-xs pointer-events-none opacity-0 sm:block"
         style={{ left: 0 }}
       />
 
@@ -143,7 +143,7 @@ export const ProfileTabGlider: React.FC<ProfileTabGliderProps> = ({
               tab.extraClass || ''
             } ${
               isActive
-                ? 'text-white'
+                ? 'text-white bg-[var(--color-brand-primary)] sm:bg-transparent'
                 : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
             }`}
           >

@@ -30,8 +30,15 @@ import { ActivityFeed } from '@/components/plaza/ActivityFeed';
 import { Navigation } from '@/components/Navigation';
 
 function PlazaContent() {
-  const { user } = useAuth();
+  const { user, sessionUnavailable } = useAuth();
   const searchParams = useSearchParams();
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => { setHydrated(true); }, []);
+
+  // The server always renders with no session. Hold the guest shape until the
+  // first client commit so restored auth state cannot change the hydrated tree.
+  const sessionUser = hydrated ? user : null;
 
   const queryBoard = (searchParams?.get('board') as any) || 'everyone';
   const queryPeriod = (searchParams?.get('period') as any) || 'weekly';
@@ -69,8 +76,8 @@ function PlazaContent() {
         limit: 20,
       });
       setStandingsData(data);
-    } catch (err: any) {
-      setStandingsError(err?.message || 'Failed to load standings');
+    } catch {
+      setStandingsError('We couldn’t load the Plaza right now. Check your connection and try again.');
     } finally {
       setStandingsLoading(false);
     }
@@ -218,7 +225,15 @@ function PlazaContent() {
     setActivities((prev) => prev.filter((a) => a.id !== activityId));
   };
 
-  const isGuest = !user;
+  const isGuest = !sessionUser;
+  const connectionUnavailable = Boolean(sessionUnavailable || standingsError);
+  const retryPlaza = () => {
+    setStandingsLoading(true);
+    setStandingsError(null);
+    void loadStandings();
+    void loadTowns();
+    void loadFeed(true);
+  };
 
   // Split entries into podium (top 3) and rankList (rest)
   const podium = standingsData?.podium || [];
@@ -238,26 +253,23 @@ function PlazaContent() {
         resetsInSeconds={standingsData?.week?.resets_in_seconds}
       />
 
-      {/* Standings Error Alert */}
-      {standingsError && (
-        <div
-          role="alert"
-          className="rounded-2xl border-2 border-red-500/30 bg-red-50 p-4 text-xs font-medium text-red-900 flex items-center justify-between gap-3 shadow-2xs"
-        >
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-            <span>{standingsError}</span>
-          </div>
+      {connectionUnavailable ? (
+        <div role="alert" className="rounded-2xl border border-[var(--color-border-default)] bg-white p-6 text-center shadow-xs">
+          <AlertCircle className="w-7 h-7 mx-auto text-[var(--color-brand-primary)]" />
+          <h2 className="mt-2 text-lg font-black text-[var(--color-brand-brown)]">Connection unavailable</h2>
+          <p className="mx-auto mt-1 max-w-md text-xs text-[var(--color-text-muted)]">
+            We couldn’t load the Plaza right now. Your sign-in and data are safe. Check your connection and try again.
+          </p>
           <button
             type="button"
-            onClick={loadStandings}
-            className="px-3 py-1 bg-red-600 text-white rounded-lg font-bold text-xs hover:bg-red-700 transition"
+            onClick={retryPlaza}
+            className="mt-4 min-h-11 rounded-xl bg-[var(--color-brand-primary)] px-5 py-2 text-sm font-bold text-white"
           >
-            Retry
+            Try again
           </button>
         </div>
-      )}
-
+      ) : (
+        <>
       {/* Town Board without home town notice */}
       {board === 'town' && !standingsData?.town && !standingsLoading && (
         <div className="rounded-2xl border border-[var(--color-border-default)] bg-amber-50/80 p-5 text-center text-xs text-[var(--color-brand-brown)] shadow-xs">
@@ -267,7 +279,7 @@ function PlazaContent() {
       )}
 
       {/* My Current Rank Card */}
-      <MyRankCard me={me} user={user} rivalAbove={rivalAbove} />
+      <MyRankCard me={me} user={sessionUser} rivalAbove={rivalAbove} />
 
       {standingsLoading ? (
         <div className="bg-white p-12 rounded-2xl border border-[var(--color-border-default)] text-center text-xs text-[var(--color-text-muted)] flex flex-col items-center justify-center gap-2 shadow-xs">
@@ -355,6 +367,8 @@ function PlazaContent() {
         pinnedActivityId={queryActivityId}
         openCommentsDefault={queryComments}
       />
+        </>
+      )}
     </div>
   );
 }

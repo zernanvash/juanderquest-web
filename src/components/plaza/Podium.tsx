@@ -29,6 +29,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
       if (!first) return;
 
       const reduced = prefersReducedMotion();
+      const narrow = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
       if (reduced) {
         // Reduced motion: subtle opacity fade only (<= 150ms)
         const targets = [card2Ref.current, card3Ref.current, card1Ref.current, crownRef.current].filter(Boolean);
@@ -46,7 +47,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
 
       if (card2Ref.current) {
         tl.from(card2Ref.current, {
-          y: 40,
+          y: narrow ? 0 : 40,
           opacity: 0,
           duration: 0.45,
           ease: 'back.out(1.8)',
@@ -57,7 +58,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
         tl.from(
           card3Ref.current,
           {
-            y: 40,
+            y: narrow ? 0 : 40,
             opacity: 0,
             duration: 0.45,
             ease: 'back.out(1.8)',
@@ -70,7 +71,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
         tl.from(
           card1Ref.current,
           {
-            y: 55,
+            y: narrow ? 0 : 55,
             opacity: 0,
             duration: 0.55,
             ease: 'back.out(2)',
@@ -83,7 +84,7 @@ export const Podium: React.FC<PodiumProps> = ({ podium }) => {
         tl.from(
           crownRef.current,
           {
-            y: -24,
+            y: narrow ? 0 : -24,
             scale: 0.8,
             opacity: 0,
             duration: 0.35,

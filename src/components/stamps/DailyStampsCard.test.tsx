@@ -70,7 +70,11 @@ describe('DailyStampsCard', () => {
     expect(screen.getByText('Check in at a destination')).toBeTruthy();
     expect(screen.getByText('2/5 missions · +30 stamps')).toBeTruthy();
     expect(screen.getByText('2-day streak')).toBeTruthy();
-    expect(screen.getByRole('progressbar', { name: 'Weekly stamp cap used' })).toBeTruthy();
+    const capBar = screen.getByRole('progressbar', { name: 'Weekly stamp cap used' });
+    expect(capBar.getAttribute('aria-valuenow')).toBe('45');
+    expect(capBar.getAttribute('aria-valuemin')).toBe('0');
+    expect(capBar.getAttribute('aria-valuemax')).toBe('250');
+    expect(screen.getByLabelText('Day 1: 5 stamps, claimed')).toBeTruthy();
     expect(screen.getByText('45 / 250')).toBeTruthy();
   });
 

@@ -304,23 +304,24 @@ export default function LoginPage() {
         {activeTab === 'signin' && (
           <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">Email Address</label>
+              <label htmlFor="login-email" className="block text-xs font-bold text-neutral-700 mb-1">Email Address</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
+                  id="login-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="traveler@example.com"
                   required
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                 />
               </div>
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="block text-xs font-bold text-neutral-700">Password</label>
+                <label htmlFor="login-password" className="block text-xs font-bold text-neutral-700">Password</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -336,12 +337,13 @@ export default function LoginPage() {
               <div className="relative">
                 <Lock className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
+                  id="login-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                 />
               </div>
             </div>
@@ -360,47 +362,50 @@ export default function LoginPage() {
         {activeTab === 'register' && (
           <form onSubmit={handleEmailRegister} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">Display Name</label>
+              <label htmlFor="register-display-name" className="block text-xs font-bold text-neutral-700 mb-1">Display Name</label>
               <div className="relative">
                 <User className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
+                  id="register-display-name"
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Juan Dela Cruz"
                   required
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">Email Address</label>
+              <label htmlFor="register-email" className="block text-xs font-bold text-neutral-700 mb-1">Email Address</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
+                  id="register-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="traveler@example.com"
                   required
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">Password</label>
+              <label htmlFor="register-password" className="block text-xs font-bold text-neutral-700 mb-1">Password</label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
+                  id="register-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
                   required
                   minLength={8}
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                 />
               </div>
             </div>
@@ -444,17 +449,18 @@ export default function LoginPage() {
               Enter the 6-digit verification code sent to <strong>{email}</strong>.
             </p>
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">6-Digit Code</label>
+              <label htmlFor="login-otp" className="block text-xs font-bold text-neutral-700 mb-1">6-Digit Code</label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 <input
+                  id="login-otp"
                   type="text"
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.trim())}
                   placeholder="123456"
                   required
-                  className="w-full pl-9 pr-3 py-2.5 font-mono text-center tracking-widest text-lg font-black rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2.5 font-mono text-center tracking-widest text-lg font-black rounded-xl border border-neutral-300 focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                 />
               </div>
             </div>
@@ -475,15 +481,16 @@ export default function LoginPage() {
             {!resetGrant ? (
               <form onSubmit={handleVerifyResetCode} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">Account Email</label>
+                  <label htmlFor="login-reset-email" className="block text-xs font-bold text-neutral-700 mb-1">Account Email</label>
                   <div className="flex gap-2">
                     <input
+                      id="login-reset-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="traveler@example.com"
                       required
-                      className="flex-1 px-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                     />
                     <button
                       type="button"
@@ -496,15 +503,16 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">Recovery Code</label>
+                  <label htmlFor="login-reset-code" className="block text-xs font-bold text-neutral-700 mb-1">Recovery Code</label>
                   <input
+                    id="login-reset-code"
                     type="text"
                     maxLength={6}
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.trim())}
                     placeholder="6-digit recovery code"
                     required
-                    className="w-full px-3 py-2.5 font-mono text-center tracking-widest text-base font-bold rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none"
+                    className="w-full px-3 py-2.5 font-mono text-center tracking-widest text-base font-bold rounded-xl border border-neutral-300 focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                   />
                 </div>
 
@@ -519,15 +527,16 @@ export default function LoginPage() {
             ) : (
               <form onSubmit={handleCompleteReset} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">New Password</label>
+                  <label htmlFor="login-new-password" className="block text-xs font-bold text-neutral-700 mb-1">New Password</label>
                   <input
+                    id="login-new-password"
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="New secure password"
                     required
                     minLength={8}
-                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                   />
                 </div>
 
