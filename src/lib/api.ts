@@ -736,8 +736,11 @@ export async function fetchRoute(params: {
   endLng: number;
   costing?: 'auto' | 'pedestrian' | 'bicycle' | 'motorcycle';
   avoidCongested?: boolean;
+  /** Trail navigation: stops to pass through, in order. */
+  via?: { lat: number; lng: number }[];
 }): Promise<RouteModel> {
   const res = await api.post('/routes', {
+    ...(params.via?.length ? { via: params.via } : {}),
     start: { lat: params.startLat, lng: params.startLng },
     end: { lat: params.endLat, lng: params.endLng },
     costing: params.costing || 'auto',

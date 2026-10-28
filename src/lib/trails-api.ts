@@ -6,7 +6,14 @@ export interface TrailCatalogItem {
   municipalities: string[]; stop_count: number; total_minutes: number; total_km: number;
   unlock_rule: { type: string; price_points?: number; min_level?: number };
   available_until: string | null; rarity_art_key: string; is_unlocked: boolean;
+  reward_points?: number;
 }
+/** A trail card in a destination's side panel (GET /trails/near). */
+export interface NearbyTrail extends TrailCatalogItem {
+  cover_image_url: string | null; passes_here: boolean; nearest_km: number; reward_points: number;
+}
+/** What a locked trail offers: names, photos and one line per stop; no order or map. */
+export interface TrailPreviewStop { name: string; municipality: string; category: string; image_url: string | null; blurb: string }
 export interface TrailStop {
   position: number; spot_id: string; name: string; municipality: string; category: string;
   lat: number; lng: number; narration: string; arrive_offset_min: number; dwell_min: number;
@@ -17,6 +24,8 @@ export interface TrailDetail extends TrailCatalogItem {
   story?: { intro?: string; source?: 'ai' | 'template' };
   stops?: TrailStop[];
   is_unlocked: boolean;
+  intro?: string;
+  preview?: TrailPreviewStop[];
 }
 export interface PersonalTrailAllowance { free_remaining:number; price_points:number }
 
@@ -29,6 +38,11 @@ export async function fetchTrails(): Promise<{items:TrailCatalogItem[];personalG
   const data = responseData<{ items?: TrailCatalogItem[]; personal_generation?:PersonalTrailAllowance|null }>(await api.get('/trails'));
   return {items:data.items??[],personalGeneration:data.personal_generation??null};
 }
+export async function fetchTrailsNear(point: { lat: number; lng: number }, spotId?: string): Promise<NearbyTrail[]> {
+  const data = responseData<{ items?: NearbyTrail[] }>(await api.get('/trails/near', { params: { lat: point.lat, lng: point.lng, ...(spotId ? { spot_id: spotId } : {}) } }));
+  return data.items ?? [];
+}
+export const isHiyasTrail = (tier: TrailTier) => tier === 'signature' || tier === 'legendary';
 export async function fetchTrail(id: string): Promise<TrailDetail> {
   return responseData<TrailDetail>(await api.get(`/trails/${encodeURIComponent(id)}`));
 }
