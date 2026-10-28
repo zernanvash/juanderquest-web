@@ -32,6 +32,13 @@ import { Navigation } from '@/components/Navigation';
 function PlazaContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => { setHydrated(true); }, []);
+
+  // The server always renders with no session. Hold the guest shape until the
+  // first client commit so restored auth state cannot change the hydrated tree.
+  const sessionUser = hydrated ? user : null;
 
   const queryBoard = (searchParams?.get('board') as any) || 'everyone';
   const queryPeriod = (searchParams?.get('period') as any) || 'weekly';
@@ -218,7 +225,7 @@ function PlazaContent() {
     setActivities((prev) => prev.filter((a) => a.id !== activityId));
   };
 
-  const isGuest = !user;
+  const isGuest = !sessionUser;
 
   // Split entries into podium (top 3) and rankList (rest)
   const podium = standingsData?.podium || [];
@@ -267,7 +274,7 @@ function PlazaContent() {
       )}
 
       {/* My Current Rank Card */}
-      <MyRankCard me={me} user={user} rivalAbove={rivalAbove} />
+      <MyRankCard me={me} user={sessionUser} rivalAbove={rivalAbove} />
 
       {standingsLoading ? (
         <div className="bg-white p-12 rounded-2xl border border-[var(--color-border-default)] text-center text-xs text-[var(--color-text-muted)] flex flex-col items-center justify-center gap-2 shadow-xs">
