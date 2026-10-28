@@ -28,6 +28,7 @@ vi.mock('@/lib/juanchoice', async () => {
 process.env.NEXT_PUBLIC_JDQ_PRESENTATION_MODE = 'false';
 import { JuanChoiceExperience } from './JuanChoiceExperience';
 import { BoostBar, PerkPills, ReigningHero } from './JuanChoiceWeekly';
+import { CountdownBlocks } from './JuanChoiceArena';
 
 const now = '2026-10-28T04:00:00.000Z';
 const reigning: JuanChoiceReigning = {
@@ -95,6 +96,28 @@ describe('Plan 65 weekly JuanChoice UI', () => {
     await waitFor(() => expect(lib.putJuanChoiceBallot).toHaveBeenCalledWith('wk-1', 'k1', 1, expect.any(String), 2));
     expect((await screen.findByText(/Boost recorded: your vote now counts 2x/)).textContent).toMatch(/25 points spent, \+10 Civic XP/);
     expect(auth.refreshProfile).toHaveBeenCalled();
+  });
+
+  it('renders the arena countdown, vote shares, leader and last week podium', async () => {
+    const withPrevious = overview();
+    withPrevious.previous = { campaign_id: 'w43', period_label: 'Week 43 · Oct 19 – 25', opens_at: '2026-10-18T16:00:00.000Z', closes_at: '2026-10-25T16:00:00.000Z',
+      finalized_at: '2026-10-25T16:01:00.000Z', theme: 'Coast', valid_ballots: 9, co_winner_ids: ['p1'], minister_candidate_id: 'p2',
+      standings: [{ candidate_id: 'p1', spot_id: 'a', spot_name: 'Patar Beach', votes: 9 }, { candidate_id: 'p2', spot_id: 'b', spot_name: 'Enchanted Cave', votes: 3 }] };
+    lib.getJuanChoiceOverview.mockResolvedValue(withPrevious);
+    render(<JuanChoiceExperience />);
+    expect(await screen.findByRole('timer')).toBeTruthy();
+    expect(screen.getByText('Week 44')).toBeTruthy();
+    expect(screen.getByText(/Leading the race/)).toBeTruthy();
+    expect(screen.getAllByRole('progressbar', { name: 'Vote share' }).map(bar => bar.getAttribute('aria-valuenow'))).toEqual(['75', '25']);
+    expect(screen.getByText('Week 43 · Oct 19 – 25')).toBeTruthy();
+    expect(screen.getByText('Champion')).toBeTruthy();
+    expect(screen.getByText('Minister')).toBeTruthy();
+  });
+
+  it('formats the countdown into days, hours, minutes and seconds', () => {
+    render(<CountdownBlocks msLeft={((2 * 24 + 3) * 3600 + 4 * 60 + 5) * 1000} />);
+    expect(screen.getByRole('timer').getAttribute('aria-label')).toBe('2 days 3 hours 4 minutes left');
+    expect(screen.getByText('05')).toBeTruthy();
   });
 
   it('hides counts and rank during the final 24 hours', async () => {

@@ -11,6 +11,8 @@ import { effectiveJuanChoiceStatus, getJuanChoiceCampaign, getJuanChoiceOverview
 import { getJuanChoicePresentation, isJuanChoiceEnvironmentTrusted } from '@/lib/juanchoice-presentation';
 import { triggerCelebration } from './CelebrationEffects';
 import { BoostBar, PerkPills, ReigningHero } from './JuanChoiceWeekly';
+import { RankMedal, RoundArena, ShareBar, VotePower, useLiveServerNow } from './JuanChoiceArena';
+import { Check, Crown, Zap } from 'lucide-react';
 
 const NOT_OPEN_MESSAGE = 'JuanChoice is not open yet. Check back when the pilot begins.';
 
@@ -153,6 +155,13 @@ export function JuanChoiceExperience({
   const canVote = serverNow !== null && status === 'voting' && overview?.current?.id === campaign?.id
     && environmentTrusted && overview?.availability.voting_enabled === true && !isPreviewActive && myState?.can_vote_now === true;
   const currentUrl = selectedId ? appRoutes.choice(selectedId) : '/choice';
+  const liveNow = useLiveServerNow(overview?.server_time, overview?.receivedAtMono) ?? serverNow;
+  const weekly = campaign?.policy_version === 'juanchoice-weekly-v1';
+  const standings = detail?.standings ?? [];
+  const totalVotes = standings.reduce((sum, item) => sum + (item.votes ?? 0), 0);
+  const totalVoters = standings.every(item => typeof item.voter_count === 'number')
+    ? standings.reduce((sum, item) => sum + (item.voter_count ?? 0), 0) : null;
+  const leaderId = !campaign?.tally_hidden && standings[0] && (standings[0].votes ?? 0) > (standings[1]?.votes ?? 0) ? standings[0].candidate_id : null;
   const formatDate = (value:string) => new Date(value).toLocaleString('en-PH',{
     timeZone:overview?.region.timezone ?? 'Asia/Manila',dateStyle:'long',timeStyle:'short',
   });
@@ -204,16 +213,21 @@ export function JuanChoiceExperience({
         </ol>
       </div>
     </section>}
-    {campaign && overview?.next && <p className="rounded-2xl border border-[#E3DFD5] bg-white p-4 text-sm text-[#514532]">{presentation.nextRoundPrefix} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time>.</p>}
+    {campaign && !weekly && overview?.next && <p className="rounded-2xl border border-[#E3DFD5] bg-white p-4 text-sm text-[#514532]">{presentation.nextRoundPrefix} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time>.</p>}
     {campaign && <section className="space-y-5" aria-labelledby="round-heading">
+      <RoundArena campaign={campaign} status={status} nowMs={liveNow} totalVotes={campaign.tally_hidden ? null : totalVotes}
+        totalVoters={campaign.tally_hidden ? null : totalVoters} contenders={standings.length} shareHref={currentUrl}>
+        {weekly && <p className="mt-2 max-w-xl text-sm text-white/85">Vote for next week&apos;s Champion. The winner reigns for 7 days with its perks live; the runner-up becomes Minister.</p>}
+      </RoundArena>
       <div className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase text-[#7D5800]">{campaign.region} · {status}{campaign.round_tier === 'special_festival' ? ' · 🎉 Special festival election' : ''}</p><h2 id="round-heading" className="mt-1 text-2xl font-black text-[#2C221E]">{campaign.theme}</h2>{campaign.policy_version === 'juanchoice-weekly-v1' && <p className="mt-1 text-xs text-[#514532]">Vote for next week&apos;s Champion. The winner reigns for 7 days with its perks live; the runner-up becomes Minister.</p>}</div><Link href={currentUrl} className="rounded-full border border-[#E3DFD5] px-3 py-2 text-sm font-semibold text-[#3F6653]">Share round</Link></div>
-        <p className="mt-3 text-sm text-[#514532]">{presentation.roundWindowLabel}: <time dateTime={status === 'scheduled' ? campaign.opens_at : campaign.closes_at}>{new Date(status === 'scheduled' ? campaign.opens_at : campaign.closes_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT</time></p>
+        <p className="text-sm text-[#514532]">{presentation.roundWindowLabel}: <time dateTime={status === 'scheduled' ? campaign.opens_at : campaign.closes_at}>{new Date(status === 'scheduled' ? campaign.opens_at : campaign.closes_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT</time></p>
         {isPreviewActive && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Evaluator preview is read-only. Exit preview before voting.</p>}
         {!user && !authLoading && status === 'voting' && presentation.mode === 'write_enabled' && <p className="mt-3 text-sm text-[#514532]">Browse freely; <Link className="font-bold text-[#3F6653] underline" href={`/login?redirect=${encodeURIComponent(currentUrl)}`}>sign in</Link> to vote.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'ACCOUNT_TOO_NEW' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting unlocks after {myState.eligibility.eligible_at ? formatDate(myState.eligibility.eligible_at) : 'your account is 72 hours old'} or after one approved destination visit.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'UNAVAILABLE' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting eligibility could not be confirmed. Please try again later.</p>}
-        {ballot && <p className="mt-3 text-sm font-semibold text-[#2D6A4F]">Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'}{ballot.vote_weight && ballot.vote_weight > 1 ? ` · counts ${ballot.vote_weight}x` : ''} · version {ballot.version}</p>}
+        {ballot && <p className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-[#2D6A4F]">
+          <Check className="h-4 w-4" aria-hidden="true" />Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'}{ballot.vote_weight && ballot.vote_weight > 1 ? ` · counts ${ballot.vote_weight}x` : ''}
+          {weekly && <VotePower weight={ballot.vote_weight ?? 1} />}<span className="text-xs font-normal text-[#6F6352]">version {ballot.version}</span></p>}
         {ballot && canVote && user && myState?.boost?.available && (myState.boost.current_weight || 1) < 5 && <BoostBar currentWeight={myState.boost.current_weight || 1}
           costByWeight={myState.boost.cost_by_weight} xpPerTier={myState.boost.civic_xp_per_tier} balance={user.points} disabled={submitting}
           onBoost={(weight, cost) => { setVoteError(''); setPending({ candidateId: ballot.candidate_id, expectedVersion: ballot.version, key: uuid(), targetWeight: weight, cost }); }} />}
@@ -223,15 +237,26 @@ export function JuanChoiceExperience({
           : <>{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo Civic stamp in the separate test database only' : receipt.participation ? 'Ballot recorded. +25 Civic XP and +1 Civic stamp earned (not a Passport Stamp)' : 'Ballot updated'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</>}</p>}
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">{detail.standings.map((item, index) => <article key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`} className={`rounded-2xl border bg-white p-5 flex flex-col justify-between ${focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">{detail.standings.map((item, index) => { const mine = ballot?.candidate_id === item.candidate_id; const leading = leaderId === item.candidate_id; return <article key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`}
+        className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 bg-white p-5 transition-transform duration-200 motion-safe:hover:-translate-y-1 hover:shadow-lg ${mine ? 'border-[#2D6A4F] shadow-md' : leading ? 'border-amber-300 shadow-[0_0_0_4px_rgba(252,211,77,0.25)]' : focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
+        {mine && <span className="absolute right-0 top-0 inline-flex items-center gap-1 rounded-bl-xl bg-[#2D6A4F] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white"><Check className="h-3 w-3" aria-hidden="true" />Your pick</span>}
         <div>
-          <p className="text-xs font-bold uppercase text-[#837560]">{campaign.tally_hidden ? 'Candidate' : `#${index + 1}`} · {presentationBuild ? 'demo support' : 'community support'}</p><h3 className="mt-1 text-xl font-black text-[#2C221E]">{item.spot_name ?? item.spot_id}</h3>
+          <div className="flex items-start gap-3">
+            <RankMedal rank={index + 1} hidden={campaign.tally_hidden} />
+            <div className="min-w-0"><p className="text-xs font-bold uppercase text-[#837560]">{campaign.tally_hidden ? 'Candidate' : `#${index + 1}`} · {presentationBuild ? 'demo support' : 'community support'}</p><h3 className="mt-0.5 text-xl font-black leading-tight text-[#2C221E]">{item.spot_name ?? item.spot_id}</h3></div>
+          </div>
+          {leading && <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-100 to-amber-200 px-2 py-0.5 text-[11px] font-black uppercase text-amber-900"><Crown className="h-3 w-3" aria-hidden="true" /> Leading the race</p>}
           {(item.prior_loss_streak ?? 0) > 0 && <p className="mt-1 inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-900">🔥 Underdog: +{Math.min(2, item.prior_loss_streak ?? 0)} bonus perk{(item.prior_loss_streak ?? 0) > 1 ? 's' : ''} unlocked</p>}
           <p className="mt-2 text-sm text-[#514532]">{item.votes === null ? '🔒 Votes hidden in the final 24 hours' : <>{item.votes} {presentationBuild ? (item.votes === 1 ? 'demo ballot' : 'demo ballots') : campaign.policy_version === 'juanchoice-weekly-v1' ? (item.votes === 1 ? 'vote' : 'votes') : (item.votes === 1 ? 'ballot' : 'ballots')}{campaign.policy_version === 'juanchoice-weekly-v1' && item.voter_count != null ? ` from ${item.voter_count} ${item.voter_count === 1 ? 'traveler' : 'travelers'}` : ''} · popularity, not a visitor rating</>}</p>
+          {weekly && <ShareBar votes={item.votes} total={totalVotes} leading={leading} />}
           <PerkPills perks={item.manifesto_perks} />
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">{item.spot_id && <Link href={appRoutes.spot(item.spot_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">View place</Link>}<Link href={appRoutes.choiceCandidate(campaign.id, item.candidate_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">Share</Link>{canVote && user && <button type="button" onClick={event => { returnFocusRef.current=event.currentTarget; setVoteError(''); setPending({candidateId:item.candidate_id,expectedVersion:ballot?.version ?? 0,key:uuid()}); }} className="rounded-lg bg-[#3F6653] px-3.5 py-1.5 text-xs font-bold text-white cursor-pointer active:scale-95">{ballot ? 'Change vote' : 'Vote for this place'}</button>}</div>
-      </article>)}</div>
+        <div className="mt-4 space-y-2">
+          {canVote && user && !mine && <button type="button" onClick={event => { returnFocusRef.current=event.currentTarget; setVoteError(''); setPending({candidateId:item.candidate_id,expectedVersion:ballot?.version ?? 0,key:uuid()}); }}
+            className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#2D6A4F] to-[#40916C] px-4 text-sm font-black text-white shadow-md transition cursor-pointer hover:brightness-110 active:scale-95"><Zap className="h-4 w-4 fill-amber-300 text-amber-300" aria-hidden="true" />{ballot ? 'Change vote' : 'Vote for this place'}</button>}
+          <div className="flex flex-wrap gap-2">{item.spot_id && <Link href={appRoutes.spot(item.spot_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">View place</Link>}<Link href={appRoutes.choiceCandidate(campaign.id, item.candidate_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">Share</Link></div>
+        </div>
+      </article>; })}</div>
       {detail.standings.length === 0 && <p className="rounded-2xl bg-white p-6 text-[#514532]">No eligible destinations are listed for this round.</p>}
       {detail.result && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-[#582F0E]">{presentationBuild ? `Presentation demo result: ${detail.result.valid_ballots} demo ballots recorded in the separate test database. This rehearsal does not count toward official destination rankings or rewards.` : `Final result: ${detail.result.valid_ballots} valid ballots. ${detail.result.co_winner_ids.length === 0 ? 'No winner was declared.' : detail.result.co_winner_ids.length > 1 ? 'The round ended in a tie; all co-winners are preserved.' : 'One destination topped the community vote. Spotlight placement still requires a separate safety review.'}`}</p>}
     </section>}
@@ -239,9 +264,23 @@ export function JuanChoiceExperience({
       <p className="text-xs font-bold uppercase tracking-wide text-[#7D5800]">{overview.previous.period_label}</p>
       <h2 id="previous-results-heading" className="mt-1 text-xl font-black text-[#2C221E]">{presentationBuild ? 'Previous demo results' : 'Previous results'}</h2>
       <p className="mt-2 text-sm text-[#514532]">{presentationBuild ? `Presentation demo: ${overview.previous.valid_ballots} demo ballots in test database. Not official rankings.` : `${overview.previous.valid_ballots} valid ${overview.previous.valid_ballots === 1 ? 'ballot' : 'ballots'} · ${overview.previous.co_winner_ids.length === 0 ? 'No winner this round' : overview.previous.co_winner_ids.length > 1 ? 'Co-winners' : 'Community winner'}. Community support is popularity, not a visitor rating.`}</p>
-      <ol className="mt-4 space-y-2">{overview.previous.standings.map(item => <li key={item.candidate_id} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E3DFD5] pt-2 text-sm text-[#514532]">
-        <span>{overview.previous!.co_winner_ids.includes(item.candidate_id) ? '★ ' : ''}{item.spot_name ?? 'Destination unavailable'}</span><span>{item.votes} {item.votes===1?'vote':'votes'}</span>
-      </li>)}</ol>
+      <ol className="mt-4 space-y-3">{overview.previous.standings.map((item, index) => {
+        const previous = overview.previous!;
+        const champion = previous.co_winner_ids.includes(item.candidate_id);
+        const minister = previous.minister_candidate_id === item.candidate_id;
+        const total = previous.standings.reduce((sum, row) => sum + (row.votes ?? 0), 0);
+        return <li key={item.candidate_id} className={`flex items-center gap-3 rounded-xl p-3 text-sm text-[#514532] ${champion ? 'bg-gradient-to-r from-amber-50 to-white ring-1 ring-amber-200' : minister ? 'bg-emerald-50/60 ring-1 ring-emerald-100' : 'bg-[#FAF9F5]'}`}>
+          <RankMedal rank={index + 1} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold text-[#2C221E]">{champion ? '★ ' : ''}{item.spot_name ?? 'Destination unavailable'}
+                {champion && <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#F6C344] to-[#E09F1F] px-2 py-0.5 align-middle text-[10px] font-black uppercase text-[#4A2E00]"><Crown className="h-3 w-3" aria-hidden="true" />Champion</span>}
+                {minister && <span className="ml-2 rounded-full bg-[#2D6A4F] px-2 py-0.5 align-middle text-[10px] font-black uppercase text-white">Minister</span>}</span>
+              <span className="tabular-nums">{item.votes} {item.votes===1?'vote':'votes'}</span>
+            </div>
+            {total > 0 && item.votes !== null && <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#EFEBE2]" aria-hidden="true"><div className={`h-full rounded-full ${champion ? 'bg-amber-400' : 'bg-[#40916C]'}`} style={{ width: `${Math.round((item.votes / total) * 100)}%` }} /></div>}
+          </div>
+        </li>; })}</ol>
     </section>}
     {!loading && !error && !overview?.previous && campaign && <section className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6" aria-labelledby="previous-results-heading">
       <h2 id="previous-results-heading" className="text-xl font-black text-[#2C221E]">{presentationBuild ? 'Previous demo results' : 'Previous results'}</h2>

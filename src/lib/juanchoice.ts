@@ -69,7 +69,8 @@ export interface JuanChoiceOverview {
   reigning?:JuanChoiceReigning|null;
   next:{opens_at:string;closes_at:string;theme:string|null;schedule_status:'scheduled'|'postponed'}|null;
   previous:{campaign_id:string;period_label:string;opens_at:string;closes_at:string;finalized_at:string;
-    theme:string;valid_ballots:number;co_winner_ids:string[];standings:JuanChoiceStanding[]}|null;
+    theme:string;valid_ballots:number;co_winner_ids:string[];standings:JuanChoiceStanding[];
+    minister_candidate_id?:string|null;total_weighted_votes?:number|null}|null;
   notice:{code:string;message:string}|null;
 }
 
