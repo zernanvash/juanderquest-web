@@ -127,12 +127,23 @@ export function RankMedal({ rank, hidden = false }: { rank: number; hidden?: boo
 }
 
 /** Vote share for one contender; a shimmering mystery bar while the tally is blind. */
-export function ShareBar({ votes, total, leading = false }: { votes: number | null; total: number; leading?: boolean }) {
+export function ShareBar({ votes, total, leading = false, compact = false }: { votes: number | null; total: number; leading?: boolean; compact?: boolean }) {
   if (votes === null) {
-    return <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-violet-100" aria-hidden="true">
+    return <div className={`${compact ? 'mt-2 h-2' : 'mt-3 h-2.5'} overflow-hidden rounded-full bg-violet-100`} aria-hidden="true">
       <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-violet-200 via-violet-400 to-violet-200 motion-safe:animate-pulse" /></div>;
   }
   const pct = total > 0 ? Math.round((votes / total) * 100) : 0;
+  const fill = leading ? 'bg-gradient-to-r from-amber-300 to-amber-500' : 'bg-gradient-to-r from-emerald-300 to-[#2D6A4F]';
+  if (compact) {
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#F3F0E8]" role="progressbar" aria-label="Vote share" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className={`h-full rounded-full transition-[width] duration-700 ${fill}`} style={{ width: `${Math.max(pct, votes > 0 ? 4 : 0)}%` }} />
+        </div>
+        <span className={`w-9 text-right text-xs font-black tabular-nums ${leading ? 'text-amber-700' : 'text-[#2C221E]'}`}>{pct}%</span>
+      </div>
+    );
+  }
   return (
     <div className="mt-3">
       <div className="flex items-baseline justify-between text-xs font-bold text-[#514532]">

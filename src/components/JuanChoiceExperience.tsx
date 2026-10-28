@@ -12,7 +12,7 @@ import { getJuanChoicePresentation, isJuanChoiceEnvironmentTrusted } from '@/lib
 import { triggerCelebration } from './CelebrationEffects';
 import { BoostBar, PerkPills, ReigningHero } from './JuanChoiceWeekly';
 import { RankMedal, RoundArena, ShareBar, VotePower, useLiveServerNow } from './JuanChoiceArena';
-import { Check, Crown, Zap } from 'lucide-react';
+import { Check, ChevronDown, Crown, Zap } from 'lucide-react';
 
 const NOT_OPEN_MESSAGE = 'JuanChoice is not open yet. Check back when the pilot begins.';
 
@@ -237,26 +237,36 @@ export function JuanChoiceExperience({
           : <>{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo Civic stamp in the separate test database only' : receipt.participation ? 'Ballot recorded. +25 Civic XP and +1 Civic stamp earned (not a Passport Stamp)' : 'Ballot updated'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</>}</p>}
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">{detail.standings.map((item, index) => { const mine = ballot?.candidate_id === item.candidate_id; const leading = leaderId === item.candidate_id; return <article key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`}
-        className={`relative flex flex-col justify-between overflow-hidden rounded-2xl border-2 bg-white p-5 transition-transform duration-200 motion-safe:hover:-translate-y-1 hover:shadow-lg ${mine ? 'border-[#2D6A4F] shadow-md' : leading ? 'border-amber-300 shadow-[0_0_0_4px_rgba(252,211,77,0.25)]' : focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
-        {mine && <span className="absolute right-0 top-0 inline-flex items-center gap-1 rounded-bl-xl bg-[#2D6A4F] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white"><Check className="h-3 w-3" aria-hidden="true" />Your pick</span>}
-        <div>
-          <div className="flex items-start gap-3">
-            <RankMedal rank={index + 1} hidden={campaign.tally_hidden} />
-            <div className="min-w-0"><p className="text-xs font-bold uppercase text-[#837560]">{campaign.tally_hidden ? 'Candidate' : `#${index + 1}`} · {presentationBuild ? 'demo support' : 'community support'}</p><h3 className="mt-0.5 text-xl font-black leading-tight text-[#2C221E]">{item.spot_name ?? item.spot_id}</h3></div>
+      <ol className="grid gap-3 lg:grid-cols-2" aria-label="Contenders">{detail.standings.map((item, index) => { const mine = ballot?.candidate_id === item.candidate_id; const leading = leaderId === item.candidate_id; return <li key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`}
+        className={`relative overflow-hidden rounded-2xl border-2 bg-white transition-shadow hover:shadow-md ${mine ? 'border-[#2D6A4F]' : leading ? 'border-amber-300 shadow-[0_0_0_4px_rgba(252,211,77,0.25)]' : focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
+        <div className="flex items-center gap-3 p-3 sm:p-4">
+          <RankMedal rank={index + 1} hidden={campaign.tally_hidden} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase text-[#837560]">{campaign.tally_hidden ? 'Candidate' : `#${index + 1}`} · {presentationBuild ? 'demo support' : 'community support'}</p>
+            <h3 className="truncate text-base font-black leading-tight text-[#2C221E] sm:text-lg">{item.spot_name ?? item.spot_id}</h3>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {mine && <span className="inline-flex items-center gap-1 rounded-full bg-[#2D6A4F] px-2 py-0.5 text-[10px] font-black uppercase text-white"><Check className="h-3 w-3" aria-hidden="true" />Your pick</span>}
+              {leading && <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-100 to-amber-200 px-2 py-0.5 text-[10px] font-black uppercase text-amber-900"><Crown className="h-3 w-3" aria-hidden="true" /> Leading the race</span>}
+              {(item.prior_loss_streak ?? 0) > 0 && <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-900">🔥 Underdog: +{Math.min(2, item.prior_loss_streak ?? 0)} bonus perk{(item.prior_loss_streak ?? 0) > 1 ? 's' : ''} unlocked</span>}
+            </div>
+            {weekly && <ShareBar votes={item.votes} total={totalVotes} leading={leading} compact />}
           </div>
-          {leading && <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-100 to-amber-200 px-2 py-0.5 text-[11px] font-black uppercase text-amber-900"><Crown className="h-3 w-3" aria-hidden="true" /> Leading the race</p>}
-          {(item.prior_loss_streak ?? 0) > 0 && <p className="mt-1 inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-900">🔥 Underdog: +{Math.min(2, item.prior_loss_streak ?? 0)} bonus perk{(item.prior_loss_streak ?? 0) > 1 ? 's' : ''} unlocked</p>}
-          <p className="mt-2 text-sm text-[#514532]">{item.votes === null ? '🔒 Votes hidden in the final 24 hours' : <>{item.votes} {presentationBuild ? (item.votes === 1 ? 'demo ballot' : 'demo ballots') : campaign.policy_version === 'juanchoice-weekly-v1' ? (item.votes === 1 ? 'vote' : 'votes') : (item.votes === 1 ? 'ballot' : 'ballots')}{campaign.policy_version === 'juanchoice-weekly-v1' && item.voter_count != null ? ` from ${item.voter_count} ${item.voter_count === 1 ? 'traveler' : 'travelers'}` : ''} · popularity, not a visitor rating</>}</p>
-          {weekly && <ShareBar votes={item.votes} total={totalVotes} leading={leading} />}
-          <PerkPills perks={item.manifesto_perks} />
-        </div>
-        <div className="mt-4 space-y-2">
           {canVote && user && !mine && <button type="button" onClick={event => { returnFocusRef.current=event.currentTarget; setVoteError(''); setPending({candidateId:item.candidate_id,expectedVersion:ballot?.version ?? 0,key:uuid()}); }}
-            className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#2D6A4F] to-[#40916C] px-4 text-sm font-black text-white shadow-md transition cursor-pointer hover:brightness-110 active:scale-95"><Zap className="h-4 w-4 fill-amber-300 text-amber-300" aria-hidden="true" />{ballot ? 'Change vote' : 'Vote for this place'}</button>}
-          <div className="flex flex-wrap gap-2">{item.spot_id && <Link href={appRoutes.spot(item.spot_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">View place</Link>}<Link href={appRoutes.choiceCandidate(campaign.id, item.candidate_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">Share</Link></div>
+            aria-label={`${ballot ? 'Change vote' : 'Vote for this place'}: ${item.spot_name ?? 'destination'}`}
+            className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl bg-gradient-to-r from-[#2D6A4F] to-[#40916C] px-3 text-sm font-black text-white shadow-md transition cursor-pointer hover:brightness-110 active:scale-95"><Zap className="h-4 w-4 fill-amber-300 text-amber-300" aria-hidden="true" /><span>{ballot ? "Switch" : "Vote"}</span></button>}
         </div>
-      </article>; })}</div>
+        <details className="group border-t border-[#EFEBE2]" open={focusCandidateId === item.candidate_id || undefined}>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2 text-xs font-bold text-[#3F6653] hover:bg-[#FAF9F5] [&::-webkit-details-marker]:hidden">
+            <span>Perks &amp; details{Array.isArray(item.manifesto_perks) && item.manifesto_perks.length ? ` · ${item.manifesto_perks.length} perks` : ''}</span>
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="px-4 pb-4">
+            <p className="text-sm text-[#514532]">{item.votes === null ? '🔒 Votes hidden in the final 24 hours' : <>{item.votes} {presentationBuild ? (item.votes === 1 ? 'demo ballot' : 'demo ballots') : campaign.policy_version === 'juanchoice-weekly-v1' ? (item.votes === 1 ? 'vote' : 'votes') : (item.votes === 1 ? 'ballot' : 'ballots')}{campaign.policy_version === 'juanchoice-weekly-v1' && item.voter_count != null ? ` from ${item.voter_count} ${item.voter_count === 1 ? 'traveler' : 'travelers'}` : ''} · popularity, not a visitor rating</>}</p>
+            <PerkPills perks={item.manifesto_perks} />
+            <div className="mt-3 flex flex-wrap gap-2">{item.spot_id && <Link href={appRoutes.spot(item.spot_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">View place</Link>}<Link href={appRoutes.choiceCandidate(campaign.id, item.candidate_id)} className="rounded-lg border border-[#E3DFD5] px-3.5 py-1.5 text-xs font-semibold text-[#3F6653]">Share</Link></div>
+          </div>
+        </details>
+      </li>; })}</ol>
       {detail.standings.length === 0 && <p className="rounded-2xl bg-white p-6 text-[#514532]">No eligible destinations are listed for this round.</p>}
       {detail.result && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-[#582F0E]">{presentationBuild ? `Presentation demo result: ${detail.result.valid_ballots} demo ballots recorded in the separate test database. This rehearsal does not count toward official destination rankings or rewards.` : `Final result: ${detail.result.valid_ballots} valid ballots. ${detail.result.co_winner_ids.length === 0 ? 'No winner was declared.' : detail.result.co_winner_ids.length > 1 ? 'The round ended in a tie; all co-winners are preserved.' : 'One destination topped the community vote. Spotlight placement still requires a separate safety review.'}`}</p>}
     </section>}
