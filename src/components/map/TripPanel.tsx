@@ -244,7 +244,7 @@ export function TripPanel({ spot, userLocation, onOverlay }: {
               <div key={area.municipality} className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-white p-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="text-[12px] font-bold text-[#1F2A24]">{area.municipality}</p>
-                  <p className="text-[10px] text-[#837560]">+{area.detour_km.toFixed(0)} km · about +{formatMinutes(area.extra_minutes)}</p>
+                  <p className="text-[10px] text-[#837560]">{area.detour_km < 2 ? `On the way · about +${formatMinutes(area.extra_minutes)} to stop` : `+${area.detour_km.toFixed(0)} km · about +${formatMinutes(area.extra_minutes)}`}</p>
                   <p className="truncate text-[11px] text-[#514532]">{area.highlights.map((h) => h.name).join(' · ')}</p>
                 </div>
                 <button type="button" onClick={() => toggleDetour(area)} aria-pressed={added}
