@@ -2,11 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TrailsClient } from './TrailsClient';
 
-const mocks = vi.hoisted(() => ({ fetchTrails: vi.fn(), unlockTrail: vi.fn(), createPersonalTrail: vi.fn(), refreshProfile: vi.fn(), searchTab: null as string | null }));
+const mocks = vi.hoisted(() => ({ fetchTrails: vi.fn(), unlockTrail: vi.fn(), createPersonalTrail: vi.fn(), refreshProfile: vi.fn(), push: vi.fn(), searchTab: null as string | null, user: { id: 'traveler', points: 50 } as { id: string; points: number } | null }));
 vi.mock('@/lib/trails-api', () => mocks);
-vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: { id: 'traveler', points: 50 }, isLoading: false, refreshProfile: mocks.refreshProfile }) }));
+vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: mocks.user, isLoading: false, refreshProfile: mocks.refreshProfile }) }));
 vi.mock('@/components/Navigation', () => ({ Navigation: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), useSearchParams: () => ({ get: (key: string) => key === 'tab' ? mocks.searchTab : null }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }), useSearchParams: () => ({ get: (key: string) => key === 'tab' ? mocks.searchTab : null }) }));
 
 const catalog = [
   { id:'locked-route',slug:'locked-route',title:'Hidden Coast',tagline:'A secret route',tier:'signature',theme:'coast',municipalities:['Bolinao'],stop_count:3,total_minutes:210,total_km:22,unlock_rule:{type:'points',price_points:300},available_until:null,rarity_art_key:'signature',is_unlocked:false },
@@ -14,7 +14,7 @@ const catalog = [
 ];
 
 describe('Trail hub', () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.searchTab=null; mocks.fetchTrails.mockResolvedValue({items:catalog,personalGeneration:{free_remaining:1,price_points:100}}); mocks.refreshProfile.mockResolvedValue(undefined); mocks.createPersonalTrail.mockResolvedValue({ trail:{id:'personal-route'} }); });
+  beforeEach(() => { vi.clearAllMocks(); mocks.searchTab=null; mocks.user={ id:'traveler', points:50 }; mocks.fetchTrails.mockResolvedValue({items:catalog,personalGeneration:{free_remaining:1,price_points:100}}); mocks.refreshProfile.mockResolvedValue(undefined); mocks.createPersonalTrail.mockResolvedValue({ trail:{id:'personal-route'} }); });
 
   it('renders tier cards and keeps locked stops as mystery-only content', async () => {
     render(<TrailsClient />);
@@ -30,6 +30,14 @@ describe('Trail hub', () => {
     fireEvent.click(await screen.findByRole('button', { name:/Unlock · 300 points/ }));
     expect((await screen.findByRole('alert')).textContent).toMatch(/Not enough points/);
     expect(mocks.unlockTrail).toHaveBeenCalledWith('locked-route');
+  });
+
+  it('sends signed-out travelers to login and back to the trail', async () => {
+    mocks.user = null;
+    render(<TrailsClient />);
+    fireEvent.click(await screen.findByRole('button', { name:/Unlock · 300 points/ }));
+    expect(mocks.push).toHaveBeenCalledWith('/login?redirect=%2Ftrails%2Flocked-route');
+    expect(mocks.unlockTrail).not.toHaveBeenCalled();
   });
 
   it('validates generator preferences before calling the API and submits selected preferences', async () => {

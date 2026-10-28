@@ -77,7 +77,7 @@ export function TrailsClient() {
   const toggle = (items: string[], setItems: (values: string[]) => void, item: string) => setItems(items.includes(item) ? items.filter(value => value !== item) : [...items, item]);
 
   const handleUnlock = async (trail: TrailCatalogItem) => {
-    if (!user) { router.push(`/login?next=${encodeURIComponent(`/trails/${trail.id}`)}`); return; }
+    if (!user) { router.push(`/login?redirect=${encodeURIComponent(`/trails/${trail.id}`)}`); return; }
     setBusyTrail(trail.id); setError('');
     try { await unlockTrail(trail.id); await Promise.all([load(), refreshProfile()]); }
     catch (err: unknown) {
@@ -91,7 +91,7 @@ export function TrailsClient() {
 
   const handleGenerate = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!user) { router.push(`/login?next=${encodeURIComponent('/trails?tab=create')}`); return; }
+    if (!user) { router.push(`/login?redirect=${encodeURIComponent('/trails?tab=create')}`); return; }
     if (!text.trim() && !themes.length && !towns.length) { setError('Describe your trip or choose a theme or town first.'); return; }
     setGenerating(true); setError('');
     try {
