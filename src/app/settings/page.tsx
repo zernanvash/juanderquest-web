@@ -324,22 +324,23 @@ export default function SettingsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
+                        <label htmlFor="settings-display-name" className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
                           Display Name
                         </label>
                         <input
+                          id="settings-display-name"
                           type="text"
                           value={displayName}
                           onChange={(e) => setDisplayName(e.target.value)}
                           maxLength={50}
                           required
-                          className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] outline-none min-h-[42px]"
+                          className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand-primary)] min-h-[42px]"
                           placeholder="Your traveler name"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
+                        <label htmlFor="settings-handle" className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
                           Explorer Handle (@)
                         </label>
                         <div className="relative">
@@ -347,11 +348,12 @@ export default function SettingsPage() {
                             @
                           </span>
                           <input
+                            id="settings-handle"
                             type="text"
                             value={handle}
                             onChange={(e) => setHandle(e.target.value)}
                             maxLength={30}
-                            className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] pl-7 pr-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] outline-none min-h-[42px]"
+                            className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] pl-7 pr-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand-primary)] min-h-[42px]"
                             placeholder="username"
                           />
                         </div>
@@ -359,29 +361,31 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
+                      <label htmlFor="settings-status" className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
                         Current Status
                       </label>
                       <input
+                        id="settings-status"
                         type="text"
                         value={statusText}
                         onChange={(e) => setStatusText(e.target.value)}
                         maxLength={120}
-                        className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] outline-none min-h-[42px]"
+                        className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand-primary)] min-h-[42px]"
                         placeholder="e.g. Exploring Bolinao Cape & Alaminos trails 🌊"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
+                      <label htmlFor="settings-bio" className="block text-xs font-bold text-[var(--color-brand-brown)] mb-1">
                         Public Bio
                       </label>
                       <textarea
+                        id="settings-bio"
                         rows={3}
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         maxLength={300}
-                        className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] outline-none"
+                        className="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-3.5 py-2 text-xs sm:text-sm text-[var(--color-text-primary)] focus:border-[var(--color-brand-primary)] focus:ring-1 focus:ring-[var(--color-brand-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand-primary)]"
                         placeholder="Tell the community about your Pangasinan adventures..."
                       />
                     </div>
