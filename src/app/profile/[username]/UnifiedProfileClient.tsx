@@ -65,6 +65,8 @@ import {
   SAMPLE_USER_BADGES,
   type UserBadge,
 } from '@/lib/badges';
+import { ProfileXpBar } from '@/components/profile/ProfileXpBar';
+import { ProfileTabGlider } from '@/components/profile/ProfileTabGlider';
 
 interface UnifiedProfileClientProps {
   username: string;
@@ -413,54 +415,22 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       </div>
 
                       {/* Compact Level Gauge */}
-                      <div className="p-3 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] min-w-[220px] space-y-1.5 shrink-0">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="flex items-center gap-1 text-[#582F0E]">
-                            <Award className="w-3.5 h-3.5 text-[#FFB703]" />
-                            <span>Level {scoutLevel} Scout</span>
-                          </span>
-                          <span className="text-[11px] text-[#2D6A4F] font-black">
-                            {scoutRep} Rep
-                          </span>
-                        </div>
-                        <div className="w-full bg-[#E3DFD5]/70 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.max(6, scoutLevelProgress)}%` }}
-                          />
-                        </div>
-                      </div>
+                      <ProfileXpBar
+                        level={scoutLevel}
+                        label="Scout"
+                        xp={scoutRep}
+                        xpUnit="Rep"
+                        progressPercent={scoutLevelProgress}
+                      />
                     </div>
 
-                    {/* Navigation tabs row (Facebook style) */}
-                    <div className="mt-4 pt-3 border-t border-[#F2EFE9] flex items-center gap-2 overflow-x-auto">
-                      <Link
-                        href={`/profile/${cleanParam}`}
-                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
-                          activePanel === 'overview'
-                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
-                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
-                        }`}
-                      >
-                        <Compass className="w-4 h-4" />
-                        <span>Overview</span>
-                      </Link>
-
-                      <Link
-                        href={`/profile/${cleanParam}?tab=badges`}
-                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
-                          activePanel === 'badges'
-                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
-                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
-                        }`}
-                      >
-                        <Award className="w-4 h-4" />
-                        <span>Badges &amp; Achievements</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-200/60 text-stone-700">
-                          {SAMPLE_USER_BADGES.length}
-                        </span>
-                      </Link>
-                    </div>
+                    {/* Navigation tabs row (Facebook style with GSAP Flip tab glider) */}
+                    <ProfileTabGlider
+                      cleanParam={cleanParam}
+                      activePanel={activePanel}
+                      isOwner={false}
+                      sampleBadgesCount={SAMPLE_USER_BADGES.length}
+                    />
                   </div>
                 </section>
 
@@ -531,7 +501,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                         <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
                           <Compass className="w-4 h-4 text-purple-700" />
                         </div>
-                        <div className="text-xl font-black text-purple-900">{sharedBadges?.length || 3}</div>
+                        <div className="text-xl font-black text-purple-900">{sharedBadges?.length ?? 0}</div>
                         <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Badges Earned</div>
                       </div>
                     </div>
@@ -642,7 +612,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                                 {COPY.badge.titlePlural}
                               </h2>
                               <p className="text-[11px] text-[var(--color-text-muted)]">
-                                {sharedBadges?.length || 3} verified badges collected
+                                {sharedBadges?.length ?? 0} verified badges collected
                               </p>
                             </div>
                           </div>
@@ -657,7 +627,11 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
 
                         {/* Top 3-4 Badges Compact Preview */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {SAMPLE_USER_BADGES.slice(0, 3).map((badge) => (
+                          {/* Only badges the server confirmed for this traveler; never the sample catalog. */}
+                          {SAMPLE_USER_BADGES.filter((badge) => sharedBadges?.some((earned) => earned.id === badge.id)).length === 0 && (
+                            <p className="sm:col-span-3 text-xs text-[var(--color-text-muted)]">No verified badges to show yet.</p>
+                          )}
+                          {SAMPLE_USER_BADGES.filter((badge) => sharedBadges?.some((earned) => earned.id === badge.id)).slice(0, 3).map((badge) => (
                             <div
                               key={badge.id}
                               onClick={() => setSelectedBadgeModal(badge)}
@@ -901,70 +875,21 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       </div>
 
                       {/* Compact Level Gauge */}
-                      <div className="p-3 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] min-w-[220px] space-y-1.5 shrink-0">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="flex items-center gap-1 text-[#582F0E]">
-                            <Award className="w-3.5 h-3.5 text-[#FFB703]" />
-                            <span>Level {currentLevel} Explorer</span>
-                          </span>
-                          <span className="text-[11px] text-[#2D6A4F] font-black">
-                            {formatXp(currentXp)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-[#E3DFD5]/70 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.max(6, nextLevelProgress)}%` }}
-                          />
-                        </div>
-                      </div>
+                      <ProfileXpBar
+                        level={currentLevel}
+                        label="Explorer"
+                        xp={currentXp}
+                        progressPercent={nextLevelProgress}
+                      />
                     </div>
 
-                    {/* Navigation tabs row (Facebook style) */}
-                    <div className="mt-4 pt-3 border-t border-[#F2EFE9] flex items-center gap-2 overflow-x-auto">
-                      <Link
-                        href={`/profile/${cleanParam}`}
-                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
-                          activePanel === 'overview'
-                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
-                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
-                        }`}
-                      >
-                        <Compass className="w-4 h-4" />
-                        <span>Overview</span>
-                      </Link>
-
-                      <Link
-                        href={`/profile/${cleanParam}?tab=badges`}
-                        className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shrink-0 ${
-                          activePanel === 'badges'
-                            ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
-                            : 'text-[#837560] hover:text-[#2C221E] hover:bg-stone-50'
-                        }`}
-                      >
-                        <Award className="w-4 h-4" />
-                        <span>Badges &amp; Achievements</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-stone-200/60 text-stone-700">
-                          {SAMPLE_USER_BADGES.length}
-                        </span>
-                      </Link>
-
-                      <Link
-                        href="/history"
-                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-[#837560] hover:text-[#2C221E] hover:bg-stone-50 transition flex items-center gap-1.5 shrink-0"
-                      >
-                        <History className="w-4 h-4" />
-                        <span>Submissions &amp; GPS Proof</span>
-                      </Link>
-
-                      <Link
-                        href="/settings"
-                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-[#837560] hover:text-[#2C221E] hover:bg-stone-50 transition flex items-center gap-1.5 shrink-0 ml-auto"
-                      >
-                        <Settings className="w-4 h-4" />
-                        <span>Settings</span>
-                      </Link>
-                    </div>
+                    {/* Navigation tabs row (Facebook style with GSAP Flip tab glider) */}
+                    <ProfileTabGlider
+                      cleanParam={cleanParam}
+                      activePanel={activePanel}
+                      isOwner={true}
+                      sampleBadgesCount={SAMPLE_USER_BADGES.length}
+                    />
                   </div>
                 </section>
 

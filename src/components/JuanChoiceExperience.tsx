@@ -11,6 +11,8 @@ import { effectiveJuanChoiceStatus, getJuanChoiceCampaign, getJuanChoiceOverview
 import { getJuanChoicePresentation, isJuanChoiceEnvironmentTrusted } from '@/lib/juanchoice-presentation';
 import { triggerCelebration } from './CelebrationEffects';
 
+const NOT_OPEN_MESSAGE = 'JuanChoice is not open yet. Check back when the pilot begins.';
+
 type PendingVote = { candidateId: string; expectedVersion: number; key: string };
 
 export function JuanChoiceExperience({
@@ -50,7 +52,7 @@ export function JuanChoiceExperience({
       if (!campaignId) { setSelectedId(value.current?.id ?? null); if (!value.current) setDetail(null); }
       setError('');
     }).catch(err => {
-      if (!controller.signal.aborted) setError(juanChoiceErrorCode(err) === 'FEATURE_DISABLED' ? 'JuanChoice is not open yet. Check back when the pilot begins.' : 'Campaigns could not be loaded. Please retry.');
+      if (!controller.signal.aborted) setError(juanChoiceErrorCode(err) === 'FEATURE_DISABLED' ? NOT_OPEN_MESSAGE : 'Campaigns could not be loaded. Please retry.');
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [campaignId]);
@@ -165,7 +167,9 @@ export function JuanChoiceExperience({
       </div>
     )}
     {loading && <p role="status" className="rounded-2xl bg-white p-6 text-[#514532]">Loading the current round…</p>}
-    {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Retry</button></div>}
+    {error && (error === NOT_OPEN_MESSAGE
+      ? <div role="status" className="rounded-2xl border border-[#E3DFD5] bg-white p-5 text-sm text-[#514532]">{error}</div>
+      : <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Retry</button></div>)}
     {!loading && !error && !campaign && <section className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6 space-y-4" aria-labelledby="next-round-heading">
       <div>
         <h2 id="next-round-heading" className="text-xl font-black text-[#2C221E]">{presentation.nextRoundHeading}</h2>
@@ -201,7 +205,7 @@ export function JuanChoiceExperience({
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'ACCOUNT_TOO_NEW' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting unlocks after {myState.eligibility.eligible_at ? formatDate(myState.eligibility.eligible_at) : 'your account is 72 hours old'} or after one approved destination visit.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'UNAVAILABLE' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting eligibility could not be confirmed. Please try again later.</p>}
         {ballot && <p className="mt-3 text-sm font-semibold text-[#2D6A4F]">Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'} · version {ballot.version}</p>}
-        {receipt && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo stamp in the separate test database only' : 'Ballot recorded. +25 Civic XP and +1 stamp earned'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</p>}
+        {receipt && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo Civic stamp in the separate test database only' : 'Ballot recorded. +25 Civic XP and +1 Civic stamp earned (not a Passport Stamp)'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</p>}
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">{detail.standings.map((item, index) => <article key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`} className={`rounded-2xl border bg-white p-5 flex flex-col justify-between ${focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>

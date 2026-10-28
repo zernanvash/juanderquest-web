@@ -1,4 +1,5 @@
 'use client';
+import { categoryLabel } from '@/lib/category-label';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -311,9 +312,9 @@ export default function VotePage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-black text-[#582F0E]">
-                Active Voting Proposals ({proposals.length})
+                Past proposals ({proposals.length})
               </h2>
-              <span className="text-xs font-bold text-gray-500">Live Quad-Weighted Voting</span>
+              <span className="text-xs font-bold text-gray-500">Read-only archive</span>
             </div>
 
             {loading ? (
@@ -353,7 +354,7 @@ export default function VotePage() {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-amber-50 text-[#7D5800] border border-amber-200">
-                            {prop.category.replace('_', ' ')}
+                            {categoryLabel(prop.category)}
                           </span>
                           <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-stone-100 text-gray-600 uppercase">
                             {prop.state}

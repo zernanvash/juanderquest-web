@@ -170,7 +170,7 @@ describe('JuanChoiceExperience component integration tests', () => {
     // Wait for receipt display
     await waitFor(() => {
       expect(mockJuanChoice.putJuanChoiceBallot).toHaveBeenCalled();
-      expect(screen.getByText(/Demo ballot recorded\. \+25 demo Civic XP and \+1 demo stamp in the separate test database only; 0 points cost\./i)).toBeTruthy();
+      expect(screen.getByText(/Demo ballot recorded\. \+25 demo Civic XP and \+1 demo Civic stamp in the separate test database only; 0 points cost\./i)).toBeTruthy();
     });
   });
 
@@ -212,10 +212,10 @@ describe('JuanChoiceExperience component integration tests', () => {
 
     render(<JuanChoiceExperience isPresentation={true} />);
 
-    const alert = await screen.findByRole('alert');
-    expect(alert.textContent).toContain(
-      'JuanChoice is not open yet. Check back when the pilot begins.'
-    );
+    // Not open yet is a neutral notice, not an error with Retry.
+    const notice = await screen.findByText('JuanChoice is not open yet. Check back when the pilot begins.');
+    expect(notice.getAttribute('role')).toBe('status');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('handles CAMPAIGN_NOT_FOUND when requesting an unknown campaignId', async () => {

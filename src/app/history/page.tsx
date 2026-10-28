@@ -1,4 +1,5 @@
 'use client';
+import { categoryLabel } from '@/lib/category-label';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -50,7 +51,7 @@ export default function HistoryPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-extrabold text-[var(--color-brand-brown)]">Submissions &amp; Proof History</h1>
-              <p className="text-xs text-[var(--color-text-secondary)]">Track status of submitted AR quest proof verifications.</p>
+              <p className="text-xs text-[var(--color-text-secondary)]">Track the status of your quest proofs.</p>
             </div>
             <button
               onClick={() => fetchSubmissions(true)}
@@ -93,7 +94,7 @@ export default function HistoryPage() {
                 >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[var(--color-text-muted)]">ID: {sub.id}</span>
+                      <span className="text-xs font-bold text-[var(--color-text-muted)]" title={sub.id}>Ref {sub.id.slice(-6).toUpperCase()}</span>
                       <span
                         className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
                           isApproved
@@ -121,11 +122,12 @@ export default function HistoryPage() {
                         <span>On-Site Checkpoint</span>
                       </Link>
                       <span>•</span>
-                      <span>{sub.category.replace('_', ' ')}</span>
-                      {sub.rewardPoints > 0 && (
+                      <span>{categoryLabel(sub.category)}</span>
+                      {/* Points are only earned once a submission is approved. */}
+                      {isApproved && sub.rewardPoints > 0 && (
                         <>
                           <span>•</span>
-                          <span className="text-[var(--color-brand-accent-dark)] font-bold">+{sub.rewardPoints} PTS</span>
+                          <span className="text-[var(--color-brand-accent-dark)] font-bold">+{sub.rewardPoints} points</span>
                         </>
                       )}
                     </div>

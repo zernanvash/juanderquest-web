@@ -60,8 +60,8 @@ export const DEV_BYPASS_WALLET: WalletModel = {
   balanceJdq: 50,
 };
 
-// Admins are routed to the dashboard origin without exposing the session token
-// in the URL. The session itself lives in the HttpOnly API cookie.
+// Admins stay in the traveler app after signing in; the menu and profile link to
+// the dashboard origin. The session itself lives in the HttpOnly API cookie.
 export const adminHandoffUrl = () => ADMIN_URL;
 
 export const isTravelerAppView = (): boolean => {
@@ -242,10 +242,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await api.post('/auth/login', { email, password, remember_me: rememberMe });
       if (res.data?.success) {
         const normalized = normalizeUser(res.data.data.user);
-        if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
-          window.location.assign(adminHandoffUrl());
-          return { success: false };
-        }
         clearStoredSession();
         invalidateCache();
         setToken('cookie-session');
@@ -325,11 +321,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await api.post('/auth/demo-login', { seed_id: seedId });
       if (res.data?.success) {
         const normalized = normalizeUser(res.data.data.user);
-        // Admin users hand off to dashboard unless explicitly in traveler app view / preview mode.
-        if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
-          window.location.assign(adminHandoffUrl());
-          return false;
-        }
         invalidateCache();
         setToken('cookie-session');
         setUser(normalized);
@@ -351,10 +342,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await api.post('/auth/simulated-wallet-login', { username, password });
       if (res.data?.success) {
         const normalized = normalizeUser(res.data.data.user);
-        if (normalized.role === 'admin' && !shouldStayInTravelerApp()) {
-          window.location.assign(adminHandoffUrl());
-          return { success: false };
-        }
         clearStoredSession();
         invalidateCache();
         setToken('cookie-session');
@@ -376,10 +363,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const storeWalletSession = (data: { token: string; user: Parameters<typeof normalizeUser>[0] }) => {
     const user = normalizeUser(data.user);
-    if (user.role === 'admin' && !shouldStayInTravelerApp()) {
-      window.location.assign(adminHandoffUrl());
-      return;
-    }
     clearStoredSession();
     invalidateCache();
     setToken('cookie-session');

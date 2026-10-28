@@ -36,6 +36,7 @@ import { fetchMerchantMe } from '@/lib/api';
 import { getNotifications, markAllNotificationsRead, markNotificationRead, type DurableNotification } from '@/lib/notifications-api';
 import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
 import { DisplayName } from '@/components/cosmetics/DisplayName';
+import { StampBalanceChip } from '@/components/stamps/StampBalanceChip';
 
 export interface NavigationNotification {
   id: string;
@@ -902,6 +903,7 @@ export const Navigation: React.FC<{
           {/* Drawer Footer / Single compact identity + progress block */}
           <div className="p-2 border-t border-[var(--color-border-default)]/60 bg-[var(--color-bg-subtle)]/40 shrink-0">
             {user ? (
+              <div className="space-y-1.5">
               <Link
                 href={userProfileHref}
                 className={`rounded-xl border border-[var(--color-border-default)] bg-white/80 hover:border-[var(--color-brand-primary)]/40 transition group ${
@@ -944,6 +946,8 @@ export const Navigation: React.FC<{
                   </>
                 )}
               </Link>
+              <StampBalanceChip compact={isDesktopDrawerCollapsed} className="w-full justify-center" />
+              </div>
             ) : (
               <Link
                 href="/login"
@@ -1095,6 +1099,10 @@ export const Navigation: React.FC<{
                     <span className="font-extrabold text-[var(--color-brand-brown)]">
                       {currentPoints.toLocaleString()} XP
                     </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Passport stamps</span>
+                    <StampBalanceChip />
                   </div>
                   <div className="mt-2 pt-2 border-t border-[var(--color-border-default)]/40 flex items-center justify-between text-[11px]">
                     <Link
