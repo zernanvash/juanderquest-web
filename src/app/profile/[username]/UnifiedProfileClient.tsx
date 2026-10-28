@@ -334,7 +334,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                   {/* Cover Photo */}
                   <ProfileBanner asset={profile.cosmetics?.banner?.asset as any} seed={profile.cosmetics?.banner?.seed} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
                     <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
-                    <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+                    <div className="absolute right-3 top-3 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs sm:bottom-3 sm:right-4 sm:top-auto">
                       <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
                       <span>Member since {joinedYear}</span>
                     </div>
@@ -747,7 +747,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                   {/* Cover Photo */}
                   <ProfileBanner asset={(myProfile?.cosmetics ?? user.cosmetics)?.banner?.asset as any} seed={(myProfile?.cosmetics ?? user.cosmetics)?.banner?.seed} className="relative h-44 sm:h-56 md:h-64 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C]">
                     <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
-                    <div className="absolute bottom-3 right-4 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+                    <div className="absolute right-3 top-3 flex items-center gap-1.5 text-white/95 text-xs font-bold uppercase tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs sm:bottom-3 sm:right-4 sm:top-auto">
                       <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
                       <span>Your Passport · Member {joinedYear}</span>
                     </div>
