@@ -2,8 +2,8 @@
 
 // Plan 64: a destination's trails, in one flow. Swipe premade trails (Direct route first), open
 // one to see what it offers, choose it (Hiyas Trails unlock with points), then navigate it.
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Clock, Gem, Loader2, Lock, MapPin, Plus, Route, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Clock, Gem, Loader2, Lock, MapPin, Plus, Route, X } from 'lucide-react';
 import type { SpotModel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { planTrip, TRIP_ORIGINS, formatMinutes, type DetourArea, type LatLng, type TripPlan } from '@/lib/trip-api';
@@ -25,12 +25,31 @@ export function TripPanel({ spot, userLocation, onOverlay }: {
   const [offer, setOffer] = useState<NearbyTrail | null>(null);
   const [navigating, setNavigating] = useState<TrailDetail | null>(null);
   const [direct, setDirect] = useState(false);
+  // Desktop arrows for the swipe row; hidden at either end.
+  const rowRef = useRef<HTMLUListElement>(null);
+  const [edges, setEdges] = useState({ start: true, end: true });
+  const updateEdges = useCallback(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    setEdges({ start: row.scrollLeft <= 4, end: row.scrollLeft + row.clientWidth >= row.scrollWidth - 4 });
+  }, []);
+  const scrollRow = (direction: 1 | -1) => rowRef.current?.scrollBy({ left: direction * 210, behavior: 'smooth' });
 
   const [originKey, setOriginKey] = useState('');
   const [via, setVia] = useState<DetourArea[]>([]);
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [planning, setPlanning] = useState(false);
   const [error, setError] = useState('');
+
+  // Recheck the arrows when the cards arrive or the panel resizes.
+  useEffect(() => {
+    updateEdges();
+    const row = rowRef.current;
+    if (!row || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(updateEdges);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [trails, updateEdges]);
 
   useEffect(() => {
     let active = true;
@@ -86,7 +105,8 @@ export function TripPanel({ spot, userLocation, onOverlay }: {
     <section className="space-y-2.5 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-3.5" aria-label="Trails from this destination">
       <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#2D6A4F]"><Route className="h-3.5 w-3.5" /> Trails here</p>
 
-      <ul className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1" aria-label="Choose a trail">
+      <div className="relative">
+      <ul ref={rowRef} onScroll={updateEdges} className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1" aria-label="Choose a trail">
         <li>
           <button type="button" onClick={() => { setDirect((v) => !v); if (direct) onOverlay(null); }} aria-pressed={direct}
             className={`${cardBase} ${direct ? 'border-[#2D6A4F] ring-2 ring-[#2D6A4F]/30' : 'border-emerald-100'}`}>
@@ -123,6 +143,19 @@ export function TripPanel({ spot, userLocation, onOverlay }: {
           );
         })}
       </ul>
+      {!edges.start && (
+        <button type="button" onClick={() => scrollRow(-1)} aria-label="Previous trails"
+          className="absolute left-0 top-[48px] hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full border border-emerald-100 bg-white/95 text-[#1B4332] shadow-md sm:grid cursor-pointer hover:bg-white">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
+      {!edges.end && (
+        <button type="button" onClick={() => scrollRow(1)} aria-label="Next trails"
+          className="absolute right-0 top-[48px] hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full border border-emerald-100 bg-white/95 text-[#1B4332] shadow-md sm:grid cursor-pointer hover:bg-white">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+      </div>
       {trails !== null && trails.length === 0 && <p className="text-[11px] text-[#6F6352]">No trails near here yet. Use the direct route, or check back soon.</p>}
 
       {direct && (

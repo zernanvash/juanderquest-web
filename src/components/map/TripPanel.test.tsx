@@ -56,6 +56,21 @@ describe('TripPanel trails carousel (Plan 64)', () => {
     expect(mocks.fetchTrailsNear).toHaveBeenCalledWith({ lat: 16.32, lng: 119.78 }, 'spot-bolinao');
   });
 
+  it('has desktop arrows that scroll the trail row and hide at the ends', async () => {
+    render(<TripPanel spot={spot} onOverlay={vi.fn()} />);
+    const row = await screen.findByRole('list', { name: 'Choose a trail' });
+    await within(row).findByRole('button', { name: /Bolinao Heritage/ });
+    expect(screen.queryByRole('button', { name: 'Next trails' })).toBeNull();
+    Object.defineProperty(row, 'scrollWidth', { configurable: true, value: 700 });
+    Object.defineProperty(row, 'clientWidth', { configurable: true, value: 300 });
+    const scrollBy = vi.fn();
+    row.scrollBy = scrollBy as unknown as typeof row.scrollBy;
+    fireEvent.scroll(row);
+    expect(screen.queryByRole('button', { name: 'Previous trails' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Next trails' }));
+    expect(scrollBy).toHaveBeenCalledWith({ left: 210, behavior: 'smooth' });
+  });
+
   it('keeps the free direct route with detours', async () => {
     const onOverlay = vi.fn();
     render(<TripPanel spot={spot} onOverlay={onOverlay} />);
