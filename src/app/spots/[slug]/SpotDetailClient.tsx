@@ -931,7 +931,7 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                           className="chip-live btn-tactile inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-full bg-[#FAF8F4] hover:bg-[#F3EFE6] text-[#141C16] border border-[#E2DDD3] text-xs sm:text-sm font-bold transition shadow-xs cursor-pointer min-h-[44px]"
                         >
                           <MapPin className="w-4 h-4 text-[#1B4332]" />
-                          <span>View on Map</span>
+                          <span>Get there &amp; trails</span>
                         </Link>
                       </div>
 

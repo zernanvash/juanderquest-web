@@ -12,7 +12,8 @@ import { useAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SpotPostingWizard } from '@/components/SpotPostingWizard';
-import { TrailPreviewCard } from '@/components/TrailPreviewCard';
+import { TripPanel } from '@/components/map/TripPanel';
+import type { MapOverlay } from '@/components/map/VectorMapCanvas';
 import type { SpotPostingPin } from '@/lib/spot-posting';
 import { createQuestPinHtml, createSpotPinHtml, createAreaHitboxHtml } from '@/lib/map-icons';
 import { declutterItems } from '@/lib/map-declutter';
@@ -237,6 +238,7 @@ export default function QuestMapPage() {
   const [locating, setLocating] = useState(false);
   const [locationNotice, setLocationNotice] = useState('');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [tripOverlay, setTripOverlay] = useState<MapOverlay | null>(null);
   const followUserRef = useRef(false);
 
   // Map-first destination posting: armed pin placement, draft pin and wizard.
@@ -1187,6 +1189,7 @@ export default function QuestMapPage() {
           ) : webglSupported ? (
             <div className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`}>
               <VectorMapCanvas
+                overlay={tripOverlay}
                 selectedAreaId={activeArea?.id || null}
                 allSpots={spots}
                 onSelectArea={(areaId) => {
@@ -1558,7 +1561,7 @@ export default function QuestMapPage() {
                 </div>
 
                 {selectedItem.type === 'spot' && (
-                  <TrailPreviewCard key={(selectedItem.data as SpotModel).id} />
+                  <TripPanel key={(selectedItem.data as SpotModel).id} spot={selectedItem.data as SpotModel} userLocation={userLocation} onOverlay={setTripOverlay} />
                 )}
               </div>
             ) : (

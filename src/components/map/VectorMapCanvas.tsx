@@ -33,6 +33,14 @@ export interface VectorMapCanvasProps {
   draftPin?: SpotPostingPin | null;
   // User location
   userLocation?: { lat: number; lng: number; accuracy: number } | null;
+  /** Trip or trail drawn on top of the map: a route line and numbered points (Plan 64). */
+  overlay?: MapOverlay | null;
+}
+
+export interface MapOverlay {
+  /** [lng, lat] pairs in travel order. */
+  line: [number, number][];
+  points?: { lng: number; lat: number; label: string; kind: 'start' | 'end' | 'detour' | 'stop' | 'done' }[];
 }
 
 const PANGASINAN_CENTER: [number, number] = [120.33, 16.03]; // [lng, lat] for MapLibre
@@ -72,6 +80,7 @@ export function VectorMapCanvas({
   onDropPin,
   draftPin,
   userLocation,
+  overlay,
 }: VectorMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -858,6 +867,48 @@ export function VectorMapCanvas({
       draftSource.setData({ type: 'FeatureCollection', features: [] });
     }
   }, [draftPin, mapLoaded]);
+
+  // Trip/trail overlay: one source, line + numbered circles; fit the camera when it changes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    let source = map.getSource('trip-overlay') as GeoJSONSource | undefined;
+    if (!source) {
+      map.addSource('trip-overlay', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'trip-overlay-casing', type: 'line', source: 'trip-overlay', filter: ['==', '$type', 'LineString'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.9 } });
+      map.addLayer({ id: 'trip-overlay-line', type: 'line', source: 'trip-overlay', filter: ['==', '$type', 'LineString'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#2D6A4F', 'line-width': 4.5 } });
+      map.addLayer({ id: 'trip-overlay-points', type: 'circle', source: 'trip-overlay', filter: ['==', '$type', 'Point'],
+        paint: {
+          'circle-radius': ['match', ['get', 'kind'], 'detour', 7, 10],
+          'circle-color': ['match', ['get', 'kind'], 'start', '#264653', 'end', '#D62828', 'detour', '#F4A261', 'done', '#2D6A4F', '#F4A261'],
+          'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5,
+        } });
+      map.addLayer({ id: 'trip-overlay-labels', type: 'symbol', source: 'trip-overlay', filter: ['==', '$type', 'Point'],
+        layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-allow-overlap': true },
+        paint: { 'text-color': '#ffffff' } });
+      source = map.getSource('trip-overlay') as GeoJSONSource;
+    }
+    if (!overlay || overlay.line.length === 0) {
+      source.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+    source.setData({
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: overlay.line } },
+        ...(overlay.points ?? []).map((point) => ({
+          type: 'Feature' as const, properties: { label: point.label, kind: point.kind },
+          geometry: { type: 'Point' as const, coordinates: [point.lng, point.lat] },
+        })),
+      ],
+    });
+    const lngs = overlay.line.map((c) => c[0]);
+    const lats = overlay.line.map((c) => c[1]);
+    map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+      { padding: 64, maxZoom: 14, duration: prefersReducedMotion() ? 0 : FOCUS_EASE_MS });
+  }, [overlay, mapLoaded]);
 
   return (
     <div className="relative w-full h-full">
