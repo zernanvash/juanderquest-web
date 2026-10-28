@@ -57,7 +57,7 @@ export function getJuanChoicePresentation(
       readOnlyNotice: null,
       headerTitle: 'Choose a destination worth discovering',
       headerDescription:
-        'One free ballot per round. Every participant earns the same 25 Civic XP and one stamp, regardless of which destination wins. This is separate from governance voting and mJDQ.',
+        'One free ballot per round. Every participant earns the same 25 Civic XP and one stamp, regardless of which destination wins. Each week’s winner reigns the following week with its perks live. Optional boosts use in-app points only; this is separate from governance voting and mJDQ.',
       roundWindowLabel:
         campaignStatus === 'voting'
           ? 'Voting closes'

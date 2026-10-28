@@ -15,7 +15,7 @@ export function PerkPills({ perks, live = false }: { perks?: JuanChoicePerk[]; l
       {perks.map((perk, index) => {
         if (perk.is_mystery && !perk.revealed) {
           return (
-            <li key={`mystery-${index}`} className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-100 via-fuchsia-50 to-violet-100 px-2.5 py-1.5 text-xs font-bold text-violet-900 motion-safe:animate-pulse">
+            <li key={`mystery-${index}`} className="flex flex-wrap items-center gap-x-1.5 rounded-lg bg-gradient-to-r from-violet-100 via-fuchsia-50 to-violet-100 px-2.5 py-1.5 text-xs font-bold text-violet-900 motion-safe:animate-pulse">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> ??? Mystery perk <span className="font-normal">(revealed if this place wins)</span>
             </li>
           );
