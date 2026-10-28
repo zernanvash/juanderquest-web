@@ -12,6 +12,10 @@ describe('traveler session gate', () => {
     expect(isTravelerSession({ seedId: 'usr-verified-email', role: 'user' })).toBe(true);
     expect(isTravelerSession({ seedId: 'admin-1', role: 'admin' }, true)).toBe(true);
   });
+  it('keeps wallet admins in the traveler app without the app view', () => {
+    expect(isTravelerSession({ seedId: 'wallet:0xadmin', role: 'admin' })).toBe(true);
+    expect(isTravelerSession({ seedId: 'usr-admin123', role: 'admin' })).toBe(false);
+  });
   it('does not treat missing or legacy demo accounts as traveler sessions', () => {
     expect(isTravelerSession(null)).toBe(false);
     expect(isTravelerSession({ seedId: 'admin-1', role: 'admin' })).toBe(false);
