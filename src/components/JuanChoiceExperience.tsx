@@ -237,7 +237,7 @@ export function JuanChoiceExperience({
           : <>{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo Civic stamp in the separate test database only' : receipt.participation ? 'Ballot recorded. +25 Civic XP and +1 Civic stamp earned (not a Passport Stamp)' : 'Ballot updated'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 points cost.</>}</p>}
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
       </div>
-      <ol className="grid gap-3 lg:grid-cols-2" aria-label="Contenders">{detail.standings.map((item, index) => { const mine = ballot?.candidate_id === item.candidate_id; const leading = leaderId === item.candidate_id; return <li key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`}
+      <ol className="grid items-start gap-3 lg:grid-cols-2" aria-label="Contenders">{detail.standings.map((item, index) => { const mine = ballot?.candidate_id === item.candidate_id; const leading = leaderId === item.candidate_id; return <li key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`}
         className={`relative overflow-hidden rounded-2xl border-2 bg-white transition-shadow hover:shadow-md ${mine ? 'border-[#2D6A4F]' : leading ? 'border-amber-300 shadow-[0_0_0_4px_rgba(252,211,77,0.25)]' : focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
         <div className="flex items-center gap-3 p-3 sm:p-4">
           <RankMedal rank={index + 1} hidden={campaign.tally_hidden} />
