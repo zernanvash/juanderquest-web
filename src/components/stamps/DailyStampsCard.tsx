@@ -192,13 +192,14 @@ export function DailyStampsCard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div className="lg:col-span-5 space-y-4">
-          <div className="grid grid-cols-7 gap-1.5" role="list" aria-label="Seven-day stamp calendar">
+          <div className="grid grid-cols-7 gap-1" role="list" aria-label="Seven-day stamp calendar">
             {data.claim.calendar.map((day) => {
               const isCurrent = day.day === currentDay && !claimed;
               return (
                 <div
                   key={day.day}
                   role="listitem"
+                  aria-label={`Day ${day.day}: ${day.stamps} stamps${day.claimed ? ', claimed' : ''}`}
                   className={`rounded-xl border px-1 py-2 text-center transition ${
                     day.claimed
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
