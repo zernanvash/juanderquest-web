@@ -1,4 +1,6 @@
 import { KNOWN_AREAS } from './areas';
+import { api } from './api';
+import { fallbackStoryStarters, type SpotRecognition } from './spot-posting';
 
 export interface ReverseSuggestion {
   municipality: string;
@@ -184,5 +186,45 @@ export function mapNominatimReverse(
     address: addressLine || `${municipality}, ${province}`,
     placeName,
     outsidePangasinan,
+  };
+}
+
+/**
+ * Plan 66: recognize a map pin through the shared API (`GET /spots/recognize`), falling back to the
+ * web's own `/api/osm/reverse` and then to offline suggestions, so posting never blocks on a lookup.
+ */
+export async function recognizeSpot(lat: number, lng: number, signal?: AbortSignal): Promise<SpotRecognition> {
+  try {
+    const response = await api.get('/spots/recognize', { params: { lat, lng }, signal, timeout: 5000 });
+    const data = response.data?.data as SpotRecognition | undefined;
+    if (data && typeof data.formatted_address === 'string') return data;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+  }
+  let suggestion: ReverseSuggestion | null = null;
+  try {
+    const res = await fetch(`/api/osm/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`, { signal });
+    if (res.ok) suggestion = ((await res.json()) as { suggestion?: ReverseSuggestion }).suggestion ?? null;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+  }
+  const area = suggestion ?? getNearestAreaFallback(lat, lng);
+  const where = [area.barangay, area.municipality].filter(Boolean).join(', ');
+  return {
+    recognized: Boolean(area.municipality),
+    source: 'client',
+    place_name: area.placeName ?? null,
+    name_suggestions: area.placeName ? [area.placeName] : area.municipality ? [`${area.municipality} Scenic Spot`] : [],
+    formatted_address: area.address,
+    municipality: area.municipality || null,
+    barangay: area.barangay ?? null,
+    province: area.province ?? null,
+    road: null,
+    outside_pangasinan: area.outsidePangasinan,
+    suggested_category: 'nature_outdoors',
+    suggested_subcategory: 'viewpoint',
+    suggested_details: { good_for: ['groups', 'solo', 'couples'], best_time: ['early_morning', 'sunset'], amenities: ['parking'], daily_hours: '06:00 AM - 06:00 PM', contact_number: '' },
+    story_starters: fallbackStoryStarters(where, 'nature_outdoors'),
+    nearby_duplicates: [],
   };
 }

@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
       if (oldestKey) cache.delete(oldestKey);
     }
     cache.set(cacheKey, { timestamp: now, data: suggestion });
+    return NextResponse.json({ suggestion });
 
   } catch {
     // Return nearest known area fallback gracefully on network timeout or exception

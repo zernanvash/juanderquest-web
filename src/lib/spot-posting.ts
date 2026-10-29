@@ -36,6 +36,11 @@ export const SPOT_POSTING_CATEGORIES = [
     label: '🛍️ Local MSME Crafts',
     subcategories: ['bagoong_distillery', 'salt_beds_farm', 'bamboo_crafts', 'night_market', 'local_cooperative'],
   },
+  {
+    id: 'stay',
+    label: '🛏️ Stay & Lodging',
+    subcategories: ['beach_resort', 'boutique_hotel', 'homestay', 'campground'],
+  },
 ] as const;
 
 export const SPOT_POSTING_AMENITIES = [
@@ -253,4 +258,102 @@ export function buildSpotPayload(
     payload.asset_ids = [media.assetId];
   }
   return payload;
+}
+
+// --- Plan 66: one-flow posting with place recognition ---------------------------------------
+
+/** GET /api/v1/spots/recognize payload (snake_case, as sent by the API). */
+export interface SpotRecognition {
+  recognized: boolean;
+  source: 'osm' | 'areas' | 'none' | 'client';
+  place_name: string | null;
+  name_suggestions: string[];
+  formatted_address: string;
+  municipality: string | null;
+  barangay: string | null;
+  province: string | null;
+  road: string | null;
+  outside_pangasinan: boolean;
+  suggested_category: string;
+  suggested_subcategory: string;
+  suggested_details: { good_for: string[]; best_time: string[]; amenities: string[]; daily_hours: string; contact_number: string };
+  story_starters: string[];
+  nearby_duplicates: Array<{ id: string; slug: string; name: string; category: string; municipality: string; distance_meters: number }>;
+}
+
+/** Which draft fields the traveler has edited by hand; recognition never overwrites those. */
+export interface SpotPostingTouched {
+  name?: boolean;
+  category?: boolean;
+  location?: boolean;
+  details?: boolean;
+}
+
+/** API taxonomy subcategory -> this composer's subcategory chips. */
+const SUBCATEGORY_FROM_API: Record<string, string> = {
+  beach: 'white_sand_beach', waterfall: 'waterfall', cave: 'cave_system', viewpoint: 'mountain_viewpoint', park: 'mountain_viewpoint',
+  trailhead: 'mountain_viewpoint', restaurant: 'bangus_grill', carinderia: 'kaleskes', cafe: 'third_wave_coffee', bakery: 'puto_calasiao',
+  street_food: 'tupig_stand', bar: 'seafood_shack', church: 'colonial_church', museum: 'heritage_mansion', heritage_site: 'heritage_mansion',
+  arts_crafts: 'heritage_mansion', water_activity: 'island_hopping', recreation: 'eco_trail_hike', sports_venue: 'eco_trail_hike',
+  running_spot: 'eco_trail_hike', gym: 'eco_trail_hike', market: 'night_market', souvenir: 'bamboo_crafts', local_products: 'local_cooperative',
+  resort: 'beach_resort', hotel: 'boutique_hotel', homestay: 'homestay', campsite: 'campground',
+};
+
+export function toPostingSubcategory(category: string, apiSubcategory: string): string {
+  const options = subcategoriesForCategory(category);
+  if (options.includes(apiSubcategory)) return apiSubcategory;
+  const mapped = SUBCATEGORY_FROM_API[apiSubcategory];
+  return mapped && options.includes(mapped) ? mapped : options[0] ?? apiSubcategory;
+}
+
+const pick = (values: string[], allowed: ReadonlyArray<string>) => values.filter(value => allowed.includes(value));
+
+/** Fills untouched fields from a recognition result. Never overwrites what the traveler typed. */
+export function applyRecognitionToDraft(draft: SpotPostingDraft, rec: SpotRecognition, touched: SpotPostingTouched = {}): SpotPostingDraft {
+  const next = { ...draft };
+  if (!touched.location) {
+    if (rec.municipality) next.municipality = rec.municipality;
+    if (rec.formatted_address) next.address = rec.formatted_address;
+  }
+  if (!touched.name && rec.place_name) next.name = rec.place_name;
+  if (!touched.category && SPOT_POSTING_CATEGORIES.some(c => c.id === rec.suggested_category)) {
+    next.category = rec.suggested_category;
+    next.subcategory = toPostingSubcategory(rec.suggested_category, rec.suggested_subcategory);
+  }
+  if (!touched.details) {
+    next.goodFor = pick(rec.suggested_details.good_for, SPOT_GOOD_FOR.map(item => item.id)).slice(0, 5);
+    next.bestTime = pick(rec.suggested_details.best_time, SPOT_BEST_TIME.map(item => item.id)).slice(0, 4);
+    next.amenities = pick(rec.suggested_details.amenities, SPOT_POSTING_AMENITIES);
+    next.dailyHours = rec.suggested_details.daily_hours ?? '';
+  }
+  return next;
+}
+
+/** Offline starters when the API cannot be reached; each is long enough to satisfy the description minimum. */
+export function fallbackStoryStarters(where: string, category: string): string[] {
+  const place = where || 'this area';
+  const lines: Record<string, string[]> = {
+    eat_drink: [`A local food stop in ${place} worth trying for a hearty meal.`, 'Ask the staff for their best-selling dish and what is fresh today.'],
+    culture_heritage: [`A meaningful place in ${place} with a story worth learning about.`, 'Please dress modestly and keep voices low during services and events.'],
+    stay: [`A comfortable place to stay in ${place} as a base for exploring.`, 'Book ahead on weekends and holidays, and ask about inclusions.'],
+  };
+  return lines[category] ?? [`A scenic spot in ${place} with relaxing views and fresh air.`, 'Best visited in the early morning or late afternoon; bring water and sun protection.'];
+}
+
+/** Appends a starter sentence to the description, avoiding duplicates. */
+export function appendStoryStarter(description: string, starter: string): string {
+  const current = description.trim();
+  if (current.includes(starter)) return description;
+  return current ? `${current} ${starter}` : starter;
+}
+
+/** One clear prompt for the sticky publish bar, or null when the draft is ready. */
+export function postingReadiness(draft: SpotPostingDraft): string | null {
+  const errors = validatePostingStep('review', draft);
+  if (errors.pin) return 'Place the pin on the map';
+  if (errors.name) return 'Add a name for this place';
+  if (errors.description) return 'Tap a story starter or add a short description';
+  if (errors.municipality || errors.address) return 'Add the town and a landmark';
+  const first = Object.values(errors)[0];
+  return first ?? null;
 }
