@@ -60,4 +60,23 @@ describe('Shop v1', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Yes, connect wallet →' }));
     expect(mocks.push).toHaveBeenCalledWith('/wallet/connect?returnTo=%2Fshop%3Ftab%3Dcosmetics');
   });
+
+  it('previews a banner on the traveler passport with their equipped frame kept on (Plan 69)', async () => {
+    const banner = { id: 'banner-capiz', kind: 'banner', name: 'Capiz Heritage', rarity: 'rare', pricePoints: 150, asset: { style: 'gradient', colors: ['#fff', '#ccc'], angle: 90 }, owned: false, equipped: false, buyable: true };
+    const frame = { id: 'frame-bamboo', kind: 'frame', name: 'Bamboo Ring', rarity: 'common', pricePoints: 120, asset: { style: 'ring', colors: ['#95d5b2'], width: 3 }, owned: true, equipped: true, buyable: false };
+    mocks.get.mockImplementation((url: string) => Promise.resolve({ data: { data:
+      url.endsWith('/shop/cosmetics') ? [banner, frame] : url.endsWith('/vouchers') ? [] : url.endsWith('/shop/teasers') ? [] : { owned: [], loadout: { frame_id: 'frame-bamboo' } } } }));
+    render(<ShopPage />);
+    expect(await screen.findByRole('button', { name: /Live animations: On/ })).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: /Capiz Heritage/ }));
+    const dialog = await screen.findByRole('dialog', { name: /Test Traveler/ });
+    expect(dialog.textContent).toContain('Your Passport');
+    const loadout = screen.getByRole('list', { name: 'Preview loadout' });
+    expect(loadout.textContent).toContain('Previewing Banner: Capiz Heritage');
+    expect(loadout.textContent).toContain('Equipped Frame: Bamboo Ring');
+    const motion = screen.getByRole('button', { name: 'Animated' });
+    fireEvent.click(motion);
+    expect(screen.getByRole('button', { name: 'Still' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Buy for 150 points' })).toBeTruthy();
+  });
 });

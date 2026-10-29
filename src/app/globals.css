@@ -920,4 +920,11 @@ img, video {
 @media (prefers-reduced-motion: no-preference) {
   .cosmetic-ring-pulse { animation: cosmetic-ring-pulse 2.8s ease-in-out infinite; }
   @keyframes cosmetic-ring-pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.2); } }
+  .cosmetic-gradient-alive { animation: cosmetic-gradient-drift 8s ease-in-out infinite; }
+  .cosmetic-gradient-alive .cosmetic-mark-float { animation: cosmetic-mark-float 6s ease-in-out infinite; }
 }
+/* Plan 69: motion the traveler asked for (preview, hover, "Live animations") plays regardless. */
+.cosmetic-gradient-live { animation: cosmetic-gradient-drift 8s ease-in-out infinite; }
+.cosmetic-gradient-live .cosmetic-mark-float { animation: cosmetic-mark-float 6s ease-in-out infinite; }
+@keyframes cosmetic-gradient-drift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@keyframes cosmetic-mark-float { 0%,100% { transform: translateY(0); opacity: .1; } 50% { transform: translateY(6px); opacity: .18; } }

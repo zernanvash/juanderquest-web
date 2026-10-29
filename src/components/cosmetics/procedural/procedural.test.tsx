@@ -130,4 +130,52 @@ describe('procedural banner runtime', () => {
     view.unmount();
     expect(cancelFrame).toHaveBeenCalledWith(42);
   });
+
+  // Plan 69: explicit previews animate even when the OS asks for reduced motion.
+  const reducedMedia = (matches: boolean) => vi.spyOn(window, 'matchMedia').mockReturnValue({
+    matches, media: '(prefers-reduced-motion: reduce)', onchange: null, addListener: vi.fn(), removeListener: vi.fn(),
+    addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+  });
+  const sunset = { style: 'procedural', generator: 'sunset', colors: paletteColors.sunset.golden };
+
+  it('live mode animates under reduced motion and paints a first frame at once', () => {
+    const { traces } = mockCanvasContext();
+    const requestFrame = vi.fn(() => 7);
+    vi.stubGlobal('requestAnimationFrame', requestFrame);
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    reducedMedia(true);
+    const dispose = animateProceduralBanner(document.createElement('canvas'), sunset, 9, 'live');
+    expect(traces.some((trace) => trace.length > 0)).toBe(true);
+    expect(requestFrame).toHaveBeenCalled();
+    dispose();
+  });
+
+  it('still mode draws one frame and never schedules animation', () => {
+    const { traces } = mockCanvasContext();
+    const requestFrame = vi.fn(() => 8);
+    vi.stubGlobal('requestAnimationFrame', requestFrame);
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    reducedMedia(false);
+    const dispose = animateProceduralBanner(document.createElement('canvas'), sunset, 9, 'still');
+    expect(traces.some((trace) => trace.length > 0)).toBe(true);
+    expect(requestFrame).not.toHaveBeenCalled();
+    dispose();
+  });
+
+  it('isReducedMotion: only auto follows the OS setting', async () => {
+    const { isReducedMotion } = await import('./runtime');
+    expect(isReducedMotion('auto', true)).toBe(true);
+    expect(isReducedMotion('auto', false)).toBe(false);
+    expect(isReducedMotion('live', true)).toBe(false);
+    expect(isReducedMotion('still', false)).toBe(true);
+  });
+
+  it('gradient banners drift unless still, with the scrim the caller asks for', () => {
+    const { container, rerender } = render(<ProfileBanner asset={{ style: 'gradient', colors: ['#000', '#fff'] }} motion="live" scrim="none" />);
+    const banner = container.querySelector('[aria-label="Profile banner"]')!;
+    expect(banner.className).toContain('cosmetic-gradient-live');
+    expect(banner.querySelector('[class*="from-black"]')).toBeNull();
+    rerender(<ProfileBanner asset={{ style: 'gradient', colors: ['#000', '#fff'] }} motion="still" />);
+    expect(container.querySelector('[aria-label="Profile banner"]')!.className).not.toContain('cosmetic-gradient');
+  });
 });
