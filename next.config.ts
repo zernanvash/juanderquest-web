@@ -78,7 +78,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/leaderboard", destination: "/plaza", permanent: true },
       { source: "/download/juanderquest-latest.apk", destination: "/api/v1/app/download", permanent: false },
-      { source: "/spots/new", destination: "/map?add=1", permanent: false },
+      { source: "/spots/new", destination: "/map/add-spot", permanent: false },
     ];
   },
   async rewrites() {

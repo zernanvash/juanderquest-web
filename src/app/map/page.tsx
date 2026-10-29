@@ -11,8 +11,8 @@ import { fetchWithCache } from '@/lib/cache';
 import { useAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { SpotPostingWizard } from '@/components/SpotPostingWizard';
 import { PinAimCard, PinReticle } from '@/components/PinAimCard';
+import { addSpotHref, saveLastMapCenter, saveSpotHandoff } from '@/lib/spot-location-handoff';
 import { TripPanel } from '@/components/map/TripPanel';
 import type { MapOverlay } from '@/components/map/VectorMapCanvas';
 import type { SpotPostingPin, SpotRecognition } from '@/lib/spot-posting';
@@ -239,18 +239,15 @@ export default function QuestMapPage() {
   const [tripOverlay, setTripOverlay] = useState<MapOverlay | null>(null);
   const followUserRef = useRef(false);
 
-  // Map-first destination posting: armed pin placement, draft pin and wizard.
+  // Map-first destination posting: aim the crosshair here, then compose on /map/add-spot (Plan 70).
   const [pinPlacementActive, setPinPlacementActive] = useState(false);
-  const [draftPin, setDraftPin] = useState<SpotPostingPin | null>(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardMinimized, setWizardMinimized] = useState(false);
   const [pinHelpOpen, setPinHelpOpen] = useState(false);
-  // Plan 66: the crosshair aims at the map center; the aim card recognizes it before the composer opens.
+  // Plan 66: the crosshair aims at the map center; the aim card recognizes it before handing off.
   const [aimCenter, setAimCenter] = useState<SpotPostingPin | null>(null);
-  const [aimRecognition, setAimRecognition] = useState<SpotRecognition | null>(null);
+  // Vector map centre (the Leaflet map is read directly); Plan 70.
+  const vectorCenterRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
   const pinPlacementRef = useRef(false);
   const pinPlacementCommitRef = useRef<((lat: number, lng: number) => void) | null>(null);
-  const draftMarkerRef = useRef<LeafletMarker | null>(null);
 
   useEffect(() => {
     pinPlacementRef.current = pinPlacementActive;
@@ -431,7 +428,6 @@ export default function QuestMapPage() {
       if (e.key === 'Escape') {
         if (pinPlacementActive) {
           setPinPlacementActive(false);
-          if (wizardOpen) setWizardMinimized(false);
         } else if (activeArea) {
           handleClearActiveArea();
         }
@@ -439,7 +435,7 @@ export default function QuestMapPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pinPlacementActive, wizardOpen, activeArea, handleClearActiveArea]);
+  }, [pinPlacementActive, activeArea, handleClearActiveArea]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -727,24 +723,37 @@ export default function QuestMapPage() {
     [handleSelectItem]
   );
 
-  const handlePlaceDestinationPin = useCallback((lat: number, lng: number) => {
-    setDraftPin({ lat, lng });
-    setWizardOpen(true);
-    setWizardMinimized(false);
+  // Plan 70: hand the exact pin (and what the aim card already recognized) to the studio page.
+  const handlePlaceDestinationPin = useCallback((lat: number, lng: number, recognition: SpotRecognition | null = null) => {
     setPinPlacementActive(false);
-  }, []);
+    const map = mapInstanceRef.current || retainedMap;
+    const zoom = Math.max(15, Math.round(map?.getZoom?.() ?? vectorCenterRef.current?.zoom ?? 17));
+    saveSpotHandoff({ pin: { lat, lng, zoom }, source: 'map-crosshair', recognition });
+    saveLastMapCenter({ lat, lng, zoom });
+    router.push(addSpotHref({ lat, lng, zoom }));
+  }, [router]);
 
   useEffect(() => {
     if (!pinPlacementActive) return;
     const map = mapInstanceRef.current || retainedMap;
-    if (!map) return;
-    const center = map.getCenter();
+    const center = map ? map.getCenter() : vectorCenterRef.current;
+    if (!center) return;
     setAimCenter({ lat: center.lat, lng: center.lng });
   }, [pinPlacementActive, mapViewportNonce]);
 
+  // Plan 70: remember where the traveler was looking; /map/add-spot falls back to it.
+  useEffect(() => {
+    if (!mapViewportNonce) return;
+    const timer = window.setTimeout(() => {
+      const map = mapInstanceRef.current || retainedMap;
+      const center = map?.getCenter?.();
+      if (center) saveLastMapCenter({ lat: center.lat, lng: center.lng, zoom: map!.getZoom() });
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [mapViewportNonce]);
+
   const handleContinueWithPlace = useCallback((pin: SpotPostingPin, recognition: SpotRecognition | null) => {
-    setAimRecognition(recognition);
-    handlePlaceDestinationPin(pin.lat, pin.lng);
+    handlePlaceDestinationPin(pin.lat, pin.lng, recognition);
   }, [handlePlaceDestinationPin]);
 
   const handlePlaceAtCenter = useCallback(() => {
@@ -760,50 +769,7 @@ export default function QuestMapPage() {
 
   const handleCancelPinPlacement = useCallback(() => {
     setPinPlacementActive(false);
-    if (wizardOpen) setWizardMinimized(false);
-  }, [wizardOpen]);
-
-  const handleRequestMovePin = useCallback(() => {
-    setWizardMinimized(true);
-    setPinPlacementActive(true);
   }, []);
-
-  // Draft destination pin: draggable marker shown while the wizard is active.
-  useEffect(() => {
-    let disposed = false;
-    (async () => {
-      const map = mapInstanceRef.current || retainedMap;
-      const L = (await import('leaflet')).default;
-      if (disposed || !map) return;
-      if (draftMarkerRef.current) {
-        draftMarkerRef.current.remove();
-        draftMarkerRef.current = null;
-      }
-      if (!draftPin) return;
-      const marker = L.marker([draftPin.lat, draftPin.lng], {
-        draggable: true,
-        keyboard: false,
-        icon: L.divIcon({
-          className: 'leaflet-custom-marker jdq-draft-pin',
-          html: '<div style="position:relative;width:38px;height:38px"><div style="position:absolute;inset:0;border:3px dashed #FFB703;border-radius:9999px;background:rgba(255,183,3,0.12);box-shadow:0 0 0 3px rgba(255,183,3,0.2)"></div><div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;line-height:1">📍</div></div>',
-          iconSize: [38, 38],
-          iconAnchor: [19, 32],
-        }),
-      }).addTo(map);
-      marker.on('dragend', () => {
-        const pos = marker.getLatLng();
-        setDraftPin({ lat: pos.lat, lng: pos.lng });
-      });
-      draftMarkerRef.current = marker;
-    })();
-    return () => {
-      disposed = true;
-      if (draftMarkerRef.current) {
-        draftMarkerRef.current.remove();
-        draftMarkerRef.current = null;
-      }
-    };
-  }, [draftPin]);
 
   const markerCandidates = useMemo(() => {
     const items: Array<{ type: 'spot' | 'quest'; data: SpotModel | QuestModel }> = [];
@@ -1241,13 +1207,13 @@ export default function QuestMapPage() {
                 onSelectSpot={(spot) => handleSelectSpot(spot)}
                 onClearArea={handleClearActiveArea}
                 pinPlacementActive={pinPlacementActive}
-                onDropPin={(pin) => {
-                  setDraftPin(pin);
-                  setPinPlacementActive(false);
-                  setWizardOpen(true);
-                  setWizardMinimized(false);
+                onDropPin={(pin) => handlePlaceDestinationPin(pin.lat, pin.lng)}
+                draftPin={null}
+                onCenterChange={(center) => {
+                  vectorCenterRef.current = center;
+                  saveLastMapCenter(center);
+                  if (pinPlacementRef.current) setAimCenter({ lat: center.lat, lng: center.lng });
                 }}
-                draftPin={draftPin}
                 userLocation={userLocation}
               />
             </div>
@@ -1337,14 +1303,8 @@ export default function QuestMapPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (pinPlacementActive) {
-                      handleCancelPinPlacement();
-                    } else if (wizardOpen && !wizardMinimized) {
-                      handleRequestMovePin();
-                    } else {
-                      setPinPlacementActive(true);
-                      if (wizardOpen) setWizardMinimized(true);
-                    }
+                    if (pinPlacementActive) handleCancelPinPlacement();
+                    else setPinPlacementActive(true);
                   }}
                   title={pinPlacementActive ? 'Cancel pin placement' : 'Pin a destination on the map'}
                   aria-label={pinPlacementActive ? 'Cancel pin placement' : 'Pin a new destination on the map'}
@@ -1783,27 +1743,6 @@ export default function QuestMapPage() {
                 Retry tiles
               </button>
             </div>
-          )}
-
-          {wizardOpen && (
-            <SpotPostingWizard
-              pin={draftPin}
-              initialRecognition={aimRecognition}
-              minimized={wizardMinimized}
-              onClose={() => {
-                setWizardOpen(false);
-                setWizardMinimized(false);
-                setDraftPin(null);
-                setAimRecognition(null);
-              }}
-              onRequestMovePin={handleRequestMovePin}
-              onPublished={(spot) => {
-                setSpots((previous) =>
-                  previous.some((s) => s.id === spot.id) ? previous : [spot, ...previous]
-                );
-                handleSelectSpot(spot);
-              }}
-            />
           )}
 
           <SignInSheet

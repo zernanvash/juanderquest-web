@@ -31,6 +31,8 @@ export interface VectorMapCanvasProps {
   pinPlacementActive?: boolean;
   onDropPin?: (pin: SpotPostingPin) => void;
   draftPin?: SpotPostingPin | null;
+  /** Map centre after each move (Plan 70: the posting crosshair aims here). */
+  onCenterChange?: (center: { lat: number; lng: number; zoom: number }) => void;
   // User location
   userLocation?: { lat: number; lng: number; accuracy: number } | null;
   /** Trip or trail drawn on top of the map: a route line and numbered points (Plan 64). */
@@ -79,6 +81,7 @@ export function VectorMapCanvas({
   pinPlacementActive = false,
   onDropPin,
   draftPin,
+  onCenterChange,
   userLocation,
   overlay,
 }: VectorMapCanvasProps) {
@@ -106,6 +109,7 @@ export function VectorMapCanvas({
   const onAreaContentLoadedRef = useLatestRef(onAreaContentLoaded);
   const pinPlacementActiveRef = useLatestRef(pinPlacementActive);
   const onDropPinRef = useLatestRef(onDropPin);
+  const onCenterChangeRef = useLatestRef(onCenterChange);
 
   const [loadingShape, setLoadingShape] = useState(false);
   const moveEndTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -475,12 +479,13 @@ export function VectorMapCanvas({
           });
           if (features.length > 0) return;
 
-          // Spot drop pin if placement mode is active
-          if (pinPlacementActiveRef.current && onDropPinRef.current) {
-            onDropPinRef.current({
-              lat: Number(e.lngLat.lat.toFixed(6)),
-              lng: Number(e.lngLat.lng.toFixed(6)),
-            });
+          // Placement mode: a click moves the crosshair there (the aim card then recognizes it).
+          if (pinPlacementActiveRef.current && (onCenterChangeRef.current || onDropPinRef.current)) {
+            if (onCenterChangeRef.current) {
+              map.easeTo({ center: e.lngLat, duration: prefersReducedMotion() ? 0 : 400, essential: true });
+            } else {
+              onDropPinRef.current?.({ lat: Number(e.lngLat.lat.toFixed(6)), lng: Number(e.lngLat.lng.toFixed(6)) });
+            }
             return;
           }
 
@@ -601,7 +606,14 @@ export function VectorMapCanvas({
     // Trigger immediately on load
     updatePlaces();
 
+    const reportCenter = () => {
+      const c = map.getCenter();
+      onCenterChangeRef.current?.({ lat: Number(c.lat.toFixed(6)), lng: Number(c.lng.toFixed(6)), zoom: map.getZoom() });
+    };
+    reportCenter();
+
     const handleMoveEnd = () => {
+      reportCenter();
       if (moveEndTimerRef.current) {
         clearTimeout(moveEndTimerRef.current);
       }

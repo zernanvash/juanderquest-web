@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ExternalLink, MapPin, Maximize2, Compass } from 'lucide-react';
 import { createBaseTileLayer } from '@/lib/map-tiles';
 import { createSpotPinHtml, createQuestPinHtml, createDestinationPinHtml } from '@/lib/map-icons';
+import { PinReticle } from '@/components/PinAimCard';
 
 export interface MiniMapPreviewProps {
   lat: number;
@@ -19,7 +20,9 @@ export interface MiniMapPreviewProps {
   className?: string;
   pinType?: 'spot' | 'quest' | 'destination';
   interactive?: boolean;
-  onLocationChange?: (lat: number, lng: number) => void;
+  onLocationChange?: (lat: number, lng: number, zoom?: number) => void;
+  /** Plan 70: the pin stays in the centre and the map pans under it (needs interactive). */
+  reticleMode?: boolean;
   hideBadge?: boolean;
   badgeLabel?: string;
   showMarker?: boolean;
@@ -42,6 +45,7 @@ export function MiniMapPreview({
   hideBadge = false,
   badgeLabel,
   showMarker = true,
+  reticleMode = false,
 }: MiniMapPreviewProps) {
   const router = useRouter();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -125,12 +129,21 @@ export function MiniMapPreview({
           iconAnchor: [18, 44],
         });
 
-        const marker = showMarker ? L.marker([viewRef.current.lat, viewRef.current.lng], {
+        const marker = showMarker && !(interactive && reticleMode) ? L.marker([viewRef.current.lat, viewRef.current.lng], {
           icon: customIcon,
           draggable: Boolean(interactive && onLocationChangeRef.current),
         }).addTo(map) : null;
 
-        if (interactive && onLocationChangeRef.current) {
+        if (interactive && reticleMode) {
+          // Report the centre after each pan/zoom; programmatic moves to the same point are ignored.
+          map.on('moveend', () => {
+            const c = map.getCenter();
+            const v = viewRef.current;
+            if (Math.abs(c.lat - v.lat) < 1e-6 && Math.abs(c.lng - v.lng) < 1e-6 && map.getZoom() === v.zoom) return;
+            viewRef.current = { lat: c.lat, lng: c.lng, zoom: map.getZoom() };
+            onLocationChangeRef.current?.(c.lat, c.lng, map.getZoom());
+          });
+        } else if (interactive && onLocationChangeRef.current) {
           marker?.on('dragend', (ev: any) => {
             const pos = ev.target.getLatLng();
             onLocationChangeRef.current?.(pos.lat, pos.lng);
@@ -168,13 +181,17 @@ export function MiniMapPreview({
         markerRef.current = null;
       }
     };
-  }, [mounted, interactive, showMarker, pinType]);
+  }, [mounted, interactive, showMarker, pinType, reticleMode]);
 
   // Update center & marker position if coordinates change dynamically
   useEffect(() => {
-    if (mapInstanceRef.current) {
+    const map = mapInstanceRef.current;
+    if (map) {
       markerRef.current?.setLatLng([validLat, validLng]);
-      mapInstanceRef.current.setView([validLat, validLng], zoom, { animate: true });
+      const c = map.getCenter();
+      // Skip when the map is already there (e.g. the change came from panning it).
+      if (Math.abs(c.lat - validLat) < 1e-6 && Math.abs(c.lng - validLng) < 1e-6 && map.getZoom() === zoom) return;
+      map.setView([validLat, validLng], zoom, { animate: true });
     }
   }, [validLat, validLng, zoom]);
 
@@ -191,6 +208,8 @@ export function MiniMapPreview({
     >
       {/* Underlying Leaflet Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
+
+      {interactive && reticleMode && !loading && <PinReticle />}
 
       {/* Loading state skeleton */}
       {loading && (
