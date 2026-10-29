@@ -9,3 +9,8 @@ export const isTravelerSession = (user: { seedId: string; role?: string } | null
     user.seedId.startsWith('usr-') ||
     user.role === 'user'
   )));
+
+// Plan 67: a wallet is needed only for shop purchases and on-chain actions,
+// never to sign in or play.
+export const hasConnectedWallet = (user: { walletAddress?: string | null } | null | undefined): boolean =>
+  Boolean(user && typeof user.walletAddress === 'string' && user.walletAddress.trim().length > 0);

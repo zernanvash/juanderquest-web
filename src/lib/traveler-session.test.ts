@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTravelerSession } from './traveler-session';
+import { hasConnectedWallet, isTravelerSession } from './traveler-session';
 
 describe('traveler session gate', () => {
   it('accepts wallet and independently provisioned guest identities', () => {
@@ -21,5 +21,11 @@ describe('traveler session gate', () => {
     expect(isTravelerSession({ seedId: 'admin-1', role: 'admin' })).toBe(false);
     expect(isTravelerSession({ seedId: 'qa-1', role: 'qa' })).toBe(false);
     expect(isTravelerSession({ seedId: 'user-1' })).toBe(false);
+  });
+  it('separates a signed-in account from a linked wallet (Plan 67)', () => {
+    expect(hasConnectedWallet({ walletAddress: '0xAbC0000000000000000000000000000000000001' })).toBe(true);
+    expect(hasConnectedWallet({ walletAddress: null })).toBe(false);
+    expect(hasConnectedWallet({ walletAddress: '  ' })).toBe(false);
+    expect(hasConnectedWallet(null)).toBe(false);
   });
 });

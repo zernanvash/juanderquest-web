@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { Wallet, ShieldAlert } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
+import { useAuth, type WalletSignInResult } from '@/lib/auth';
+
+const seedResult = (ok: boolean): WalletSignInResult => (ok ? { status: 'authenticated' } : { status: 'failed' });
 
 /**
  * Local-development wallet sign-in.
@@ -23,7 +25,7 @@ export function DevWalletLogin({
 }: {
   mode: 'local' | 'signature' | null;
   rememberMe: boolean;
-  onFinish: (ok: boolean) => void;
+  onFinish: (result: WalletSignInResult) => void;
 }) {
   const { isLoading, loginWithLocalWallet, loginWithSeed } = useAuth();
   const [identifier, setIdentifier] = React.useState('');
@@ -108,7 +110,7 @@ export function DevWalletLogin({
         </button>
         <button
           type="button"
-          onClick={async () => onFinish(await loginWithSeed('user-1'))}
+          onClick={async () => onFinish(seedResult(await loginWithSeed('user-1')))}
           disabled={isLoading}
           className="min-h-11 rounded-xl border border-amber-300 bg-white px-3 text-xs font-bold text-[#582F0E] disabled:opacity-60"
         >
@@ -116,7 +118,7 @@ export function DevWalletLogin({
         </button>
         <button
           type="button"
-          onClick={async () => onFinish(await loginWithSeed('admin-1'))}
+          onClick={async () => onFinish(seedResult(await loginWithSeed('admin-1')))}
           disabled={isLoading}
           className="min-h-11 rounded-xl border border-amber-300 bg-white px-3 text-xs font-bold text-[#582F0E] disabled:opacity-60"
         >

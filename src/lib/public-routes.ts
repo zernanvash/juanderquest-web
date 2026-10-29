@@ -6,7 +6,6 @@
  * - /quests/:id/play
  * - /profile (exact self profile)
  * - /settings
- * - /shop (redemption checkout actions)
  * - /creator
  * - /economy-lab
  */
@@ -19,6 +18,8 @@ const EXACT_PUBLIC_PATHS = new Set([
   '/plaza',
   '/leaderboard',
   '/choice',
+  // Plan 67: anyone may browse the shop; purchases ask for sign-in and a wallet.
+  '/shop',
   '/trail',
   '/about',
   '/search',

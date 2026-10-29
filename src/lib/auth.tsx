@@ -9,6 +9,21 @@ import { useRouter } from 'next/navigation';
 import { api, ADMIN_URL, isUnauthorizedError, normalizeUser, normalizeWallet, UserModel, WalletModel } from './api';
 import { walletRewardFromBalanceChange } from './wallet-reward';
 
+export type WalletSignInResult =
+  | { status: 'authenticated' }
+  | { status: 'requires_account_completion'; walletAddress: string; grant: string; existingDisplayName: string | null }
+  | { status: 'failed'; error?: string };
+
+export type CompleteWalletAccountInput = {
+  grant: string; walletAddress: string; email: string; password: string;
+  displayName?: string; ageEligibilityDeclared: boolean; termsAccepted: boolean; rememberMe?: boolean;
+};
+
+type AuthResult = { success: boolean; error?: string; code?: string };
+
+const apiErrorOf = (err: unknown): { code?: string; message?: string } =>
+  (isAxiosError<{ error?: { code?: string; message?: string } }>(err) ? err.response?.data?.error : undefined) ?? {};
+
 interface AuthContextType {
   user: UserModel | null;
   token: string | null;
@@ -22,11 +37,13 @@ interface AuthContextType {
   loginWithEmail: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   registerWithEmail: (data: { email: string; password: string; display_name: string; age_eligibility_declared: boolean; terms_accepted: boolean }) => Promise<{ success: boolean; dev_code?: string; error?: string }>;
   verifyEmailOtp: (email: string, code: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: (credential: string, rememberMe?: boolean) => Promise<boolean>;
+  loginWithGoogle: (credential: string, options?: { rememberMe?: boolean; acceptTerms?: boolean }) => Promise<AuthResult>;
   loginWithSeed: (seedId: string) => Promise<boolean>;
   loginWithSimulatedWallet: (username: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; error?: string }>;
-  loginWithWallet: (address: string, signature: string, rememberMe: boolean) => Promise<boolean>;
-  loginWithLocalWallet: (address: string, rememberMe: boolean) => Promise<boolean>;
+  loginWithWallet: (address: string, signature: string, rememberMe: boolean) => Promise<WalletSignInResult>;
+  loginWithLocalWallet: (address: string, rememberMe: boolean) => Promise<WalletSignInResult>;
+  completeWalletRegistration: (input: CompleteWalletAccountInput) => Promise<AuthResult>;
+  bindWallet: (address: string, signature: string) => Promise<AuthResult>;
   loginAsGuest: (rememberMe: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -294,25 +311,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithGoogle = async (credential: string, rememberMe = true) => {
+  const loginWithGoogle = async (credential: string, options: { rememberMe?: boolean; acceptTerms?: boolean } = {}): Promise<AuthResult> => {
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/google', { credential, remember_me: rememberMe });
+      const res = await api.post('/auth/google', {
+        credential,
+        remember_me: options.rememberMe ?? true,
+        ...(options.acceptTerms ? { terms_accepted: true, age_eligibility_declared: true } : {}),
+      });
       if (res.data?.success) {
-        const normalized = normalizeUser(res.data.data.user);
-        clearStoredSession();
-        invalidateCache();
-        setToken('cookie-session');
-        setUser(normalized);
-        setSessionUnavailable(false);
-        return true;
+        storeSession(res.data.data.user);
+        return { success: true };
       }
+      return { success: false, error: 'Google sign-in failed.' };
     } catch (err) {
-      console.error('Google sign-in error:', err);
+      const apiError = apiErrorOf(err);
+      return { success: false, code: apiError.code, error: apiError.message || 'Google sign-in failed. Please try again.' };
     } finally {
       setIsLoading(false);
     }
-    return false;
   };
 
   const loginWithSeed = async (seedId: string): Promise<boolean> => {
@@ -361,8 +378,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: 'Could not sign in with the simulated wallet. Please try again.' };
   };
 
-  const storeWalletSession = (data: { token: string; user: Parameters<typeof normalizeUser>[0] }) => {
-    const user = normalizeUser(data.user);
+  const storeSession = (rawUser: Parameters<typeof normalizeUser>[0]) => {
+    const user = normalizeUser(rawUser);
     clearStoredSession();
     invalidateCache();
     setToken('cookie-session');
@@ -370,36 +387,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessionUnavailable(false);
   };
 
-  const loginWithWallet = async (address: string, signature: string, rememberMe: boolean) => {
+  // Plan 67: a wallet signs straight in only when its account already has an email
+  // and password; otherwise the login page asks for them before any session exists.
+  const walletSignIn = async (path: string, body: Record<string, unknown>): Promise<WalletSignInResult> => {
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/wallet/login', { address, signature, remember_me: rememberMe });
-      if (res.data?.success) {
-        storeWalletSession(res.data.data);
-        return true;
+      const res = await api.post(path, body);
+      const data = res.data?.data;
+      if (!res.data?.success) return { status: 'failed' };
+      if (data?.account_completion_required) {
+        return {
+          status: 'requires_account_completion',
+          walletAddress: String(data.wallet_address),
+          grant: String(data.wallet_onboarding_grant),
+          existingDisplayName: data.existing_display_name ?? null,
+        };
       }
-    } catch (e) {
-      console.error('Wallet login error', e);
+      storeSession(data.user);
+      return { status: 'authenticated' };
+    } catch (err) {
+      return { status: 'failed', error: apiErrorOf(err).message };
     } finally {
       setIsLoading(false);
     }
-    return false;
   };
 
-  const loginWithLocalWallet = async (address: string, rememberMe: boolean) => {
+  const loginWithWallet = (address: string, signature: string, rememberMe: boolean) =>
+    walletSignIn('/auth/wallet/login', { address, signature, remember_me: rememberMe });
+
+  const loginWithLocalWallet = (address: string, rememberMe: boolean) =>
+    walletSignIn('/auth/wallet/local-login', { address, remember_me: rememberMe });
+
+  const completeWalletRegistration = async (input: CompleteWalletAccountInput): Promise<AuthResult> => {
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/wallet/local-login', { address, remember_me: rememberMe });
-      if (res.data?.success) {
-        storeWalletSession(res.data.data);
-        return true;
-      }
-    } catch {
-      // Expected validation/auth failures are rendered by the login page.
+      const res = await api.post('/auth/wallet/complete-registration', {
+        wallet_onboarding_grant: input.grant,
+        wallet_address: input.walletAddress,
+        email: input.email,
+        password: input.password,
+        ...(input.displayName?.trim() ? { display_name: input.displayName.trim() } : {}),
+        age_eligibility_declared: input.ageEligibilityDeclared,
+        terms_accepted: input.termsAccepted,
+        remember_me: input.rememberMe ?? true,
+      });
+      if (!res.data?.success) return { success: false, error: 'Could not finish your account.' };
+      storeSession(res.data.data.user);
+      return { success: true };
+    } catch (err) {
+      const apiError = apiErrorOf(err);
+      return { success: false, code: apiError.code, error: apiError.message || 'Could not finish your account. Please try again.' };
     } finally {
       setIsLoading(false);
     }
-    return false;
+  };
+
+  const bindWallet = async (address: string, signature: string): Promise<AuthResult> => {
+    try {
+      const res = await api.post('/auth/wallet/bind', { address, signature });
+      if (!res.data?.success) return { success: false, error: 'Could not link this wallet.' };
+      setUser(normalizeUser(res.data.data.user));
+      invalidateCache();
+      return { success: true };
+    } catch (err) {
+      const apiError = apiErrorOf(err);
+      return { success: false, code: apiError.code, error: apiError.message || 'Could not link this wallet. Please try again.' };
+    }
   };
 
   const logout = async () => {
@@ -451,6 +504,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithSimulatedWallet,
         loginWithWallet,
         loginWithLocalWallet,
+        completeWalletRegistration,
+        bindWallet,
         loginAsGuest,
         logout,
         refreshProfile,

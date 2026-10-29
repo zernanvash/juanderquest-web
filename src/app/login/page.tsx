@@ -4,23 +4,16 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Wallet, ShieldCheck, Mail, Lock, User, KeyRound, Sparkles, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { shouldStayInTravelerApp, useAuth } from '@/lib/auth';
+import { shouldStayInTravelerApp, useAuth, type WalletSignInResult } from '@/lib/auth';
 import { safeReturnPath } from '@/lib/routes';
 import { isTravelerSession } from '@/lib/traveler-session';
+import { shortAddress, signWalletChallenge } from '@/lib/evm-wallet';
 import { DevWalletLogin } from '@/components/DevWalletLogin';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
-type AuthTab = 'signin' | 'register' | 'forgot' | 'verify_otp';
+type AuthTab = 'signin' | 'register' | 'forgot' | 'verify_otp' | 'complete_wallet';
 type WalletMode = 'local' | 'signature';
-
-type EthereumProvider = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-};
-
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
-}
+type PendingWallet = { walletAddress: string; grant: string; existingDisplayName: string | null };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,10 +24,15 @@ export default function LoginPage() {
     registerWithEmail,
     verifyEmailOtp,
     loginWithWallet,
+    loginWithGoogle,
+    completeWalletRegistration,
   } = useAuth();
 
   const [activeTab, setActiveTab] = React.useState<AuthTab>('signin');
   const [mode, setMode] = React.useState<WalletMode | null>(null);
+  const [google, setGoogle] = React.useState<{ clientId: string | null; dev: boolean }>({ clientId: null, dev: false });
+  const [pendingWallet, setPendingWallet] = React.useState<PendingWallet | null>(null);
+  const [pendingGoogle, setPendingGoogle] = React.useState<string | null>(null);
   const [rememberMe, setRememberMe] = React.useState(true);
 
   // Form states
@@ -65,6 +63,7 @@ export default function LoginPage() {
       .get('/auth/wallet/config')
       .then((response) => {
         setMode(response.data.data.mode);
+        setGoogle({ clientId: response.data.data.google_client_id ?? null, dev: response.data.data.google_dev_credentials === true });
       })
       .catch(() => setError('Could not load the authentication configuration.'));
   }, []);
@@ -190,54 +189,70 @@ export default function LoginPage() {
     }
   };
 
-  // 5. Connect EVM Wallet
+  // 5. Wallet sign-in. Plan 67: a wallet without an email + password account must
+  // finish the account here before any session exists (sign-up and sign-in alike).
+  const handleWalletResult = (result: WalletSignInResult) => {
+    if (result.status === 'authenticated') return finish(true);
+    if (result.status === 'failed') return setError(result.error || 'Authentication failed. Please check your credentials.');
+    setPendingWallet(result);
+    if (result.existingDisplayName && !displayName) setDisplayName(result.existingDisplayName);
+    setPassword('');
+    setStatusMessage('');
+    setError('');
+    setActiveTab('complete_wallet');
+  };
+
   const connectWallet = async () => {
     setError('');
     setStatusMessage('');
     try {
-      if (!window.ethereum) {
-        setError('No injected EVM wallet (MetaMask, Coinbase, Brave, etc.) was found.');
-        return;
-      }
-      const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
-      const walletAddress = accounts[0];
-      if (!walletAddress) throw new Error('No wallet account selected');
-      
-      const challenge = await api.post('/auth/wallet/challenge', { address: walletAddress });
-      if (!challenge.data?.success || !challenge.data?.data?.message) {
-        throw new Error(challenge.data?.error?.message || 'Failed to request challenge nonce from server.');
-      }
-      const message = challenge.data.data.message as string;
-      
-      // Request signature with standard params: [message, address] (some wallets expect hex-encoded message or direct string)
-      let signature: string;
-      try {
-        signature = (await window.ethereum.request({
-          method: 'personal_sign',
-          params: [message, walletAddress],
-        })) as string;
-      } catch (signErr: any) {
-        // Fallback for wallets that strictly require hex-encoded UTF-8 messages for personal_sign
-        if (signErr?.code === 4001 || signErr?.message?.includes('User rejected')) {
-          throw new Error('Signature request was rejected in your wallet.');
-        }
-        const hexMessage = '0x' + Array.from(new TextEncoder().encode(message)).map(b => b.toString(16).padStart(2, '0')).join('');
-        signature = (await window.ethereum.request({
-          method: 'personal_sign',
-          params: [hexMessage, walletAddress],
-        })) as string;
-      }
-
-      const ok = await loginWithWallet(walletAddress, signature, rememberMe);
-      finish(ok);
+      const { address, signature } = await signWalletChallenge();
+      handleWalletResult(await loginWithWallet(address, signature, rememberMe));
     } catch (err: any) {
-      console.error('Wallet connection error:', err);
-      if (err?.code === 4001 || err?.message?.includes('User rejected')) {
-        setError('Wallet connection or signature was rejected.');
-      } else {
-        setError(err?.response?.data?.error?.message || err?.message || 'The wallet connection was rejected or could not be completed.');
-      }
+      setError(err?.response?.data?.error?.message || err?.message || 'The wallet connection was rejected or could not be completed.');
     }
+  };
+
+  const handleCompleteWallet = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingWallet) return;
+    setError('');
+    if (!ageDeclared || !termsAccepted) {
+      setError('Confirm the age requirement and accept the terms to finish your account.');
+      return;
+    }
+    const res = await completeWalletRegistration({
+      grant: pendingWallet.grant,
+      walletAddress: pendingWallet.walletAddress,
+      email,
+      password,
+      displayName,
+      ageEligibilityDeclared: true,
+      termsAccepted: true,
+      rememberMe,
+    });
+    if (res.success) return finish(true);
+    if (res.code === 'INVALID_ONBOARDING_GRANT' || res.code === 'WALLET_ACCOUNT_CHANGED') {
+      setPendingWallet(null);
+      setActiveTab('signin');
+    }
+    setError(res.error || 'Could not finish your account.');
+  };
+
+  // 6. Google. A first Google sign-in creates an account, so it needs the same two declarations.
+  const handleGoogle = async (credential: string) => {
+    setError('');
+    setStatusMessage('');
+    const accepted = ageDeclared && termsAccepted;
+    const res = await loginWithGoogle(credential, { rememberMe, acceptTerms: accepted });
+    if (res.success) return finish(true);
+    if (res.code === 'TERMS_REQUIRED') {
+      setPendingGoogle(credential);
+      setActiveTab('register');
+      setError('New to JuanDerQuest? Tick both boxes below, then tap "Create account with Google".');
+      return;
+    }
+    setError(res.error || 'Google sign-in failed.');
   };
 
   return (
@@ -256,7 +271,7 @@ export default function LoginPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex rounded-xl bg-neutral-100 p-1 border border-neutral-200">
+        {activeTab !== 'complete_wallet' && <div className="flex rounded-xl bg-neutral-100 p-1 border border-neutral-200">
           <button
             type="button"
             onClick={() => {
@@ -283,7 +298,7 @@ export default function LoginPage() {
           >
             Create Account
           </button>
-        </div>
+        </div>}
 
         {devCodeBanner && (
           <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between text-xs text-amber-900 font-bold">
@@ -439,6 +454,71 @@ export default function LoginPage() {
             >
               {isLoading ? 'Creating account…' : 'Create Traveler Account'}
             </button>
+            {pendingGoogle && (
+              <button
+                type="button"
+                disabled={isLoading || !ageDeclared || !termsAccepted}
+                onClick={() => void handleGoogle(pendingGoogle)}
+                className="w-full rounded-xl border border-neutral-300 bg-white py-3 px-5 text-sm font-extrabold text-neutral-800 shadow-xs hover:bg-neutral-50 disabled:opacity-60"
+              >
+                Create account with Google
+              </button>
+            )}
+          </form>
+        )}
+
+        {/* --- COMPLETE WALLET ACCOUNT (Plan 67) --- */}
+        {activeTab === 'complete_wallet' && pendingWallet && (
+          <form onSubmit={handleCompleteWallet} className="space-y-4" aria-labelledby="complete-wallet-title">
+            <div className="space-y-2 text-center">
+              <h2 id="complete-wallet-title" className="text-base font-black text-neutral-900">Complete your account</h2>
+              <p className="text-xs text-neutral-600">
+                Add an email and password so you can always get back in, even without your wallet.
+              </p>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 font-mono text-xs font-bold text-emerald-900 ring-1 ring-emerald-200">
+                <Wallet className="w-3.5 h-3.5" aria-hidden="true" />
+                {shortAddress(pendingWallet.walletAddress)}
+                <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Verified</span>
+              </span>
+            </div>
+            <div>
+              <label htmlFor="wallet-display-name" className="block text-xs font-bold text-neutral-700 mb-1">Display Name</label>
+              <input id="wallet-display-name" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Juan Dela Cruz" required minLength={2}
+                className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" />
+            </div>
+            <div>
+              <label htmlFor="wallet-email" className="block text-xs font-bold text-neutral-700 mb-1">Email Address</label>
+              <input id="wallet-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="traveler@example.com" required autoComplete="email"
+                className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" />
+            </div>
+            <div>
+              <label htmlFor="wallet-password" className="block text-xs font-bold text-neutral-700 mb-1">Password</label>
+              <input id="wallet-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters" required minLength={8} autoComplete="new-password"
+                className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600" />
+              <p className="mt-1 text-[11px] text-neutral-500">Already have an account with this email? Enter its password to link this wallet to it.</p>
+            </div>
+            <div className="space-y-2 pt-1 text-xs text-neutral-600">
+              <label className="flex items-start gap-2 cursor-pointer font-medium">
+                <input type="checkbox" checked={ageDeclared} onChange={(e) => setAgeDeclared(e.target.checked)} className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500" />
+                <span>I confirm that I meet the age eligibility requirement for tourism activities.</span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer font-medium">
+                <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500" />
+                <span>I agree to the JuanDerQuest terms of service and privacy notice.</span>
+              </label>
+            </div>
+            <button type="submit" disabled={isLoading}
+              className="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-3 px-5 transition cursor-pointer text-sm shadow-xs disabled:opacity-60">
+              {isLoading ? 'Finishing…' : 'Finish & Continue'}
+            </button>
+            <button type="button" onClick={() => { setPendingWallet(null); setActiveTab('signin'); setError(''); }}
+              className="w-full text-xs font-bold text-neutral-500 hover:underline">
+              Cancel
+            </button>
           </form>
         )}
 
@@ -566,11 +646,18 @@ export default function LoginPage() {
           </div>
         )}
 
+        {(activeTab === 'signin' || activeTab === 'register') && (google.clientId || google.dev) && (
+          <div className="space-y-2">
+            <GoogleSignInButton clientId={google.clientId} devCredentials={google.dev} disabled={isLoading} onCredential={(c) => void handleGoogle(c)} />
+            <p className="text-center text-[11px] text-neutral-500">No wallet needed. Connect one later when you want to redeem rewards.</p>
+          </div>
+        )}
+
         {/* Local dev wallet sign-in: dev builds only, and only when the API is in local wallet mode. */}
-        <DevWalletLogin mode={mode} rememberMe={rememberMe} onFinish={finish} />
+        {activeTab !== 'complete_wallet' && <DevWalletLogin mode={mode} rememberMe={rememberMe} onFinish={handleWalletResult} />}
 
         {/* Web3 EVM Option */}
-        {process.env.NEXT_PUBLIC_DISABLE_WALLET_LOGIN !== 'true' && (
+        {activeTab !== 'complete_wallet' && process.env.NEXT_PUBLIC_DISABLE_WALLET_LOGIN !== 'true' && (
           <>
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">

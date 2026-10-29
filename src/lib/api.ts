@@ -86,6 +86,8 @@ export interface UserModel {
   role: 'user' | 'admin' | 'qa';
   points: number; // demo_points
   handle?: string | null;
+  // Plan 67: null until the traveler links a blockchain wallet (needed only for shop purchases).
+  walletAddress?: string | null;
   cosmetics?: CosmeticRenderData;
 }
 
@@ -371,6 +373,7 @@ type BackendUser = {
   role: 'user' | 'admin';
   demo_points: number;
   handle?: string | null;
+  wallet_address?: string | null;
   cosmetics?: CosmeticRenderData;
 };
 
@@ -384,6 +387,7 @@ export function normalizeUser(raw: BackendUser): UserModel {
     role: raw.role,
     points: Number(raw.demo_points) || 0,
     handle: raw.handle || null,
+    walletAddress: raw.wallet_address ?? null,
     cosmetics: raw.cosmetics,
   };
 }

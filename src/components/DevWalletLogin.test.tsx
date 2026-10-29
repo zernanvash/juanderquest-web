@@ -4,7 +4,7 @@ import { DevWalletLogin } from './DevWalletLogin';
 
 const mockAuth = {
   isLoading: false,
-  loginWithLocalWallet: vi.fn(async () => true),
+  loginWithLocalWallet: vi.fn(async () => ({ status: 'authenticated' as const })),
   loginWithSeed: vi.fn(async () => true),
 };
 
@@ -30,7 +30,7 @@ describe('DevWalletLogin', () => {
     render(<DevWalletLogin mode="local" rememberMe={false} onFinish={onFinish} />);
     fireEvent.change(screen.getByLabelText('Wallet address or test name'), { target: { value: '  cafe-owner  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    await waitFor(() => expect(onFinish).toHaveBeenCalledWith(true));
+    await waitFor(() => expect(onFinish).toHaveBeenCalledWith({ status: 'authenticated' }));
     expect(mockAuth.loginWithLocalWallet).toHaveBeenCalledWith('cafe-owner', false);
   });
 

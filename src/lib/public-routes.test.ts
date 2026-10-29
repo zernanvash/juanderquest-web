@@ -34,7 +34,9 @@ describe('isPublicPage', () => {
     expect(isPublicPage('/quests/hundred-islands-clean-shore-quest/play')).toBe(false);
     expect(isPublicPage('/profile')).toBe(false);
     expect(isPublicPage('/settings')).toBe(false);
-    expect(isPublicPage('/shop')).toBe(false);
+    // Plan 67: the shop is browsable; purchases ask for sign-in and a wallet instead.
+    expect(isPublicPage('/shop')).toBe(true);
+    expect(isPublicPage('/wallet/connect')).toBe(false);
     expect(isPublicPage('/creator')).toBe(false);
     expect(isPublicPage('/economy-lab')).toBe(false);
     expect(isPublicPage(null)).toBe(false);
