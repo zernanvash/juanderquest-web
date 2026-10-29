@@ -12,9 +12,10 @@ import { useAuth } from '@/lib/auth';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SpotPostingWizard } from '@/components/SpotPostingWizard';
+import { PinAimCard, PinReticle } from '@/components/PinAimCard';
 import { TripPanel } from '@/components/map/TripPanel';
 import type { MapOverlay } from '@/components/map/VectorMapCanvas';
-import type { SpotPostingPin } from '@/lib/spot-posting';
+import type { SpotPostingPin, SpotRecognition } from '@/lib/spot-posting';
 import { createQuestPinHtml, createSpotPinHtml, createAreaHitboxHtml } from '@/lib/map-icons';
 import { declutterItems } from '@/lib/map-declutter';
 import { useSavedLibrary } from '@/lib/saved-library';
@@ -244,6 +245,9 @@ export default function QuestMapPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardMinimized, setWizardMinimized] = useState(false);
   const [pinHelpOpen, setPinHelpOpen] = useState(false);
+  // Plan 66: the crosshair aims at the map center; the aim card recognizes it before the composer opens.
+  const [aimCenter, setAimCenter] = useState<SpotPostingPin | null>(null);
+  const [aimRecognition, setAimRecognition] = useState<SpotRecognition | null>(null);
   const pinPlacementRef = useRef(false);
   const pinPlacementCommitRef = useRef<((lat: number, lng: number) => void) | null>(null);
   const draftMarkerRef = useRef<LeafletMarker | null>(null);
@@ -585,10 +589,10 @@ export default function QuestMapPage() {
           const onMapClick = (e: any) => {
             if (!e?.latlng) return;
 
-            // Armed destination-pin placement: commit the draft pin instead of
-            // area selection or zoom behavior.
+            // Armed destination-pin placement (Plan 66): clicking eases the crosshair
+            // (map center) to that point; "Continue with this place" commits it.
             if (pinPlacementRef.current) {
-              pinPlacementCommitRef.current?.(e.latlng.lat, e.latlng.lng);
+              activeMap.panTo(e.latlng, { animate: true, duration: 0.35 });
               return;
             }
 
@@ -729,6 +733,19 @@ export default function QuestMapPage() {
     setWizardMinimized(false);
     setPinPlacementActive(false);
   }, []);
+
+  useEffect(() => {
+    if (!pinPlacementActive) return;
+    const map = mapInstanceRef.current || retainedMap;
+    if (!map) return;
+    const center = map.getCenter();
+    setAimCenter({ lat: center.lat, lng: center.lng });
+  }, [pinPlacementActive, mapViewportNonce]);
+
+  const handleContinueWithPlace = useCallback((pin: SpotPostingPin, recognition: SpotRecognition | null) => {
+    setAimRecognition(recognition);
+    handlePlaceDestinationPin(pin.lat, pin.lng);
+  }, [handlePlaceDestinationPin]);
 
   const handlePlaceAtCenter = useCallback(() => {
     const map = mapInstanceRef.current || retainedMap;
@@ -1693,31 +1710,16 @@ export default function QuestMapPage() {
           )}
 
           {pinPlacementActive && (
-            <div
-              role="status"
-              className="absolute top-[64px] lg:top-[76px] left-1/2 -translate-x-1/2 z-30 flex max-w-[92vw] items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50/95 backdrop-blur-md px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold text-[#7D5800] shadow-md animate-in fade-in slide-in-from-top-2 duration-200"
-            >
-              <MapPin className="w-4 h-4 text-[#B45309] shrink-0" />
-              <span className="min-w-0">
-                {wizardMinimized
-                  ? 'Click the map to move the destination pin.'
-                  : 'Click the map to place your destination pin.'}
-              </span>
-              <button
-                type="button"
-                onClick={handlePlaceAtCenter}
-                className="shrink-0 rounded-lg border border-amber-300 bg-white px-2 py-1 text-[10px] font-black text-[#2D6A4F] transition hover:bg-emerald-50 cursor-pointer"
-              >
-                Place at map center
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelPinPlacement}
-                className="shrink-0 rounded-lg border border-amber-300 bg-white px-2 py-1 text-[10px] font-black text-[#7D5800] transition hover:bg-amber-100 cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
+            <>
+              <PinReticle />
+              <PinAimCard
+                center={aimCenter}
+                onContinue={handleContinueWithPlace}
+                onUseMyLocation={handleUseMyLocation}
+                onCancel={handleCancelPinPlacement}
+                locating={locating}
+              />
+            </>
           )}
 
           {pinHelpOpen && (
@@ -1734,7 +1736,7 @@ export default function QuestMapPage() {
                 </button>
               </div>
               <p>
-                Press <strong className="text-[#582F0E]">Add spot</strong>. Your cursor turns into a pin, so click where the place is (or use <em>Place at map center</em>). Drag the pin to fine-tune it. We&apos;ll fill in the address for you.
+                Press <strong className="text-[#582F0E]">Add spot</strong>. Move the map (or click a point) to aim the pin in the middle. We recognize the place for you, then press <strong className="text-[#582F0E]">Continue with this place</strong>.
               </p>
               <p>
                 Nothing is published until you review and press <strong className="text-[#582F0E]">Publish</strong>.
@@ -1786,11 +1788,13 @@ export default function QuestMapPage() {
           {wizardOpen && (
             <SpotPostingWizard
               pin={draftPin}
+              initialRecognition={aimRecognition}
               minimized={wizardMinimized}
               onClose={() => {
                 setWizardOpen(false);
                 setWizardMinimized(false);
                 setDraftPin(null);
+                setAimRecognition(null);
               }}
               onRequestMovePin={handleRequestMovePin}
               onPublished={(spot) => {

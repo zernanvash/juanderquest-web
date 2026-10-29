@@ -10,6 +10,11 @@ import {
   validatePostingMediaFile,
   validatePostingPin,
   validatePostingStep,
+  applyRecognitionToDraft,
+  appendStoryStarter,
+  fallbackStoryStarters,
+  postingReadiness,
+  toPostingSubcategory,
 } from './spot-posting';
 import type { SpotPostingDraft } from './spot-posting';
 
@@ -161,5 +166,47 @@ describe('spot posting helpers', () => {
 
     const bigVideo = new File([new Uint8Array(31 * 1024 * 1024)], 'clip.mp4', { type: 'video/mp4' });
     expect(validatePostingMediaFile(bigVideo)).toMatch(/30 MB/);
+  });
+});
+
+describe('Plan 66 recognition helpers', () => {
+  const rec = {
+    recognized: true, source: 'osm' as const, place_name: 'Bolinao Falls 1', name_suggestions: [], formatted_address: 'Brgy. Samang, Bolinao, Pangasinan',
+    municipality: 'Bolinao', barangay: 'Brgy. Samang', province: 'Pangasinan', road: null, outside_pangasinan: false,
+    suggested_category: 'nature_outdoors', suggested_subcategory: 'waterfall',
+    suggested_details: { good_for: ['groups', 'solo', 'friends'], best_time: ['early_morning', 'morning'], amenities: ['parking', 'photo_spots'], daily_hours: '07:00 AM - 05:00 PM', contact_number: '' },
+    story_starters: [], nearby_duplicates: [],
+  };
+
+  it('fills an empty draft and keeps only values the API accepts', () => {
+    const draft = applyRecognitionToDraft(createSpotPostingDraft({ lat: 16.3, lng: 119.8 }), rec);
+    expect(draft).toMatchObject({ name: 'Bolinao Falls 1', municipality: 'Bolinao', address: 'Brgy. Samang, Bolinao, Pangasinan',
+      category: 'nature_outdoors', subcategory: 'waterfall', goodFor: ['groups', 'solo'], bestTime: ['early_morning'], amenities: ['parking'],
+      dailyHours: '07:00 AM - 05:00 PM' });
+  });
+
+  it('never overwrites fields the traveler touched', () => {
+    const typed = { ...createSpotPostingDraft(null), name: 'Hidden Falls', municipality: 'Anda', address: 'Near the school', goodFor: ['couples'] };
+    const draft = applyRecognitionToDraft(typed, rec, { name: true, location: true, details: true });
+    expect(draft).toMatchObject({ name: 'Hidden Falls', municipality: 'Anda', address: 'Near the school', goodFor: ['couples'], category: 'nature_outdoors' });
+  });
+
+  it('maps API subcategories onto this composer\'s chips', () => {
+    expect(toPostingSubcategory('nature_outdoors', 'beach')).toBe('white_sand_beach');
+    expect(toPostingSubcategory('culture_heritage', 'church')).toBe('colonial_church');
+    expect(toPostingSubcategory('stay', 'resort')).toBe('beach_resort');
+    expect(toPostingSubcategory('eat_drink', 'unknown')).toBe('kaleskes');
+  });
+
+  it('appends story starters once and reports readiness', () => {
+    const line = 'A scenic spot in Brgy. Patar, Bolinao with relaxing views and fresh air.';
+    expect(appendStoryStarter('', line)).toBe(line);
+    expect(appendStoryStarter('Nice place.', line)).toBe(`Nice place. ${line}`);
+    expect(appendStoryStarter(line, line)).toBe(line);
+    for (const starter of fallbackStoryStarters('Bolinao', 'nature_outdoors')) expect(starter.length).toBeGreaterThanOrEqual(45);
+    const ready = { ...applyRecognitionToDraft(createSpotPostingDraft({ lat: 16.3, lng: 119.8 }), rec), description: line };
+    expect(postingReadiness(ready)).toBeNull();
+    expect(postingReadiness({ ...ready, name: '' })).toBe('Add a name for this place');
+    expect(postingReadiness({ ...ready, description: '' })).toBe('Tap a story starter or add a short description');
   });
 });
