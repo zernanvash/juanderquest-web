@@ -74,7 +74,7 @@ describe('Plan 65 weekly JuanChoice UI', () => {
     expect(screen.queryByRole('button', { name: /4x/ })).toBeNull();
   });
 
-  it('shows the reigning Champion, Minister, live perks and a countdown', () => {
+  it('shows the reigning Champion, Vice Champion, live perks and a countdown', () => {
     render(<ReigningHero reigning={reigning} nowMs={Date.parse(now)} />);
     expect(screen.getByRole('heading', { name: 'Patar Beach' })).toBeTruthy();
     expect(screen.getByText('Enchanted Cave')).toBeTruthy();
@@ -111,7 +111,7 @@ describe('Plan 65 weekly JuanChoice UI', () => {
     expect(screen.getAllByRole('progressbar', { name: 'Vote share' }).map(bar => bar.getAttribute('aria-valuenow'))).toEqual(['75', '25']);
     expect(screen.getByText('Week 43 · Oct 19 – 25')).toBeTruthy();
     expect(screen.getByText('Champion')).toBeTruthy();
-    expect(screen.getAllByText('Minister').length).toBe(2); // reigning hero + last week podium
+    expect(screen.getAllByText('Vice Champion').length).toBe(2); // reigning hero + last week podium
   });
 
   it('formats the countdown into days, hours, minutes and seconds', () => {

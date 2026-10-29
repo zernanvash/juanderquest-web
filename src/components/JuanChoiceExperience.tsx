@@ -239,7 +239,7 @@ export function JuanChoiceExperience({
     {campaign && <section className="space-y-5" aria-labelledby="round-heading">
       <RoundArena campaign={campaign} status={status} nowMs={liveNow} totalVotes={campaign.tally_hidden ? null : totalVotes}
         totalVoters={campaign.tally_hidden ? null : totalVoters} contenders={standings.length} shareHref={currentUrl}>
-        {weekly && <p className="mt-2 max-w-xl text-sm text-white/85">Vote for next week&apos;s Champion. The winner reigns for 7 days with its perks live; the runner-up becomes Minister.</p>}
+        {weekly && <p className="mt-2 max-w-xl text-sm text-white/85">Vote for next week&apos;s Champion. The winner reigns for 7 days with its perks live; the runner-up becomes Vice Champion.</p>}
       </RoundArena>
       <div className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6">
         <p className="text-sm text-[#514532]">{presentation.roundWindowLabel}: <time dateTime={status === 'scheduled' ? campaign.opens_at : campaign.closes_at}>{new Date(status === 'scheduled' ? campaign.opens_at : campaign.closes_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT</time></p>
@@ -307,7 +307,7 @@ export function JuanChoiceExperience({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-bold text-[#2C221E]">{champion ? '★ ' : ''}{item.spot_name ?? 'Destination unavailable'}
                 {champion && <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#F6C344] to-[#E09F1F] px-2 py-0.5 align-middle text-[10px] font-black uppercase text-[#4A2E00]"><Crown className="h-3 w-3" aria-hidden="true" />Champion</span>}
-                {minister && <span className="ml-2 rounded-full bg-[#2D6A4F] px-2 py-0.5 align-middle text-[10px] font-black uppercase text-white">Minister</span>}</span>
+                {minister && <span className="ml-2 rounded-full bg-[#2D6A4F] px-2 py-0.5 align-middle text-[10px] font-black uppercase text-white">Vice Champion</span>}</span>
               <span className="tabular-nums">{item.votes} {item.votes===1?'vote':'votes'}</span>
             </div>
             {total > 0 && item.votes !== null && <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#EFEBE2]" aria-hidden="true"><div className={`h-full rounded-full ${champion ? 'bg-amber-400' : 'bg-[#40916C]'}`} style={{ width: `${Math.round((item.votes / total) * 100)}%` }} /></div>}

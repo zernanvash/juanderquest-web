@@ -1,6 +1,6 @@
 'use client';
 
-// Plan 65: weekly JuanChoice pieces — the reigning Champion/Minister, manifesto perk pills and
+// Plan 65: weekly JuanChoice pieces — the reigning Champion/Vice Champion (internally "minister"), manifesto perk pills and
 // the quadratic boost bar. Points are in-app only; no money is involved.
 import Link from 'next/link';
 import { Crown, Gem, Lock, Map as MapIcon, ShoppingBag, Sparkles, Stamp, Swords, Zap } from 'lucide-react';
@@ -75,9 +75,9 @@ export function ReigningHero({ reigning, nowMs }: { reigning: JuanChoiceReigning
           {championPerks.length > 0 && <ul className="flex flex-wrap gap-1" aria-label="Champion perks">{championPerks.map((perk, index) => <PerkChip key={perk.key ?? index} perk={perk} />)}</ul>}
           {reigning.minister && (
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#514532]">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#2D6A4F] px-2 py-0.5 text-[10px] font-black uppercase text-white"><Swords className="h-3 w-3" aria-hidden="true" />Minister</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#2D6A4F] px-2 py-0.5 text-[10px] font-black uppercase text-white"><Swords className="h-3 w-3" aria-hidden="true" />Vice Champion</span>
               <span className="font-bold text-[#2C221E]">{reigning.minister.spot_name}</span>
-              {ministerPerk && <ul className="inline-flex" aria-label="Minister perk"><PerkChip perk={ministerPerk} /></ul>}
+              {ministerPerk && <ul className="inline-flex" aria-label="Vice Champion perk"><PerkChip perk={ministerPerk} /></ul>}
             </div>
           )}
           <div className="flex flex-wrap gap-2 pt-0.5">
