@@ -131,7 +131,11 @@ export function MapWorkspacePanel({
     <>
       {/* 1. TOP-RIGHT FLOATING MAP TOOLS STACK */}
       {floatingTools && (
-        <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
+        <div
+          className={`absolute top-[64px] sm:top-4 right-3 sm:right-4 z-20 flex flex-col items-end gap-2 pointer-events-auto transition-opacity duration-200 ${
+            mobileSnap === 'full' ? 'opacity-0 pointer-events-none lg:opacity-100 lg:pointer-events-auto' : ''
+          }`}
+        >
           {floatingTools}
         </div>
       )}
@@ -279,11 +283,11 @@ export function MapWorkspacePanel({
 
       {/* 4. MOBILE WORKSPACE PANEL (Bottom Sheet < lg) */}
       <div
-        className={`lg:hidden absolute bottom-[calc(3.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 sm:left-4 sm:right-4 z-30 pointer-events-auto bg-white/98 backdrop-blur-lg border border-[#E3DFD5] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-3xl flex flex-col overflow-hidden transition-[height] duration-250 ease-out ${
+        className={`lg:hidden absolute bottom-2.5 left-3 right-3 sm:left-4 sm:right-4 z-30 pointer-events-auto bg-white/98 backdrop-blur-lg border border-[#E3DFD5] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-3xl flex flex-col overflow-hidden transition-[height] duration-250 ease-out ${
           mobileSnap === 'peek'
             ? 'h-14'
             : mobileSnap === 'half'
-            ? 'h-[46vh]'
+            ? 'h-[38vh] max-h-[340px]'
             : 'h-[78vh]'
         }`}
       >

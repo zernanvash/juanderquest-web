@@ -428,7 +428,7 @@ export const Navigation: React.FC<{
   return (
     <div
       className={`min-h-screen bg-[var(--color-bg-canvas)] flex flex-col selection:bg-[var(--color-brand-accent)]/30 text-[var(--color-text-primary)] ${
-        isAppWorkstation ? 'lg:h-dvh lg:max-h-dvh lg:overflow-hidden' : ''
+        isAppWorkstation ? 'h-dvh max-h-dvh overflow-hidden' : ''
       }`}
     >
       {/* Global Interactive Celebration & Party Poppers Engine */}
@@ -973,7 +973,7 @@ export const Navigation: React.FC<{
               tabIndex={-1}
               className={
                 fullBleed
-                  ? 'flex-none min-h-0 w-full relative h-dvh max-h-dvh overflow-hidden flex flex-col focus:outline-none'
+                  ? 'flex-1 min-h-0 w-full relative pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] lg:pb-0 lg:h-dvh lg:max-h-dvh overflow-hidden flex flex-col focus:outline-none'
                   : theater
                   ? 'flex-1 w-full min-h-0 pb-20 lg:pb-12 focus:outline-none motion-page-enter'
                   : isExplore

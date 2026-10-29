@@ -28,19 +28,16 @@ import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePan
 import { MapSearchOverlay } from '@/components/MapSearchOverlay';
 import SignInSheet from '@/components/SignInSheet';
 import { AreaDefinition, findAreaByIdOrName, KNOWN_AREAS } from '@/lib/areas';
-import { formatPoints } from '@/lib/copy';
 
 import {
   MapPin,
   Compass,
-  Award,
   Navigation as NavIcon,
   X,
   RotateCw,
   ChevronRight,
   AlertTriangle,
   Bookmark,
-  Search,
   LocateFixed,
   HelpCircle,
   PlusCircle,
@@ -391,12 +388,13 @@ export default function QuestMapPage() {
   // Clear area filter and return to Pangasinan regional view
   // Vector map: the side panel follows focus — opens when a place or destination is focused,
   // hides when focus is cleared (owner feedback 2026-10-20: no separate panel button).
+  // On mobile, keep area focus in 'peek' so the highlighted polygon/markers stay visible.
   const hasFocus = Boolean(activeArea || selectedItem);
   useEffect(() => {
     if (!webglSupported) return;
     setIsDesktopCollapsed(!hasFocus);
-    setMobileSnap(hasFocus ? 'half' : 'peek');
-  }, [hasFocus, webglSupported]);
+    setMobileSnap(selectedItem ? 'half' : 'peek');
+  }, [hasFocus, selectedItem, webglSupported]);
 
   const handleClearActiveArea = useCallback(() => {
     setActiveArea(null);
@@ -1275,6 +1273,42 @@ export default function QuestMapPage() {
                 ? { label: activeArea.type, variant: 'emerald' }
                 : { label: 'Interactive', variant: 'emerald' }
             }
+            headerActions={
+              selectedItem ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedItem(null);
+                    setMobileSnap('peek');
+                  }}
+                  className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition cursor-pointer"
+                  title="Deselect place"
+                  aria-label="Deselect place"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : activeArea ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectArea(activeArea)}
+                    className="px-2 py-1 rounded-lg text-[10px] font-bold text-[#2D6A4F] bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer"
+                    title="Re-center on this area"
+                  >
+                    Re-center
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearActiveArea}
+                    className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition cursor-pointer"
+                    title="Clear area filter"
+                    aria-label="Clear area filter"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : null
+            }
             isDesktopCollapsed={isDesktopCollapsed}
             onDesktopCollapseChange={setIsDesktopCollapsed}
             showCollapsedPill={!webglSupported}
@@ -1298,26 +1332,14 @@ export default function QuestMapPage() {
                   title={pinPlacementActive ? 'Cancel pin placement' : 'Pin a destination on the map'}
                   aria-label={pinPlacementActive ? 'Cancel pin placement' : 'Pin a new destination on the map'}
                   aria-pressed={pinPlacementActive}
-                  className={`h-11 px-4 rounded-2xl border-2 shadow-lg inline-flex items-center justify-center gap-2 text-sm font-black transition active:scale-95 cursor-pointer ${
+                  className={`h-10 px-3 sm:h-11 sm:px-4 rounded-2xl border-2 shadow-lg inline-flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-black transition active:scale-95 cursor-pointer shrink-0 ${
                     pinPlacementActive
                       ? 'bg-[#FFB703] border-amber-400 text-[#582F0E] animate-pulse'
                       : 'bg-[#2D6A4F] border-[#FFD166] text-white hover:bg-[#1B4332] ring-4 ring-[#FFD166]/30 hover:ring-[#FFD166]/50'
                   }`}
                 >
-                  <PlusCircle className={`w-5 h-5 shrink-0 ${pinPlacementActive ? '' : 'text-[#FFD166]'}`} />
+                  <PlusCircle className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${pinPlacementActive ? '' : 'text-[#FFD166]'}`} />
                   <span>{pinPlacementActive ? 'Cancel' : 'Add spot'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPinHelpOpen((open) => !open)}
-                  title="How destination pinning works"
-                  aria-label="How destination pinning works"
-                  aria-expanded={pinHelpOpen}
-                  className="h-10 px-2.5 sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
-                >
-                  <HelpCircle className="w-4 h-4 shrink-0" />
-                  <span className="hidden sm:inline">Help</span>
                 </button>
 
                 <button
@@ -1326,7 +1348,7 @@ export default function QuestMapPage() {
                   disabled={locating}
                   title="Use my location"
                   aria-label="Use my location"
-                  className="h-10 px-2.5 sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer disabled:opacity-60"
+                  className="w-10 h-10 sm:w-auto sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer disabled:opacity-60 shrink-0"
                 >
                   {locating ? (
                     <RotateCw className="w-4 h-4 animate-spin text-[#2D6A4F] shrink-0" />
@@ -1336,24 +1358,12 @@ export default function QuestMapPage() {
                   <span className="hidden sm:inline">Locate</span>
                 </button>
 
-                {activeArea && !webglSupported && (
-                  <button
-                    type="button"
-                    onClick={handleClearActiveArea}
-                    title={`Clear ${activeArea.name} (Reset to Pangasinan)`}
-                    aria-label="Clear area filter"
-                    className="w-10 h-10 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-[#2D6A4F] shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-
                 <button
                   type="button"
                   onClick={handleFitBounds}
                   title="Fit All Coordinates"
                   aria-label="Fit all markers in view"
-                  className="h-10 px-2.5 sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
+                  className="w-10 h-10 sm:w-auto sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer shrink-0"
                 >
                   <Compass className="w-4 h-4 shrink-0" />
                   <span className="hidden sm:inline">Fit all</span>
@@ -1361,13 +1371,27 @@ export default function QuestMapPage() {
 
                 <button
                   type="button"
-                  onClick={() => fetchData(true)}
-                  title="Reload Coordinates"
-                  aria-label="Reload map data"
-                  className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+                  onClick={() => setPinHelpOpen((open) => !open)}
+                  title="How destination pinning works"
+                  aria-label="How destination pinning works"
+                  aria-expanded={pinHelpOpen}
+                  className="hidden sm:inline-flex h-10 px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer shrink-0"
                 >
-                  <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#2D6A4F]' : ''}`} />
+                  <HelpCircle className="w-4 h-4 shrink-0" />
+                  <span>Help</span>
                 </button>
+
+                {error && (
+                  <button
+                    type="button"
+                    onClick={() => fetchData(true)}
+                    title="Reload Coordinates"
+                    aria-label="Reload map data"
+                    className="w-10 h-10 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                  >
+                    <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#2D6A4F]' : ''}`} />
+                  </button>
+                )}
               </>
             }
             // Mobile Peek Bar Slot (compact summary)
@@ -1446,62 +1470,9 @@ export default function QuestMapPage() {
             }
           >
             {selectedItem ? (
-              <div className="space-y-3.5">
-                {/* Top subheader with category badge & deselect */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#FAF9F5] border border-[#E3DFD5] text-[#582F0E]">
-                      {selectedItem.type === 'quest' ? '🏆 Eco-Quest' : '📍 Destination Spot'}
-                    </span>
-                    {selectedItem.type === 'quest' && (
-                      <div className="flex items-center gap-1 text-[#7D5800] text-[11px] font-black bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                        <Award className="w-3 h-3 text-[#FFB703]" />
-                        <span>{formatPoints((selectedItem.data as QuestModel).rewardPoints, { signed: true })}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedItem(null);
-                      setMobileSnap('peek');
-                    }}
-                    className="text-stone-400 hover:text-stone-700 p-1 rounded-lg hover:bg-stone-100 transition cursor-pointer"
-                    title="Deselect place"
-                    aria-label="Deselect place"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Title & Description */}
-                <div className="space-y-1">
-                  <h3 className="text-sm sm:text-base font-bold text-[#2C221E] leading-snug">
-                    {'title' in selectedItem.data ? selectedItem.data.title : selectedItem.data.name}
-                  </h3>
-                  <p className="text-xs text-[#514532] leading-relaxed line-clamp-4">
-                    {selectedItem.data.description}
-                  </p>
-                </div>
-
-                {/* Verified Location Bar */}
-                <div className="p-2.5 bg-[#FAF9F5] rounded-2xl border border-[#E3DFD5] text-[11px] flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-medium text-[#2C221E] truncate">
-                    <MapPin className="w-3.5 h-3.5 text-[#2D6A4F] shrink-0" />
-                    <span className="truncate">
-                      {'locationName' in selectedItem.data
-                        ? selectedItem.data.locationName
-                        : selectedItem.data.municipality}
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-bold text-[#2D6A4F] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0 ml-2">
-                    Verified Pin
-                  </span>
-                </div>
-
-                {/* Actions: Navigate, View Details, Bookmark */}
-                <div className="grid grid-cols-[1fr_1fr_auto] gap-2 pt-1">
+              <div className="space-y-3">
+                {/* Actions: Navigate, View Details, Bookmark (Right at the top) */}
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                   <Link
                     href={`/navigate?name=${encodeURIComponent(
                       'title' in selectedItem.data ? selectedItem.data.title : selectedItem.data.name
@@ -1560,47 +1531,18 @@ export default function QuestMapPage() {
                   </button>
                 </div>
 
+                {/* Description */}
+                <p className="text-xs text-[#514532] leading-relaxed line-clamp-3">
+                  {selectedItem.data.description}
+                </p>
+
                 {selectedItem.type === 'spot' && (
                   <TripPanel key={(selectedItem.data as SpotModel).id} spot={selectedItem.data as SpotModel} userLocation={userLocation} onOverlay={setTripOverlay} />
                 )}
               </div>
             ) : (
               <div className="space-y-4">
-                {activeArea ? (
-                  <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Compass className="w-4 h-4 text-[#2D6A4F]" />
-                        <span className="text-[10px] font-black text-[#2D6A4F] uppercase tracking-wider">
-                          Active Geographic Zone
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleClearActiveArea}
-                        className="text-stone-400 hover:text-stone-700 p-0.5 rounded-lg hover:bg-white transition cursor-pointer"
-                        title="Clear area filter"
-                        aria-label="Clear area filter"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="space-y-0.5">
-                      <h3 className="text-sm font-extrabold text-[#582F0E]">{activeArea.name}</h3>
-                      <p className="text-xs text-[#514532] leading-relaxed">{activeArea.subtitle}</p>
-                    </div>
-                    <div className="pt-1 flex items-center justify-between text-[11px] text-[#837560] border-t border-emerald-200/60">
-                      <span>Zoom Level {activeArea.zoom}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectArea(activeArea)}
-                        className="text-[#2D6A4F] font-bold hover:underline cursor-pointer"
-                      >
-                        Re-center area
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+                {!activeArea && (
                   <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] text-center space-y-2.5">
                     <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto">
                       <MapPin className="w-5 h-5 text-[#2D6A4F]" />
