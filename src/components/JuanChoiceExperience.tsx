@@ -13,6 +13,7 @@ import { triggerCelebration } from './CelebrationEffects';
 import { BoostBar, PerkPills, ReigningHero } from './JuanChoiceWeekly';
 import { RankMedal, RoundArena, ShareBar, VotePower, useLiveServerNow } from './JuanChoiceArena';
 import { Check, ChevronDown, Crown, Zap } from 'lucide-react';
+import { GSAP_EASES, gsap, prefersReducedMotion, useGSAP } from '@/lib/animations/gsap';
 
 const NOT_OPEN_MESSAGE = 'JuanChoice is not open yet. Check back when the pilot begins.';
 
@@ -45,6 +46,7 @@ export function JuanChoiceExperience({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLButtonElement>(null);
   const scrolledCandidateRef = useRef<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [clock, setClock] = useState(0);
 
   useEffect(() => {
@@ -161,23 +163,43 @@ export function JuanChoiceExperience({
   const totalVotes = standings.reduce((sum, item) => sum + (item.votes ?? 0), 0);
   const totalVoters = standings.every(item => typeof item.voter_count === 'number')
     ? standings.reduce((sum, item) => sum + (item.voter_count ?? 0), 0) : null;
+  // GSAP: champion drops in, arena rises, rows stagger, bars fill, podium slides; crowns wiggle. Off for reduced motion.
+  useGSAP(() => {
+    if (!rootRef.current || prefersReducedMotion()) return;
+    const q = gsap.utils.selector(rootRef);
+    const tl = gsap.timeline({ defaults: { ease: GSAP_EASES.cinematic } });
+    const from = (selector: string, vars: gsap.TweenVars, position?: gsap.Position) => { const targets = q(selector); if (targets.length) tl.from(targets, vars, position); };
+    from('.jc-reign', { y: -14, opacity: 0, duration: 0.45 });
+    from('.jc-arena', { y: 20, opacity: 0, scale: 0.98, duration: 0.55 }, '-=0.2');
+    from('.jc-row', { y: 18, opacity: 0, duration: 0.4, stagger: 0.08 }, '-=0.25');
+    from('.jc-share-fill', { scaleX: 0, duration: 0.8, stagger: 0.08, ease: GSAP_EASES.fluidOut }, '-=0.3');
+    from('.jc-podium', { x: -16, opacity: 0, duration: 0.35, stagger: 0.07 }, '-=0.5');
+    const crowns = q('.jc-crown, .jc-medal-1');
+    if (crowns.length) gsap.to(crowns, { rotate: -10, yoyo: true, repeat: -1, duration: 1.1, ease: 'sine.inOut', transformOrigin: '50% 80%' });
+  }, { scope: rootRef, dependencies: [campaign?.id, overview?.reigning?.campaign_id, overview?.previous?.campaign_id] });
+  useGSAP(() => {
+    if (!receipt || !rootRef.current || prefersReducedMotion()) return;
+    const mine = gsap.utils.selector(rootRef)('.jc-mine');
+    if (mine.length) gsap.fromTo(mine, { scale: 1.04 }, { scale: 1, duration: 0.7, delay: 0.2, ease: 'elastic.out(1, 0.4)' });
+  }, { scope: rootRef, dependencies: [receipt] });
   const leaderId = !campaign?.tally_hidden && standings[0] && (standings[0].votes ?? 0) > (standings[1]?.votes ?? 0) ? standings[0].candidate_id : null;
   const formatDate = (value:string) => new Date(value).toLocaleString('en-PH',{
     timeZone:overview?.region.timezone ?? 'Asia/Manila',dateStyle:'long',timeStyle:'short',
   });
 
-  return <Navigation><div className="w-full space-y-5">
+  return <Navigation><div ref={rootRef} className="w-full space-y-5">
     {presentationBuild && <div role="status" className="rounded-2xl border-2 border-amber-500 bg-amber-100 p-4 text-sm font-bold text-amber-950">
       Presentation demo — votes and Civic XP/stamps stay in a separate test database. They do not count toward official rankings or rewards.
     </div>}
     {overview && !environmentTrusted && <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
       Voting configuration mismatch. Ballots are disabled here. Reload the page or ask the team to check the demo API.
     </div>}
-    <header className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 sm:p-8">
+    {/* The live arena carries the JuanChoice brand; the long intro stays for presentation and read-only modes. */}
+    {presentationBuild || presentation.mode !== 'write_enabled' || !campaign ? <header className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 sm:p-8">
       <p className="text-xs font-black uppercase tracking-widest text-amber-700">JuanChoice · community spotlight</p>
       <h1 className="mt-2 text-3xl font-black text-[#582F0E]">{presentation.headerTitle}</h1>
       <p className="mt-3 max-w-2xl text-sm text-[#514532]">{presentation.headerDescription}</p>
-    </header>
+    </header> : <h1 className="sr-only">JuanChoice weekly destination election</h1>}
     {!presentationBuild && overview?.reigning && <ReigningHero reigning={overview.reigning} nowMs={serverNow} />}
     {presentation.readOnlyNotice && (
       <div role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-900 shadow-xs">
@@ -238,7 +260,7 @@ export function JuanChoiceExperience({
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
       </div>
       <ol className="grid items-start gap-3 lg:grid-cols-2" aria-label="Contenders">{detail.standings.map((item, index) => { const mine = ballot?.candidate_id === item.candidate_id; const leading = leaderId === item.candidate_id; return <li key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`}
-        className={`relative overflow-hidden rounded-2xl border-2 bg-white transition-shadow hover:shadow-md ${mine ? 'border-[#2D6A4F]' : leading ? 'border-amber-300 shadow-[0_0_0_4px_rgba(252,211,77,0.25)]' : focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
+        className={`jc-row ${mine ? 'jc-mine ' : ''}relative overflow-hidden rounded-2xl border-2 bg-white transition-shadow hover:shadow-md ${mine ? 'border-[#2D6A4F]' : leading ? 'border-amber-300 shadow-[0_0_0_4px_rgba(252,211,77,0.25)]' : focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
         <div className="flex items-center gap-3 p-3 sm:p-4">
           <RankMedal rank={index + 1} hidden={campaign.tally_hidden} />
           <div className="min-w-0 flex-1">
@@ -279,7 +301,7 @@ export function JuanChoiceExperience({
         const champion = previous.co_winner_ids.includes(item.candidate_id);
         const minister = previous.minister_candidate_id === item.candidate_id;
         const total = previous.standings.reduce((sum, row) => sum + (row.votes ?? 0), 0);
-        return <li key={item.candidate_id} className={`flex items-center gap-3 rounded-xl p-3 text-sm text-[#514532] ${champion ? 'bg-gradient-to-r from-amber-50 to-white ring-1 ring-amber-200' : minister ? 'bg-emerald-50/60 ring-1 ring-emerald-100' : 'bg-[#FAF9F5]'}`}>
+        return <li key={item.candidate_id} className={`jc-podium flex items-center gap-3 rounded-xl p-3 text-sm text-[#514532] ${champion ? 'bg-gradient-to-r from-amber-50 to-white ring-1 ring-amber-200' : minister ? 'bg-emerald-50/60 ring-1 ring-emerald-100' : 'bg-[#FAF9F5]'}`}>
           <RankMedal rank={index + 1} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-2">

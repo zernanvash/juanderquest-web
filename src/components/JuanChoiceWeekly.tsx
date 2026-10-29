@@ -34,6 +34,17 @@ export function PerkPills({ perks, live = false }: { perks?: JuanChoicePerk[]; l
   );
 }
 
+/** One-line chip for a live perk; the description stays available as a tooltip. */
+function PerkChip({ perk }: { perk: JuanChoicePerk }) {
+  const Icon = perk.domain ? DOMAIN_ICON[perk.domain] : Zap;
+  return (
+    <li title={perk.description} className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-[#2C221E] ring-1 ring-[#E8E5DE]">
+      <Icon className="h-3 w-3 text-[#2D6A4F]" aria-hidden="true" />{perk.label}
+      <span className="rounded-full bg-emerald-100 px-1 text-[9px] font-black uppercase text-emerald-800">Live this week</span>
+    </li>
+  );
+}
+
 export function ReigningHero({ reigning, nowMs }: { reigning: JuanChoiceReigning; nowMs: number | null }) {
   const champion = reigning.champions[0];
   if (!champion) return null;
@@ -45,35 +56,35 @@ export function ReigningHero({ reigning, nowMs }: { reigning: JuanChoiceReigning
   const championPerks = reigning.perks.filter(perk => perk.role === 'champion');
   const ministerPerk = reigning.perks.find(perk => perk.role === 'minister');
   return (
-    <section aria-labelledby="reigning-heading" className="overflow-hidden rounded-3xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-emerald-50">
-      <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <div className="relative min-h-[180px] bg-gradient-to-br from-[#2D6A4F] to-[#1B4332]">
+    <section aria-labelledby="reigning-heading" className="jc-reign overflow-hidden rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-emerald-50">
+      <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
+        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] sm:h-32 sm:w-40">
           {champion.image_url && <img src={champion.image_url} alt="" className="h-full w-full object-cover" />}
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#F6C344] to-[#E09F1F] px-2.5 py-1 text-[11px] font-black uppercase text-[#4A2E00] shadow">
-            <Crown className="h-3.5 w-3.5" aria-hidden="true" /> In office this week
+          <span className="jc-crown absolute left-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#F6C344] to-[#E09F1F] text-[#4A2E00] shadow" aria-hidden="true">
+            <Crown className="h-4 w-4" />
           </span>
         </div>
-        <div className="space-y-3 p-5 sm:p-6">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-black uppercase tracking-widest text-amber-700">Reigning Champion{reigning.champions.length > 1 ? 's' : ''}</p>
-            {countdown && <p className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[#514532] shadow-sm" aria-label="Reign time left">{countdown}</p>}
+            <p className="text-[11px] font-black uppercase tracking-widest text-amber-700">Reigning Champion{reigning.champions.length > 1 ? 's' : ''} · in office this week</p>
+            {countdown && <p className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-[#514532] shadow-sm" aria-label="Reign time left">{countdown}</p>}
           </div>
-          <h2 id="reigning-heading" className="text-2xl font-black text-[#582F0E]">{reigning.champions.map(c => c.spot_name).join(' & ')}</h2>
-          <p className="text-sm text-[#514532]">{champion.municipality} · elected by {reigning.valid_ballots} {reigning.valid_ballots === 1 ? 'traveler' : 'travelers'}
+          <h2 id="reigning-heading" className="truncate text-lg font-black leading-tight text-[#582F0E] sm:text-xl">{reigning.champions.map(c => c.spot_name).join(' & ')}</h2>
+          <p className="text-xs text-[#514532]">{champion.municipality} · elected by {reigning.valid_ballots} {reigning.valid_ballots === 1 ? 'traveler' : 'travelers'}
             {reigning.festival_name ? ` · ${reigning.festival_name}` : ''}</p>
-          <PerkPills perks={championPerks} live />
+          {championPerks.length > 0 && <ul className="flex flex-wrap gap-1" aria-label="Champion perks">{championPerks.map((perk, index) => <PerkChip key={perk.key ?? index} perk={perk} />)}</ul>}
           {reigning.minister && (
-            <div className="rounded-xl border border-emerald-200 bg-white/80 p-3">
-              <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#2D6A4F]"><Swords className="h-3.5 w-3.5" aria-hidden="true" /> Minister of the week</p>
-              <p className="mt-0.5 text-sm font-bold text-[#2C221E]">{reigning.minister.spot_name} <span className="font-normal text-[#6F6352]">· {reigning.minister.municipality}</span></p>
-              {ministerPerk && <PerkPills perks={[ministerPerk]} live />}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#514532]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#2D6A4F] px-2 py-0.5 text-[10px] font-black uppercase text-white"><Swords className="h-3 w-3" aria-hidden="true" />Minister</span>
+              <span className="font-bold text-[#2C221E]">{reigning.minister.spot_name}</span>
+              {ministerPerk && <ul className="inline-flex" aria-label="Minister perk"><PerkChip perk={ministerPerk} /></ul>}
             </div>
           )}
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Link href={`/map?spot=${encodeURIComponent(champion.spot_id)}&trip=1`} className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#2D6A4F] px-3.5 text-xs font-bold text-white">
+          <div className="flex flex-wrap gap-2 pt-0.5">
+            <Link href={`/map?spot=${encodeURIComponent(champion.spot_id)}&trip=1`} className="inline-flex min-h-[32px] items-center gap-1.5 rounded-lg bg-[#2D6A4F] px-3 text-xs font-bold text-white">
               <MapIcon className="h-3.5 w-3.5" aria-hidden="true" /> Trails &amp; route here
             </Link>
-            <Link href={`/spots/${encodeURIComponent(champion.spot_slug || champion.spot_id)}`} className="inline-flex min-h-[40px] items-center rounded-xl border border-[#E3DFD5] bg-white px-3.5 text-xs font-semibold text-[#3F6653]">View place</Link>
+            <Link href={`/spots/${encodeURIComponent(champion.spot_slug || champion.spot_id)}`} className="inline-flex min-h-[32px] items-center rounded-lg border border-[#E3DFD5] bg-white px-3 text-xs font-semibold text-[#3F6653]">View place</Link>
           </div>
         </div>
       </div>

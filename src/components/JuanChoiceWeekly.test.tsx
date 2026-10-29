@@ -111,7 +111,7 @@ describe('Plan 65 weekly JuanChoice UI', () => {
     expect(screen.getAllByRole('progressbar', { name: 'Vote share' }).map(bar => bar.getAttribute('aria-valuenow'))).toEqual(['75', '25']);
     expect(screen.getByText('Week 43 · Oct 19 – 25')).toBeTruthy();
     expect(screen.getByText('Champion')).toBeTruthy();
-    expect(screen.getByText('Minister')).toBeTruthy();
+    expect(screen.getAllByText('Minister').length).toBe(2); // reigning hero + last week podium
   });
 
   it('formats the countdown into days, hours, minutes and seconds', () => {

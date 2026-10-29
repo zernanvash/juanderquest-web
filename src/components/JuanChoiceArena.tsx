@@ -2,10 +2,21 @@
 
 // Gamified JuanChoice booth pieces: the live election arena with a ticking countdown,
 // rank medals, vote-share bars and the vote-power meter.
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Crown, Flame, Share2, Sparkles, Swords, Timer, Users, Zap } from 'lucide-react';
+import { Crown, Flame, Share2, Sparkles, Swords, Timer, Trophy, Users, Zap } from 'lucide-react';
 import { serverAlignedNow, type JuanChoiceCampaign } from '@/lib/juanchoice';
+import { GSAP_EASES, gsap, prefersReducedMotion, useGSAP } from '@/lib/animations/gsap';
+
+/** A two-digit countdown number that flips in whenever it changes. */
+function FlipDigit({ value, className }: { value: number; className: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useGSAP(() => {
+    if (!ref.current || prefersReducedMotion()) return;
+    gsap.fromTo(ref.current, { yPercent: -45, rotateX: -70, opacity: 0.2 }, { yPercent: 0, rotateX: 0, opacity: 1, duration: 0.35, ease: GSAP_EASES.bounceOut });
+  }, { dependencies: [value] });
+  return <span ref={ref} className={className} style={{ transformOrigin: '50% 0%' }}>{String(value).padStart(2, '0')}</span>;
+}
 
 /** Ticks once a second from a trusted server timestamp; null until mounted (no hydration mismatch). */
 export function useLiveServerNow(serverTime: string | null | undefined, receivedAtMono: number | null | undefined) {
@@ -30,7 +41,7 @@ export function CountdownBlocks({ msLeft, urgent = false }: { msLeft: number; ur
         <div key={label} className="flex items-stretch gap-1 sm:gap-2">
           {index > 0 && <span className={`self-center text-xl font-black sm:text-2xl ${urgent ? 'text-red-200' : 'text-amber-200/70'}`} aria-hidden="true">:</span>}
           <div className={`min-w-[52px] rounded-xl px-1.5 py-1.5 text-center shadow-inner sm:min-w-[68px] sm:px-2 ${urgent ? 'bg-red-950/50 ring-1 ring-red-300/40' : 'bg-black/25 ring-1 ring-white/10'}`}>
-            <span className={`block text-2xl font-black tabular-nums sm:text-4xl ${urgent ? 'text-red-100' : 'text-white'}`}>{String(value).padStart(2, '0')}</span>
+            <FlipDigit value={value} className={`block text-2xl font-black tabular-nums sm:text-4xl ${urgent ? 'text-red-100' : 'text-white'}`} />
             <span className="block text-[10px] font-bold uppercase tracking-widest text-white/60">{label}</span>
           </div>
         </div>
@@ -62,12 +73,14 @@ export function RoundArena({ campaign, status, nowMs, totalVotes, totalVoters, c
   const theme = urgent ? 'from-[#7F1D1D] via-[#9A3412] to-[#582F0E]'
     : special ? 'from-[#4C1D95] via-[#7C3AED] to-[#B45309]' : 'from-[#1B4332] via-[#2D6A4F] to-[#7D5800]';
   return (
-    <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${theme} p-5 text-white shadow-lg sm:p-7`}>
+    <div className={`jc-arena relative overflow-hidden rounded-3xl bg-gradient-to-br ${theme} p-5 text-white shadow-lg sm:p-7`}>
       <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-amber-300/20 blur-2xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-emerald-300/10 blur-2xl" />
       <div className="relative flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {live && <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider shadow">
+          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#F6C344] to-[#E09F1F] px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-[#4A2E00] shadow">
+            <Trophy className="h-3 w-3" aria-hidden="true" />JuanChoice</span>
+          {live &&<span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider shadow">
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-white" /></span>
             Live</span>}
           {week && <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider ring-1 ring-white/20">Week {Number(week)}</span>}
@@ -120,7 +133,7 @@ export function RankMedal({ rank, hidden = false }: { rank: number; hidden?: boo
     return <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-lg font-black text-violet-800 ring-2 ring-violet-200" aria-hidden="true">?</span>;
   }
   return (
-    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-black shadow ring-2 ${MEDALS[rank - 1] ?? 'bg-[#F3F0E8] text-[#6F6352] ring-[#E3DFD5]'}`} aria-hidden="true">
+    <span className={`${rank === 1 ? 'jc-medal-1 ' : ''}flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-black shadow ring-2 ${MEDALS[rank - 1] ?? 'bg-[#F3F0E8] text-[#6F6352] ring-[#E3DFD5]'}`} aria-hidden="true">
       {rank === 1 ? <Crown className="h-5 w-5" /> : rank}
     </span>
   );
@@ -138,7 +151,7 @@ export function ShareBar({ votes, total, leading = false, compact = false }: { v
     return (
       <div className="mt-2 flex items-center gap-2">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#F3F0E8]" role="progressbar" aria-label="Vote share" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div className={`h-full rounded-full transition-[width] duration-700 ${fill}`} style={{ width: `${Math.max(pct, votes > 0 ? 4 : 0)}%` }} />
+          <div className={`jc-share-fill h-full origin-left rounded-full transition-[width] duration-700 ${fill}`} style={{ width: `${Math.max(pct, votes > 0 ? 4 : 0)}%` }} />
         </div>
         <span className={`w-9 text-right text-xs font-black tabular-nums ${leading ? 'text-amber-700' : 'text-[#2C221E]'}`}>{pct}%</span>
       </div>
