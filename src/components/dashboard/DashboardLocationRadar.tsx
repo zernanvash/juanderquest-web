@@ -117,9 +117,8 @@ export function DashboardLocationRadar({
           zoom={position.source === 'gps' ? 14 : 12}
           height="h-44"
           pinType="destination"
-          name={areaLabel}
           points={mapPoints}
-          badgeLabel="Open map"
+          hideBadge
           className="rounded-none border-0 border-b"
         />
         <button

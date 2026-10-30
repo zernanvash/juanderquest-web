@@ -403,7 +403,7 @@ export function DashboardCalendar({ today: todayProp }: { today?: string } = {})
                     </div>
                     <h3 className="text-xs font-extrabold text-[#2C221E] leading-snug">{ev.title}</h3>
                     <p className="text-[10px] font-mono text-[#837560]">
-                      {formatDay(ev.date, { month: 'short', day: 'numeric' })}
+                      {formatDay(ev.date, { month: 'short', day: 'numeric', ...(ev.date.slice(0, 4) !== today.slice(0, 4) ? { year: 'numeric' } : {}) })}
                       {ev.endDate ? ` – ${formatDay(ev.endDate, { month: 'short', day: 'numeric' })}` : ''}
                     </p>
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">

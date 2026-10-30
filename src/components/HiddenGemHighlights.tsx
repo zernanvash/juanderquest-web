@@ -93,17 +93,19 @@ export function HiddenGemHighlights({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 h-full">
-          <div className="relative min-h-[11rem] sm:min-h-full bg-stone-100">
-            <DestinationMedia
-              src={spot.image_url}
-              alt={spot.name}
-              destinationName={spot.name}
-              municipality={spot.municipality}
-              category={details?.category}
-              aspectRatio="card"
-              href={appRoutes.spot(spot.id)}
-              className="h-full w-full [&_img]:h-full [&_img]:object-cover"
-            />
+          <div className="relative bg-stone-100 sm:min-h-[16rem]">
+            {/* On wider screens the photo fills the whole left column instead of keeping its 16:10 box. */}
+            <div className="sm:absolute sm:inset-0 sm:[&>*]:h-full sm:[&>*>*]:h-full sm:[&>*>*]:aspect-auto sm:[&>*>*]:max-h-none">
+              <DestinationMedia
+                src={spot.image_url}
+                alt={spot.name}
+                destinationName={spot.name}
+                municipality={spot.municipality}
+                category={details?.category}
+                aspectRatio="card"
+                href={appRoutes.spot(spot.id)}
+              />
+            </div>
             <span className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-[#1B4332]/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-200 shadow">
               <Sparkles className="w-3 h-3" /> Hidden gem
             </span>
