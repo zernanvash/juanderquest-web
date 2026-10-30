@@ -330,7 +330,8 @@ describe('QuizCabinet Interactive Component & Location Gates', () => {
         mockQuestions.map((q) => ({
           question_id: q.id,
           selected_option_id: q.options[0].id,
-        }))
+        })),
+        expect.objectContaining({ style_score: expect.any(Number) })
       );
     });
 
