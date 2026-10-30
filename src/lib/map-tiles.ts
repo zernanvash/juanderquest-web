@@ -13,6 +13,31 @@ export function createBaseTileLayer(L: typeof import('leaflet')) {
   });
 }
 
+/**
+ * Esri World Imagery through an ArcGIS Location Platform key (owner 2026-10-30). The key is a public
+ * client key restricted by origin; it is set in the environment, never committed. No key → no satellite.
+ * Tiles load straight from Esri (their terms do not allow proxying or caching them).
+ */
+export const SATELLITE_KEY = process.env.NEXT_PUBLIC_ARCGIS_KEY?.trim() ?? '';
+export const SATELLITE_ATTRIBUTION =
+  'Powered by <a href="https://www.esri.com">Esri</a> | Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+
+export function satelliteAvailable(key = SATELLITE_KEY): boolean {
+  return key.length > 0;
+}
+
+export function satelliteTileUrl(key = SATELLITE_KEY): string {
+  return `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(key)}`;
+}
+
+export function createSatelliteTileLayer(L: typeof import('leaflet'), key = SATELLITE_KEY) {
+  return L.tileLayer(satelliteTileUrl(key), {
+    attribution: SATELLITE_ATTRIBUTION,
+    maxNativeZoom: MAP_TILE_MAX_ZOOM,
+    maxZoom: MAP_MAP_MAX_ZOOM,
+  });
+}
+
 export function parseTileCoordinate(value: string, allowPngSuffix = false): number | null {
   const match = (allowPngSuffix ? /^(\d+)\.png$/ : /^(\d+)$/).exec(value);
   if (!match) return null;

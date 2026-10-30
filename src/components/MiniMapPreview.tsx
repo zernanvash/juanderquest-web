@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExternalLink, MapPin, Maximize2, Compass } from 'lucide-react';
-import { createBaseTileLayer } from '@/lib/map-tiles';
+import { ExternalLink, MapPin, Maximize2, Compass, Layers } from 'lucide-react';
+import { createBaseTileLayer, createSatelliteTileLayer, satelliteAvailable } from '@/lib/map-tiles';
 import { createSpotPinHtml, createQuestPinHtml, createDestinationPinHtml } from '@/lib/map-icons';
 import { PinReticle } from '@/components/PinAimCard';
 
@@ -28,6 +28,18 @@ export interface MiniMapPreviewProps {
   showMarker?: boolean;
   /** Plan 71: small dots for nearby places around the main pin (not interactive). */
   points?: Array<{ lat: number; lng: number; title?: string }>;
+  /** Show a Map / Satellite switch (hidden when no imagery key is configured). */
+  satelliteToggle?: boolean;
+}
+
+const BASEMAP_PREF_KEY = 'jdq_minimap_basemap_v1';
+
+function readBasemapPref(): 'map' | 'satellite' {
+  try {
+    return window.localStorage.getItem(BASEMAP_PREF_KEY) === 'satellite' ? 'satellite' : 'map';
+  } catch {
+    return 'map';
+  }
 }
 
 export function MiniMapPreview({
@@ -49,7 +61,12 @@ export function MiniMapPreview({
   showMarker = true,
   reticleMode = false,
   points,
+  satelliteToggle = false,
 }: MiniMapPreviewProps) {
+  const canSatellite = satelliteToggle && satelliteAvailable();
+  const [basemap, setBasemap] = useState<'map' | 'satellite'>('map');
+  const baseLayerRef = useRef<any>(null);
+  const baseModeRef = useRef<'map' | 'satellite'>('map');
   const router = useRouter();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -89,6 +106,35 @@ export function MiniMapPreview({
   }, []);
 
   useEffect(() => {
+    if (canSatellite) setBasemap(readBasemapPref());
+  }, [canSatellite]);
+
+  // Swap the base layer in place so the view, pin and dots stay put.
+  useEffect(() => {
+    const L = leafletRef.current;
+    const map = mapInstanceRef.current;
+    if (!L || !map) return;
+    const wanted = canSatellite && basemap === 'satellite' ? 'satellite' : 'map';
+    if (baseModeRef.current === wanted) return;
+    const next = wanted === 'satellite' ? createSatelliteTileLayer(L) : createBaseTileLayer(L);
+    baseLayerRef.current?.remove();
+    baseLayerRef.current = next.addTo(map);
+    next.bringToBack();
+    baseModeRef.current = wanted;
+  }, [basemap, canSatellite, mapReady]);
+
+  const toggleBasemap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextMode = basemap === 'satellite' ? 'map' : 'satellite';
+    setBasemap(nextMode);
+    try {
+      window.localStorage.setItem(BASEMAP_PREF_KEY, nextMode);
+    } catch {
+      // Remembering the choice is a convenience only.
+    }
+  };
+
+  useEffect(() => {
     if (!mounted || !mapContainerRef.current) return;
 
     let isDisposed = false;
@@ -118,7 +164,8 @@ export function MiniMapPreview({
           keyboard: false,
         }).setView([viewRef.current.lat, viewRef.current.lng], viewRef.current.zoom);
 
-        createBaseTileLayer(L).addTo(map);
+        baseLayerRef.current = createBaseTileLayer(L).addTo(map);
+        baseModeRef.current = 'map';
 
         // Select pin icon generator
         let pinHtml = createSpotPinHtml(true);
@@ -241,6 +288,19 @@ export function MiniMapPreview({
           <Compass className="w-6 h-6 animate-spin text-[#2D6A4F]" />
           <span className="text-[11px] font-bold tracking-wide">Loading Map Preview...</span>
         </div>
+      )}
+
+      {canSatellite && !loading && (
+        <button
+          type="button"
+          onClick={toggleBasemap}
+          aria-pressed={basemap === 'satellite'}
+          data-testid="minimap-basemap-toggle"
+          className={`absolute top-2.5 ${interactive ? 'left-12' : 'left-2.5'} z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/95 text-[#2D6A4F] text-[11px] font-extrabold shadow-sm border border-[#E3DFD5] hover:bg-[#2D6A4F] hover:text-white transition-colors`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>{basemap === 'satellite' ? 'Map' : 'Satellite'}</span>
+        </button>
       )}
 
       {/* Overlay Badge */}

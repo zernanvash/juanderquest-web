@@ -89,6 +89,7 @@ export function PhotoPanel({ config, destinationCoords, onChange }: PhotoPanelPr
             Photo Capture Area Pin
           </label>
           <MiniMapPreview
+            satelliteToggle
             lat={fence.lat}
             lng={fence.lng}
             zoom={15}

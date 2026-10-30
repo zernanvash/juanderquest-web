@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidTileCoordinate, parseTileCoordinate } from './map-tiles';
+import { isValidTileCoordinate, parseTileCoordinate, satelliteAvailable, satelliteTileUrl } from './map-tiles';
 
 describe('map tile coordinate validation', () => {
   it('accepts a valid XYZ coordinate and png y suffix', () => {
@@ -14,5 +14,18 @@ describe('map tile coordinate validation', () => {
     expect(isValidTileCoordinate(20, 1, 1)).toBe(true);
     expect(isValidTileCoordinate(31, 1, 1)).toBe(false);
     expect(isValidTileCoordinate(2, 4, 0)).toBe(false);
+  });
+});
+
+describe('satellite imagery', () => {
+  it('is off without a key', () => {
+    expect(satelliteAvailable('')).toBe(false);
+    expect(satelliteAvailable('abc')).toBe(true);
+  });
+
+  it('loads Esri World Imagery directly with the key encoded', () => {
+    const url = satelliteTileUrl('a+b/c');
+    expect(url.startsWith('https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')).toBe(true);
+    expect(url.endsWith('?token=a%2Bb%2Fc')).toBe(true);
   });
 });

@@ -61,6 +61,7 @@ export function LocationPanel({ config, destinationCoords, onChange }: LocationP
       </div>
 
       <MiniMapPreview
+        satelliteToggle
         lat={fence.lat}
         lng={fence.lng}
         zoom={15}

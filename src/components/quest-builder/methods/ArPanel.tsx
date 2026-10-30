@@ -132,6 +132,7 @@ export function ArPanel({ config, destinationCoords, onChange }: ArPanelProps) {
         </div>
 
         <MiniMapPreview
+          satelliteToggle
           lat={fence.lat}
           lng={fence.lng}
           zoom={16}
