@@ -10,12 +10,16 @@ import {
   AlertTriangle,
   MapPin,
   RotateCcw,
+  Sparkles,
+  Users,
+  SkipForward,
 } from 'lucide-react';
 import {
   QuizDetail,
   QuizQuestion,
   startQuizAttempt,
   submitQuizAttempt,
+  consumeQuizLifeline,
 } from '@/lib/quizzes';
 import {
   quizArcadeReducer,
@@ -175,7 +179,7 @@ export function QuizCabinet({
       selected_option_id: state.answers[q.id] || '',
     }));
 
-    if (answersList.some((a) => !a.selected_option_id)) {
+    if (answersList.some((a) => !a.selected_option_id && !state.skippedQuestions[a.question_id])) {
       dispatch({
         type: 'SUBMIT_FAILURE',
         error: 'Answer all 5 questions first.',
@@ -189,7 +193,9 @@ export function QuizCabinet({
     });
 
     try {
-      const res = await submitQuizAttempt(activeAttemptId, answersList);
+      const res = await submitQuizAttempt(activeAttemptId, answersList, {
+        style_score: state.styleScore,
+      });
       const hostReview = res.passed
         ? getRandomHostLine(APO_LAKAY_HOST.passLines)
         : getRandomHostLine(APO_LAKAY_HOST.failLines);
@@ -212,7 +218,55 @@ export function QuizCabinet({
         error: msg,
       });
     }
-  }, [activeAttemptId, questions, state.answers, state.soundEnabled, onPassed]);
+  }, [activeAttemptId, questions, state.answers, state.skippedQuestions, state.styleScore, state.soundEnabled, onPassed]);
+
+  // Lifelines
+  const [callingLifeline, setCallingLifeline] = React.useState<string | null>(null);
+
+  const handleUseLifeline = useCallback(
+    async (lifeline: 'fifty_fifty' | 'ask_local' | 'skip') => {
+      const currentQ = questions[state.currentIndex];
+      if (!currentQ || !activeAttemptId || state.lifelinesUsed.includes(lifeline)) return;
+
+      setCallingLifeline(lifeline);
+      try {
+        const res = await consumeQuizLifeline({
+          quizId: quiz.id,
+          attemptId: activeAttemptId,
+          lifeline,
+          questionId: currentQ.id,
+        });
+
+        if (lifeline === 'fifty_fifty') {
+          dispatch({
+            type: 'USE_LIFELINE_FIFTY_FIFTY',
+            questionId: currentQ.id,
+            eliminatedIds: res.eliminated_option_ids || [],
+          });
+        } else if (lifeline === 'ask_local') {
+          dispatch({
+            type: 'USE_LIFELINE_ASK_LOCAL',
+            questionId: currentQ.id,
+            hint: res.hint || 'Listen closely to the local elders!',
+          });
+        } else if (lifeline === 'skip') {
+          dispatch({
+            type: 'USE_LIFELINE_SKIP',
+            questionId: currentQ.id,
+          });
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Could not use lifeline.';
+        dispatch({
+          type: 'SUBMIT_FAILURE',
+          error: msg,
+        });
+      } finally {
+        setCallingLifeline(null);
+      }
+    },
+    [activeAttemptId, questions, quiz.id, state.currentIndex, state.lifelinesUsed]
+  );
 
   // Restart handler - clears attempt ID and questions so a fresh attempt is required
   const handlePlayAgain = useCallback(() => {
@@ -273,7 +327,7 @@ export function QuizCabinet({
   const currentQuestion = questions[state.currentIndex];
   const allAnswered =
     questions.length === 5 &&
-    questions.every((q) => Boolean(state.answers[q.id]));
+    questions.every((q) => Boolean(state.answers[q.id]) || Boolean(state.skippedQuestions[q.id]));
 
   return (
     <div className="space-y-4">
@@ -361,6 +415,57 @@ export function QuizCabinet({
             line={state.hostLine || APO_LAKAY_HOST.questionLeadIn[state.currentIndex]}
           />
 
+          {/* Phase 2 Lifelines Bar */}
+          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-amber-50/70 border border-amber-200/60">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-900">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>Lifelines:</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleUseLifeline('fifty_fifty')}
+                disabled={state.lifelinesUsed.includes('fifty_fifty') || callingLifeline !== null}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                  state.lifelinesUsed.includes('fifty_fifty')
+                    ? 'bg-stone-100 text-stone-400 line-through cursor-not-allowed'
+                    : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-2xs'
+                }`}
+                title="50:50 - Remove 2 incorrect choices"
+              >
+                <span>50:50</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUseLifeline('ask_local')}
+                disabled={state.lifelinesUsed.includes('ask_local') || callingLifeline !== null}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                  state.lifelinesUsed.includes('ask_local')
+                    ? 'bg-stone-100 text-stone-400 line-through cursor-not-allowed'
+                    : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-2xs'
+                }`}
+                title="Ask a Local - Reveal elder hint"
+              >
+                <Users className="w-3 h-3 text-amber-700" />
+                <span>Ask Local</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUseLifeline('skip')}
+                disabled={state.lifelinesUsed.includes('skip') || callingLifeline !== null}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                  state.lifelinesUsed.includes('skip')
+                    ? 'bg-stone-100 text-stone-400 line-through cursor-not-allowed'
+                    : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-2xs'
+                }`}
+                title="Skip Question"
+              >
+                <SkipForward className="w-3 h-3 text-amber-700" />
+                <span>Skip</span>
+              </button>
+            </div>
+          </div>
+
           <QuestionCard
             ordinal={currentQuestion.ordinal || state.currentIndex + 1}
             questionText={currentQuestion.question_text}
@@ -369,6 +474,10 @@ export function QuizCabinet({
             onSelectOption={handleSelectOption}
             focusedOptionIndex={state.focusedOptionIndex}
             onFocusOption={(idx) => dispatch({ type: 'SET_FOCUS_OPTION', index: idx })}
+            round={currentQuestion.round}
+            mediaUrl={currentQuestion.media_url}
+            eliminatedOptionIds={state.eliminatedOptions[currentQuestion.id] || []}
+            revealedHint={state.revealedHints[currentQuestion.id]}
           />
 
           {state.error && (
@@ -393,7 +502,7 @@ export function QuizCabinet({
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={!state.answers[currentQuestion.id]}
+                disabled={!state.answers[currentQuestion.id] && !state.skippedQuestions[currentQuestion.id]}
                 className="px-4 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold shadow-2xs transition disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
               >
                 Next

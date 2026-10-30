@@ -28,6 +28,9 @@ export interface QuizQuestion {
   options: QuizOption[];
   explanation?: string;
   source_url?: string;
+  question_type?: 'multiple_choice' | 'true_false' | 'picture' | 'order' | 'map_drop';
+  media_url?: string | null;
+  round?: 'main' | 'special' | 'lightning';
 }
 
 export interface QuizDetail {
@@ -46,6 +49,8 @@ export interface QuizDetail {
   cooldown_hours: number;
   status: string;
   version: number;
+  theme?: string;
+  host_lines?: Record<string, unknown>;
   is_completed: boolean;
   active_attempt_id: string | null;
   cooldown_until: string | null;
@@ -59,6 +64,9 @@ export interface QuizAttemptStartResult {
     status: string;
     started_at: string;
     expires_at: string;
+    lifelines_used?: string[];
+    style_score?: number;
+    streak_max?: number;
   };
   questions: QuizQuestion[];
 }
@@ -103,7 +111,7 @@ export async function fetchNearbyQuizzes(lat: number, lng: number): Promise<Near
       return res.data.data;
     }
     return [];
-  } catch (err) {
+  } catch {
     return [];
   }
 }
@@ -118,7 +126,7 @@ export async function fetchQuizDetail(quizId: string): Promise<QuizDetail | null
       return res.data.data;
     }
     return null;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -143,14 +151,52 @@ export async function startQuizAttempt(params: {
 }
 
 /**
+ * Use a single-use lifeline during an active quiz attempt.
+ */
+export async function consumeQuizLifeline(params: {
+  quizId: string;
+  attemptId: string;
+  lifeline: 'fifty_fifty' | 'ask_local' | 'skip';
+  questionId?: string;
+}): Promise<{
+  lifeline: string;
+  question_id?: string;
+  eliminated_option_ids?: string[];
+  hint?: string;
+  skipped?: boolean;
+  remaining_lifelines: string[];
+}> {
+  const res = await api.post(
+    `/quizzes/${encodeURIComponent(params.quizId)}/attempts/${encodeURIComponent(params.attemptId)}/lifeline`,
+    {
+      lifeline: params.lifeline,
+      question_id: params.questionId,
+    }
+  );
+  if (!res.data?.success) {
+    throw new Error(res.data?.error?.message || 'Failed to use lifeline.');
+  }
+  return res.data.data;
+}
+
+/**
  * Submit answers for an active quiz attempt.
  */
 export async function submitQuizAttempt(
   attemptId: string,
-  answers: Array<{ question_id: string; selected_option_id: string }>
+  answers: Array<{
+    question_id: string;
+    selected_option_id?: string;
+    selected_order?: string[];
+    selected_location?: { lat: number; lng: number };
+    skipped?: boolean;
+  }>,
+  options?: { style_score?: number; streak_max?: number }
 ): Promise<QuizSubmissionResult> {
   const res = await api.put(`/quiz-attempts/${encodeURIComponent(attemptId)}/submission`, {
     answers,
+    style_score: options?.style_score,
+    streak_max: options?.streak_max,
   });
   if (!res.data?.success) {
     throw new Error(res.data?.error?.message || 'Failed to submit quiz attempt.');
@@ -168,7 +214,7 @@ export async function fetchMyQuizHistory(): Promise<UserQuizHistoryItem[]> {
       return res.data.data;
     }
     return [];
-  } catch (err) {
+  } catch {
     return [];
   }
 }
