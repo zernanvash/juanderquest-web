@@ -25,6 +25,7 @@ import { createBaseTileLayer, MAP_MAP_MAX_ZOOM } from '@/lib/map-tiles';
 import { PANGASINAN_BOUNDS, PH_LEAFLET_BOUNDS } from '@/lib/map-bounds';
 import { clampMapZoom, isValidLatitude, isValidLongitude } from '@/lib/map-url';
 import { appRoutes } from '@/lib/routes';
+import { questBadgeLabel } from '@/lib/quest-badge';
 import { MapWorkspacePanel, MobileSnapState } from '@/components/MapWorkspacePanel';
 import { MapSearchOverlay } from '@/components/MapSearchOverlay';
 import SignInSheet from '@/components/SignInSheet';
@@ -1250,7 +1251,7 @@ export default function QuestMapPage() {
             badge={
               selectedItem
                 ? selectedItem.type === 'quest'
-                  ? { label: 'Eco-Quest', variant: 'amber' }
+                  ? { label: questBadgeLabel(selectedItem.data as QuestModel), variant: 'amber' }
                   : { label: 'Spot', variant: 'emerald' }
                 : activeArea
                 ? { label: activeArea.type, variant: 'emerald' }
@@ -1352,10 +1353,10 @@ export default function QuestMapPage() {
                   title="How destination pinning works"
                   aria-label="How destination pinning works"
                   aria-expanded={pinHelpOpen}
-                  className="hidden sm:inline-flex h-10 px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer shrink-0"
+                  className="inline-flex w-10 h-10 sm:w-auto sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer shrink-0"
                 >
                   <HelpCircle className="w-4 h-4 shrink-0" />
-                  <span>Help</span>
+                  <span className="hidden sm:inline">Help</span>
                 </button>
 
                 {error && (
@@ -1683,7 +1684,7 @@ export default function QuestMapPage() {
           )}
 
           {pinHelpOpen && (
-            <div className="absolute right-4 top-16 z-30 w-72 max-w-[calc(100vw-2rem)] space-y-2.5 rounded-2xl border border-[#E3DFD5] bg-white/97 backdrop-blur-md p-4 text-xs leading-relaxed text-[#514532] shadow-xl">
+            <div className="absolute left-3 right-16 top-[64px] sm:left-auto sm:right-4 sm:top-16 z-30 sm:w-72 sm:max-w-[calc(100vw-2rem)] space-y-2.5 rounded-2xl border border-[#E3DFD5] bg-white/97 backdrop-blur-md p-4 text-xs leading-relaxed text-[#514532] shadow-xl">
               <div className="flex items-center justify-between">
                 <span className="font-black text-[#582F0E]">Add a spot</span>
                 <button
