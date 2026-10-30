@@ -20,7 +20,7 @@ describe('Quest Builder Validation & Reducer Logic (Plan 43 §5)', () => {
     const errors = validateQuestBuilder({
       title: 'A',
       description: 'Short',
-      category: 'eco_tourism',
+      category: 'eco',
       status: 'draft',
       tasks: [validTask],
     });
@@ -33,7 +33,7 @@ describe('Quest Builder Validation & Reducer Logic (Plan 43 §5)', () => {
     const noTasksErrors = validateQuestBuilder({
       title: 'Valid Quest Title',
       description: 'A completely valid description for this quest.',
-      category: 'eco_tourism',
+      category: 'eco',
       status: 'published',
       tasks: [],
     });
@@ -42,7 +42,7 @@ describe('Quest Builder Validation & Reducer Logic (Plan 43 §5)', () => {
     const noRequiredErrors = validateQuestBuilder({
       title: 'Valid Quest Title',
       description: 'A completely valid description for this quest.',
-      category: 'eco_tourism',
+      category: 'eco',
       status: 'published',
       tasks: [{ ...validTask, required: false }],
     });
@@ -68,7 +68,7 @@ describe('Quest Builder Validation & Reducer Logic (Plan 43 §5)', () => {
     const errors = validateQuestBuilder({
       title: 'Valid Quest Title',
       description: 'A completely valid description for this quest.',
-      category: 'eco_tourism',
+      category: 'eco',
       status: 'published',
       tasks: [validTask, photoTask],
     });
@@ -86,7 +86,7 @@ describe('Quest Builder Validation & Reducer Logic (Plan 43 §5)', () => {
     const errors = validateQuestBuilder({
       title: 'Valid Quest Title',
       description: 'A completely valid description for this quest.',
-      category: 'eco_tourism',
+      category: 'eco',
       status: 'draft',
       tasks: tenTasks,
     });

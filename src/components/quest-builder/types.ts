@@ -72,3 +72,14 @@ export interface QuestBuilderState {
   tasks: BuilderTask[];
   version: number;
 }
+
+/** The quest categories the API accepts (`createAuthorQuestSchema` in backend `routes/spots.ts`). */
+export const QUEST_CATEGORIES = [
+  { value: 'eco', label: 'Eco-Tourism & Nature' },
+  { value: 'cultural', label: 'Cultural Heritage' },
+  { value: 'food_trade', label: 'Food & Local Trade' },
+] as const;
+
+export function questCategoryOrDefault(category: string | undefined): string {
+  return QUEST_CATEGORIES.some((c) => c.value === category) ? (category as string) : 'eco';
+}

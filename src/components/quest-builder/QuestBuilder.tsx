@@ -11,7 +11,7 @@ import {
   QrCode,
   Sparkles,
 } from 'lucide-react';
-import { QuestBuilderState, BuilderTask } from './types';
+import { QuestBuilderState, BuilderTask, QUEST_CATEGORIES, questCategoryOrDefault } from './types';
 import { TaskList } from './TaskList';
 import { TravelerPreview } from './TravelerPreview';
 import { validateQuestBuilder, ValidationError } from './taskValidation';
@@ -129,7 +129,7 @@ export function QuestBuilder({ initialQuest, destination, isNew = false }: Quest
   const [state, dispatch] = useReducer(builderReducer, {
     title: initialQuest?.title || `Explore ${destination.name}`,
     description: initialQuest?.description || `Discover the cultural and scenic highlights of ${destination.name}.`,
-    category: initialQuest?.category || 'eco_tourism',
+    category: questCategoryOrDefault(initialQuest?.category),
     reward_points: (initialQuest?.reward_points || 50) as 50 | 75 | 100,
     step_order_mode: initialQuest?.step_order_mode || 'sequential',
     status: initialQuest?.status || 'draft',
@@ -364,10 +364,9 @@ export function QuestBuilder({ initialQuest, destination, isNew = false }: Quest
                   onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'category', value: e.target.value })}
                   className="w-full p-2.5 rounded-xl border border-stone-200 text-xs text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer"
                 >
-                  <option value="eco_tourism">Eco-Tourism</option>
-                  <option value="culture_heritage">Cultural Heritage</option>
-                  <option value="food_culinary">Food & Culinary</option>
-                  <option value="nature_adventure">Nature & Adventure</option>
+                  {QUEST_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
                 </select>
               </div>
 
