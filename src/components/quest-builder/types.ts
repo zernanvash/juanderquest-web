@@ -15,10 +15,14 @@ export interface LocationCfg {
   fence: GeoFence;
 }
 
+/** Who scans: the traveler scans a printed code, or the host scans the traveler's in-app pass. */
+export type QrScanMode = 'traveler_scans' | 'host_scans_traveler';
+
 export interface QrCfg {
   type: 'qr';
   fence: GeoFence;
   marker_code?: string;
+  scan_mode?: QrScanMode;
 }
 
 export interface PhotoCfg {

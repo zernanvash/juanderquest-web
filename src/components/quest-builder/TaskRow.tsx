@@ -56,6 +56,7 @@ export function TaskRow({
         defaultVerification = {
           type: 'qr',
           fence: { lat: destinationCoords.lat, lng: destinationCoords.lng, radius_meters: 80 },
+          scan_mode: 'traveler_scans',
         };
         break;
       case 'photo':

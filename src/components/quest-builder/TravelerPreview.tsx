@@ -27,7 +27,7 @@ export function TravelerPreview({
   stepOrderMode,
   tasks,
 }: TravelerPreviewProps) {
-  const getMethodBadge = (type: string) => {
+  const getMethodBadge = (type: string, scanMode?: string) => {
     switch (type) {
       case 'location':
         return (
@@ -38,7 +38,7 @@ export function TravelerPreview({
       case 'qr':
         return (
           <span className="flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-            <QrCode className="w-3 h-3" /> QR code
+            <QrCode className="w-3 h-3" /> {scanMode === 'host_scans_traveler' ? 'Host scans your pass' : 'QR code'}
           </span>
         );
       case 'photo':
@@ -118,7 +118,7 @@ export function TravelerPreview({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {getMethodBadge(task.checkpoint_type)}
+                    {getMethodBadge(task.checkpoint_type, (task.verification as { scan_mode?: string } | undefined)?.scan_mode)}
                     {isLocked ? (
                       <Lock className="w-3.5 h-3.5 text-stone-400" />
                     ) : (

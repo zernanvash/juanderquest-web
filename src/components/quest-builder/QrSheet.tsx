@@ -10,6 +10,8 @@ export interface QrSheetTask {
   title: string;
   marker_code: string;
   qr_payload: string;
+  /** host_scans_traveler tasks have no placard: the host scans the traveler's pass in the app. */
+  scan_mode?: 'traveler_scans' | 'host_scans_traveler';
   fence?: {
     lat: number;
     lng: number;
@@ -65,9 +67,17 @@ export function QrSheet({ data, onBack }: QrSheetProps) {
         </button>
       </div>
 
+      {data.qr_tasks.some((task) => task.scan_mode === 'host_scans_traveler') && (
+        <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 text-xs text-blue-900 print:hidden" data-testid="host-scan-note">
+          <strong>No placard needed for:</strong>{' '}
+          {data.qr_tasks.filter((task) => task.scan_mode === 'host_scans_traveler').map((task) => `${task.step_order}. ${task.title}`).join(', ')}.
+          {' '}You scan each traveler&apos;s quest pass in the app (open the quest, then <em>Scan traveler pass</em>).
+        </div>
+      )}
+
       {/* Cards Grid (optimized for desktop view and print CSS) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4">
-        {data.qr_tasks.map((task) => {
+        {data.qr_tasks.filter((task) => task.scan_mode !== 'host_scans_traveler').map((task) => {
           const { path, viewBox } = generateQrSvgPath(task.qr_payload);
 
           return (
