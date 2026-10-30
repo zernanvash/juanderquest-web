@@ -10,6 +10,8 @@ import {
   fetchQotd,
   notifyStampsUpdated,
 } from '@/lib/stamps-api';
+import { useMissionHighlight } from '@/lib/mission-guidance';
+import { MissionPill } from '@/components/MissionPill';
 
 export function QotdCard() {
   const { user } = useAuth();
@@ -18,6 +20,8 @@ export function QotdCard() {
   const [selected, setSelected] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Plan 71: the QOTD Daily Mission scrolls here and highlights the options for a moment.
+  const { isHighlighted, dismiss } = useMissionHighlight('qotd', { scrollElementId: 'qotd-card' });
 
   const load = useCallback(async () => {
     try {
@@ -36,6 +40,7 @@ export function QotdCard() {
 
   const handleAnswer = async (optionId: string) => {
     if (!user || !data?.question || data.answered || submitting) return;
+    dismiss();
     setSubmitting(true);
     setError('');
     setSelected(optionId);
@@ -66,7 +71,7 @@ export function QotdCard() {
 
   if (loading) {
     return (
-      <section className="bg-white rounded-3xl border border-[#E3DFD5] p-5 shadow-xs space-y-3" aria-busy="true">
+      <section id="qotd-card" className="bg-white rounded-3xl border border-[#E3DFD5] p-5 shadow-xs space-y-3" aria-busy="true">
         <div className="h-4 w-36 rounded bg-stone-100 animate-pulse" />
         <div className="h-10 rounded-xl bg-stone-50 animate-pulse" />
       </section>
@@ -77,9 +82,14 @@ export function QotdCard() {
 
   const answered = data.answered;
   const answer = data.answer;
+  const guiding = isHighlighted && !answered;
 
   return (
-    <section aria-labelledby="qotd-title" className="bg-white rounded-3xl border border-[#E3DFD5] p-5 shadow-xs space-y-3">
+    <section
+      id="qotd-card"
+      aria-labelledby="qotd-title"
+      className={`bg-white rounded-3xl border border-[#E3DFD5] p-5 shadow-xs space-y-3 scroll-mt-24 ${guiding ? 'mission-guidance-highlight' : ''}`}
+    >
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-700 flex items-center justify-center">
           <HelpCircle className="w-4 h-4" />
@@ -92,6 +102,8 @@ export function QotdCard() {
           +5 stamps
         </span>
       </div>
+
+      {guiding && <MissionPill>Daily Mission · Pick an answer below</MissionPill>}
 
       <p className="text-xs font-semibold text-[#2C221E] leading-relaxed">{data.question.text}</p>
 

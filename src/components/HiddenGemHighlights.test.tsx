@@ -40,3 +40,27 @@ describe('Hidden Gem promotional card', () => {
     expect(screen.getByText(/Finding discovery picks/)).toBeTruthy();
   });
 });
+
+describe('Plan 71 spotlight', () => {
+  const picks = [
+    { id: 'gem-one', name: 'Test Cove', municipality: 'Bolinao', reason: 'Discover somewhere different', crowd_status: 'quiet' },
+    { id: 'gem-two', name: 'Second Falls', municipality: 'Sison', reason: 'Matches your travel interests', crowd_status: 'moderate' },
+  ];
+  it('cycles picks, reports the featured one and shows distance only with the traveler GPS', async () => {
+    mocks.get.mockResolvedValue({ data: { success: true, data: picks } });
+    const featured = vi.fn();
+    const spots = [{ id: 'gem-one', gpsLat: 16.38, gpsLng: 119.9, category: 'nature_outdoors' }] as never;
+    const view = render(<HiddenGemHighlights spots={spots} onFeaturedChange={featured} />);
+    await screen.findByText('Test Cove');
+    expect(screen.queryByText(/away/)).toBeNull();
+    expect(featured).toHaveBeenLastCalledWith('gem-one');
+    expect(screen.getByRole('link', { name: 'View on map' }).getAttribute('href')).toBe('/map?spot=gem-one');
+
+    view.rerender(<HiddenGemHighlights spots={spots} onFeaturedChange={featured} userCoords={{ lat: 16.38, lng: 119.95 }} />);
+    expect(screen.getByText(/km away/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next hidden gem' }));
+    expect(screen.getByText('Second Falls')).toBeTruthy();
+    expect(featured).toHaveBeenLastCalledWith('gem-two');
+  });
+});

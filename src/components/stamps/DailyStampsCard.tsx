@@ -18,8 +18,10 @@ import {
   Stamp,
   Zap,
 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { gsap, motionDuration } from '@/lib/animations/gsap';
+import { requestMissionHighlight, resolveMissionTarget } from '@/lib/mission-guidance';
 import {
   DailyStamps,
   STAMPS_UPDATED_EVENT,
@@ -40,8 +42,9 @@ function MissionIcon({ kind }: { kind: string }) {
   }
 }
 
-export function DailyStampsCard() {
+export function DailyStampsCard({ hiddenGemSpotId = null }: { hiddenGemSpotId?: string | null } = {}) {
   const { user } = useAuth();
+  const onDashboard = usePathname() === '/dashboard';
   const userId = user?.id ?? null;
   const [data, setData] = useState<DailyStamps | null>(null);
   const [loading, setLoading] = useState(true);
@@ -280,29 +283,62 @@ export function DailyStampsCard() {
               <span className="text-[10px] text-[#837560]">{data.missions?.filter((mission) => mission.completed).length ?? 0}/3 done</span>
             </div>
             <div className="space-y-2">
-              {(data.missions ?? []).map((mission) => (
-                <div
-                  key={mission.id}
-                  className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 ${
-                    mission.completed ? 'bg-emerald-50/60 border-emerald-200' : 'bg-[#FAF9F5] border-[#E3DFD5]'
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    mission.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-white border border-[#E3DFD5] text-[#2D6A4F]'
-                  }`}>
-                    {mission.completed ? <Check className="w-4 h-4" /> : <MissionIcon kind={mission.kind} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] sm:text-xs font-bold text-[#2C221E] leading-snug line-clamp-2">{mission.title}</p>
-                    <p className="text-[9px] text-[#837560]">
-                      {mission.on_site ? 'On-site · server verified' : 'At home · server verified'}
-                    </p>
-                  </div>
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md shrink-0 ${
-                    mission.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
-                  }`}>+{mission.stamps}</span>
-                </div>
-              ))}
+              {(data.missions ?? []).map((mission) => {
+                const body = (
+                  <>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      mission.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-white border border-[#E3DFD5] text-[#2D6A4F]'
+                    }`}>
+                      {mission.completed ? <Check className="w-4 h-4" /> : <MissionIcon kind={mission.kind} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] sm:text-xs font-bold text-[#2C221E] leading-snug line-clamp-2">{mission.title}</p>
+                      <p className="text-[9px] text-[#837560]">
+                        {mission.on_site ? 'On-site · server verified' : 'At home · server verified'}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md shrink-0 ${
+                      mission.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+                    }`}>+{mission.stamps}</span>
+                  </>
+                );
+                if (mission.completed) {
+                  return (
+                    <div key={mission.id} className="flex items-center gap-2.5 rounded-xl border px-3 py-2 bg-emerald-50/60 border-emerald-200">
+                      {body}
+                      <span className="text-[10px] font-black text-emerald-800 shrink-0">✓ Done</span>
+                    </div>
+                  );
+                }
+                // Plan 71: an open mission takes the traveler to where it is done and highlights the control there.
+                const target = resolveMissionTarget(mission.kind, { hiddenGemSpotId });
+                const rowClass = 'group flex items-center gap-2.5 rounded-xl border px-3 py-2 bg-[#FAF9F5] border-[#E3DFD5] hover:border-[#2D6A4F]/50 hover:bg-white transition text-left w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2D6A4F]/40';
+                const cta = (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#2D6A4F]/10 px-2.5 py-1 text-[11px] font-bold text-[#2D6A4F] group-hover:bg-[#2D6A4F] group-hover:text-white transition-colors shrink-0">
+                    {target.ctaLabel} <ArrowRight className="w-3 h-3" />
+                  </span>
+                );
+                if (target.kind === 'qotd' && onDashboard) {
+                  return (
+                    <button
+                      key={mission.id}
+                      type="button"
+                      data-mission={target.kind}
+                      onClick={() => requestMissionHighlight('qotd')}
+                      className={rowClass}
+                    >
+                      {body}
+                      {cta}
+                    </button>
+                  );
+                }
+                return (
+                  <Link key={mission.id} href={target.href} data-mission={target.kind} className={rowClass}>
+                    {body}
+                    {cta}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 

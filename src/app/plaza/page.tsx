@@ -28,6 +28,7 @@ import { TownBoard } from '@/components/plaza/TownBoard';
 import { AlertsCard } from '@/components/plaza/AlertsCard';
 import { ActivityFeed } from '@/components/plaza/ActivityFeed';
 import { Navigation } from '@/components/Navigation';
+import { useMissionHighlight } from '@/lib/mission-guidance';
 
 function PlazaContent() {
   const { user, sessionUnavailable } = useAuth();
@@ -226,6 +227,11 @@ function PlazaContent() {
   };
 
   const isGuest = !sessionUser;
+  // Plan 71: the Cheer Daily Mission lands here and points at the first post you can cheer.
+  const cheerMission = useMissionHighlight('cheer_post', {
+    scrollElementId: 'mission-cheer-target',
+    ready: !feedLoading && activities.length > 0,
+  });
   const connectionUnavailable = Boolean(sessionUnavailable || standingsError);
   const retryPlaza = () => {
     setStandingsLoading(true);
@@ -366,6 +372,8 @@ function PlazaContent() {
         onFollowToggle={handleFollowToggle}
         pinnedActivityId={queryActivityId}
         openCommentsDefault={queryComments}
+        highlightFirstCheerable={cheerMission.isHighlighted && !isGuest}
+        onCheerMissionDone={cheerMission.dismiss}
       />
         </>
       )}

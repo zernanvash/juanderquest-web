@@ -26,6 +26,8 @@ export interface MiniMapPreviewProps {
   hideBadge?: boolean;
   badgeLabel?: string;
   showMarker?: boolean;
+  /** Plan 71: small dots for nearby places around the main pin (not interactive). */
+  points?: Array<{ lat: number; lng: number; title?: string }>;
 }
 
 export function MiniMapPreview({
@@ -46,11 +48,15 @@ export function MiniMapPreview({
   badgeLabel,
   showMarker = true,
   reticleMode = false,
+  points,
 }: MiniMapPreviewProps) {
   const router = useRouter();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const pointsLayerRef = useRef<any>(null);
+  const leafletRef = useRef<any>(null);
+  const [mapReady, setMapReady] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -158,7 +164,10 @@ export function MiniMapPreview({
 
         mapInstanceRef.current = map;
         markerRef.current = marker;
+        leafletRef.current = L;
+        pointsLayerRef.current = L.layerGroup().addTo(map);
         setLoading(false);
+        setMapReady((n) => n + 1);
 
         // Invalidate size after layout stabilization
         setTimeout(() => {
@@ -182,6 +191,21 @@ export function MiniMapPreview({
       }
     };
   }, [mounted, interactive, showMarker, pinType, reticleMode]);
+
+  const pointsKey = (points ?? []).map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)},${p.title ?? ''}`).join('|');
+  useEffect(() => {
+    const L = leafletRef.current;
+    const layer = pointsLayerRef.current;
+    if (!L || !layer) return;
+    layer.clearLayers();
+    for (const point of points ?? []) {
+      const dot = L.circleMarker([point.lat, point.lng], {
+        radius: 5, color: '#ffffff', weight: 2, fillColor: '#2D6A4F', fillOpacity: 0.9, interactive: false,
+      });
+      dot.addTo(layer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pointsKey, mapReady]);
 
   // Update center & marker position if coordinates change dynamically
   useEffect(() => {

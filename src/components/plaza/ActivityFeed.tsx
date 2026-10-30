@@ -19,6 +19,9 @@ interface ActivityFeedProps {
   onFollowToggle?: (userId: string, currentlyFollowing: boolean) => void;
   pinnedActivityId?: string | null;
   openCommentsDefault?: boolean;
+  /** Plan 71: highlight the first post the viewer can still cheer (Daily Mission). */
+  highlightFirstCheerable?: boolean;
+  onCheerMissionDone?: () => void;
 }
 
 export const ActivityFeed: React.FC<ActivityFeedProps> = ({
@@ -35,7 +38,12 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
   onFollowToggle,
   pinnedActivityId,
   openCommentsDefault,
+  highlightFirstCheerable = false,
+  onCheerMissionDone,
 }) => {
+  const missionTargetId = highlightFirstCheerable
+    ? activities.find((activity) => !activity.cheered_by_me && activity.reason !== 'you')?.id ?? null
+    : null;
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // IntersectionObserver for infinite scrolling
@@ -137,6 +145,8 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
               onCheerToggle={onCheerToggle}
               onHideActivity={onHideActivity}
               defaultCommentsOpen={pinnedActivityId === activity.id && openCommentsDefault}
+              missionHighlight={missionTargetId === activity.id}
+              onCheerMissionDone={onCheerMissionDone}
             />
           ))
         )}

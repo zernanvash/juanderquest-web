@@ -12,6 +12,8 @@ const stampsApi = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/stamps-api', () => stampsApi);
+const nav = vi.hoisted(() => ({ pathname: '/dashboard' }));
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }));
 vi.mock('@/lib/auth', () => ({
   useAuth: () => ({ user: { id: 'traveler-1', displayName: 'Vash', points: 10, role: 'user' } }),
 }));
@@ -102,5 +104,29 @@ describe('DailyStampsCard', () => {
     render(<DailyStampsCard />);
     const button = await screen.findByRole('button', { name: /Claimed today/i });
     expect((button as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('Plan 71: open missions lead to their task; done missions are marked done', async () => {
+    nav.pathname = '/stamps';
+    render(<DailyStampsCard hiddenGemSpotId="gem-one" />);
+    const cheer = await screen.findByText('Cheer a Plaza post');
+    expect(cheer.closest('a')?.getAttribute('href')).toBe('/plaza?mission=cheer_post');
+    // Off the dashboard, the QOTD mission links back to the dashboard card.
+    expect(screen.getByText('Answer the Question of the Day').closest('a')?.getAttribute('href')).toBe('/dashboard?mission=qotd#qotd-card');
+    expect(screen.getByText('Check in at a destination').closest('a')).toBeNull();
+    expect(screen.getByText('✓ Done')).toBeTruthy();
+  });
+
+  it('Plan 71: on the dashboard the QOTD mission highlights the card without leaving the page', async () => {
+    nav.pathname = '/dashboard';
+    const heard = vi.fn();
+    window.addEventListener('jdq:mission-highlight', heard);
+    render(<DailyStampsCard />);
+    const button = (await screen.findByText('Answer the Question of the Day')).closest('button');
+    expect(button).toBeTruthy();
+    fireEvent.click(button!);
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect((heard.mock.calls[0][0] as CustomEvent).detail).toEqual({ kind: 'qotd' });
+    window.removeEventListener('jdq:mission-highlight', heard);
   });
 });

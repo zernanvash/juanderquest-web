@@ -14,6 +14,8 @@ import { appRoutes } from '@/lib/routes';
 import { COPY, formatPoints } from '@/lib/copy';
 import { DestinationMedia } from '@/components/DestinationMedia';
 import { QuestMarkerMedia } from '@/components/QuestMarkerMedia';
+import { MissionPill } from '@/components/MissionPill';
+import { useMissionHighlight } from '@/lib/mission-guidance';
 import {
   Compass,
   MapPin,
@@ -198,6 +200,7 @@ function QuestsContent() {
     return () => observer.disconnect();
   }, [loading, activeTab]);
 
+  const questMission = useMissionHighlight('quest_step', { scrollElementId: 'mission-quest-target', ready: !loading });
   const paginatedQuests = useMemo(() => {
     return filteredQuests.slice(0, visibleCount);
   }, [filteredQuests, visibleCount]);
@@ -227,13 +230,19 @@ function QuestsContent() {
     { id: 'food_trade', label: '🐟 Food & Agri-Trade' },
   ];
 
+  // Plan 71: the Quest-step Daily Mission points at the first quest on the list.
+  const missionQuestId = questMission.isHighlighted ? paginatedQuests[0]?.id ?? null : null;
+
   const renderQuestCard = (quest: QuestModel) => {
+    const missionTarget = quest.id === missionQuestId;
     return (
       <article
         key={quest.id}
-        className="bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/50 p-4 sm:p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group"
+        id={missionTarget ? 'mission-quest-target' : undefined}
+        className={`${missionTarget ? 'mission-guidance-highlight ' : ''}bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/50 p-4 sm:p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition duration-200 group`}
       >
         <div className="space-y-3">
+          {missionTarget && <MissionPill>Daily Mission · Complete a quest step</MissionPill>}
           <div className="relative w-full h-36 rounded-xl overflow-hidden bg-stone-100 shrink-0">
             <QuestMarkerMedia
               markerImageUrl={quest.markerImageUrl}
@@ -308,6 +317,7 @@ function QuestsContent() {
 
           <Link
             href={appRoutes.quest(quest.id)}
+            onClick={missionTarget ? questMission.dismiss : undefined}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white text-xs font-bold shadow-xs group-hover:translate-x-0.5 transition active:scale-95"
           >
             <span>{COPY.quest.viewCta}</span>
