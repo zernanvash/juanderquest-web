@@ -45,6 +45,8 @@ import { SpotGestureHandler } from '@/lib/spot-ui-gestures';
 import { getAvailableChapters, scrollToChapter } from '@/lib/spot-ui-chapters';
 import { SPOT_GOOD_FOR, SPOT_BEST_TIME } from '@/lib/spot-posting';
 import SignInSheet from '@/components/SignInSheet';
+import { MissionPill } from '@/components/MissionPill';
+import { useMissionHighlight } from '@/lib/mission-guidance';
 
 function getAuthorBadges(spotId: string, authorName: string, currentUser?: { displayName?: string }) {
   if (currentUser?.displayName && authorName.toLowerCase() === currentUser.displayName.toLowerCase()) {
@@ -67,6 +69,8 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
   const router = useRouter();
   const [spot, setSpot] = useState<SpotModel | null>(null);
   const [alternatives, setAlternatives] = useState<SpotModel[]>([]);
+  // Plan 71: arriving from the Read-a-story Daily Mission highlights the story for a moment.
+  const storyMission = useMissionHighlight('read_story', { scrollElementId: 'spot-about', ready: Boolean(spot) });
   const [error, setError] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const { toggle: toggleSaved, isSaved: isSpotSaved } = useSavedLibrary();
@@ -897,8 +901,9 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                     {/* About Narrative */}
                     <section
                       id="spot-about"
-                      className="pb-8 pt-2 lg:pt-0 space-y-4 scroll-mt-24"
+                      className={`pb-8 pt-2 lg:pt-0 space-y-4 scroll-mt-24 ${storyMission.isHighlighted ? 'mission-guidance-highlight rounded-2xl px-3 sm:px-4 pt-3' : ''}`}
                     >
+                      {storyMission.isHighlighted && <MissionPill>Daily Mission · Opening this story counts</MissionPill>}
                       <h2 className="text-xl sm:text-2xl font-black text-[#141C16]">
                         About {spot.name}
                       </h2>

@@ -38,6 +38,8 @@ import {
   api,
   SpotModel,
   normalizeSpot,
+  QuestModel,
+  fetchQuests,
   SubmissionModel,
   normalizeSubmission,
   fetchMerchantMe,
@@ -57,6 +59,8 @@ import { DailyStampsCard } from '@/components/stamps/DailyStampsCard';
 import { QotdCard } from '@/components/stamps/QotdCard';
 import { triggerCelebration } from '@/components/CelebrationEffects';
 import { appRoutes } from '@/lib/routes';
+import { DashboardLocationRadar, type LobbyPosition } from '@/components/dashboard/DashboardLocationRadar';
+import { LINGAYEN_ANCHOR, loadLastMapCenter } from '@/lib/spot-location-handoff';
 
 export function DashboardClient() {
   const { user } = useAuth();
@@ -82,7 +86,27 @@ export function DashboardClient() {
   const [affiliateApp, setAffiliateApp] = useState<AffiliateApplicationModel | null>(null);
   const [loadingMerchant, setLoadingMerchant] = useState(true);
 
-  // 5. XP Toast / Celebrations
+  // 5. Plan 71 lobby: where the traveler is, nearby places/quests, and today's featured gem
+  const [position, setPosition] = useState<LobbyPosition>({ ...LINGAYEN_ANCHOR, source: 'default' });
+  const [spots, setSpots] = useState<SpotModel[]>([]);
+  const [quests, setQuests] = useState<QuestModel[]>([]);
+  const [featuredGemId, setFeaturedGemId] = useState<string | null>(null);
+  useEffect(() => {
+    const last = loadLastMapCenter();
+    if (last) setPosition((current) => (current.source === 'gps' ? current : { lat: last.lat, lng: last.lng, source: 'map' }));
+    let alive = true;
+    api.get('/spots', { timeout: 10000 })
+      .then((res) => {
+        if (alive && res.data?.success && Array.isArray(res.data.data)) setSpots(res.data.data.map(normalizeSpot));
+      })
+      .catch(() => {});
+    fetchQuests()
+      .then((list) => { if (alive) setQuests(list); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // 6. XP Toast / Celebrations
   const [bonusXp, setBonusXp] = useState<number>(0);
 
   // Quiz dialog: opened from the quiz card, or by a deep link (/dashboard?quiz=<id>, /quiz/<id>).
@@ -237,22 +261,55 @@ export function DashboardClient() {
       {openQuizId && <QuizDialog quizId={openQuizId} onClose={closeQuiz} onPassed={handleQuizPassed} />}
       <ErrorBoundary fallbackTitle="Unable to load Explorer Dashboard">
         <div className="max-w-7xl 2xl:max-w-[1560px] mx-auto space-y-8 pb-16">
-          {/* ======================================================== */}
-          {/* 1. EXPEDITION & FESTIVAL CALENDAR (FULL ROW) */}
-          {/* ======================================================== */}
+          {/* Plan 71 main lobby: 1 where you are + today's gem, 2 daily loop, 3 calendar, 4 play & community. */}
+          {/* Row 1: Explorer command deck */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            <div className="lg:col-span-5 min-w-0">
+              <DashboardLocationRadar position={position} onPositionChange={setPosition} spots={spots} quests={quests} />
+            </div>
+            <div className="lg:col-span-7 min-w-0">
+              <HiddenGemHighlights
+                actorId={user?.id}
+                spots={spots}
+                userCoords={position.source === 'gps' ? position : null}
+                onFeaturedChange={setFeaturedGemId}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Daily action loop — missions beside the Question of the Day they point to */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-8 min-w-0">
+              <DailyStampsCard hiddenGemSpotId={featuredGemId} />
+            </div>
+            <div className="lg:col-span-4 min-w-0">
+              <QotdCard />
+            </div>
+          </div>
+
+          {/* Row 3: Festival calendar (compact; full month on demand) */}
           <DashboardCalendar />
 
-          {/* ======================================================== */}
-          {/* 2. DAILY PASSPORT STAMPS & REWARDS */}
-          {/* ======================================================== */}
-          <DailyStampsCard />
-
-          {/* ======================================================== */}
-          {/* 3. MAIN 2-COLUMN DASHBOARD GRID */}
-          {/* ======================================================== */}
+          {/* Row 4: Adventure & community */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left 8-Column Area: Recommendations & Content */}
             <div className="lg:col-span-8 space-y-8">
+              {/* SECTION: Quest Progress Panel (Ongoing Quests & Previous Done Quests - 3 rows) */}
+              <section className="space-y-4">
+                <DashboardQuestProgressPanel />
+              </section>
+
+              {/* SECTION: Cultural quizzes (the quiz plays in a dialog over the dashboard) */}
+              <section id="quizzes" className="space-y-4 scroll-mt-20">
+                <DashboardQuizCard onOpenQuiz={setOpenQuizId} />
+              </section>
+
+              {/* SECTION: JuanChoice Community Spotlight Rail */}
+              <section className="space-y-4">
+                <JuanChoiceRail />
+              </section>
+
+              {/* Plan 71: partner / merchant panel sits below the traveler's own play. */}
               {/* SECTION: Merchant Workspace / Establishment Panel */}
               {merchantMe?.has_merchant && merchantMe.merchant ? (
                 <section className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] text-white rounded-3xl p-6 sm:p-7 shadow-sm border border-emerald-500/20 relative overflow-hidden">
@@ -367,31 +424,10 @@ export function DashboardClient() {
                   </Link>
                 </section>
               )}
-
-              {/* SECTION: Quest Progress Panel (Ongoing Quests & Previous Done Quests - 3 rows) */}
-              <section className="space-y-4">
-                <DashboardQuestProgressPanel />
-              </section>
-
-              {/* SECTION: Cultural quizzes (the quiz plays in a dialog over the dashboard) */}
-              <section id="quizzes" className="space-y-4 scroll-mt-20">
-                <DashboardQuizCard onOpenQuiz={setOpenQuizId} />
-              </section>
-
-              {/* SECTION: JuanChoice Community Spotlight Rail */}
-              <section className="space-y-4">
-                <JuanChoiceRail />
-              </section>
             </div>
 
-            {/* Right 4-Column Area: Hidden Gems, Voting Status & Recent Activities */}
+            {/* Right 4-Column Area: Voting Status & Recent Activities */}
             <div className="lg:col-span-4 space-y-6">
-              {/* Question of the Day (stamp mission) */}
-              <QotdCard />
-
-              {/* Standalone Hidden Gems Discovery Panel */}
-              <HiddenGemHighlights />
-
               {/* Voting Availability Card */}
               <div className="bg-white rounded-3xl border border-[#E3DFD5] p-5 sm:p-6 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#F2EFE9]">

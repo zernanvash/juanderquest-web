@@ -8,15 +8,8 @@ import {
   ChevronRight,
   Sparkles,
   MapPin,
-  Clock,
   ExternalLink,
-  Flame,
-  Award,
-  Vote,
-  Compass,
   ArrowRight,
-  Filter,
-  CheckCircle2,
 } from 'lucide-react';
 
 export interface CalendarEvent {
@@ -32,12 +25,15 @@ export interface CalendarEvent {
   spotId?: string;
   actionUrl?: string;
   actionLabel?: string;
+  /** Plan 71: town name for `/map?area=` (omitted for province-wide events). */
+  mapArea?: string;
 }
 
 // Authentic Pangasinan provincial festival, tourism, and community governance calendar
 export const PANGASINAN_EVENTS: CalendarEvent[] = [
   {
     id: 'ev-bangus-fest-2026',
+    mapArea: 'Dagupan',
     title: 'Dagupan Bangus Festival & Gilon-Gilon',
     date: '2026-10-18',
     endDate: '2026-10-24',
@@ -52,6 +48,7 @@ export const PANGASINAN_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'ev-pista-dayat-2026',
+    mapArea: 'Lingayen',
     title: 'Pista’y Dayat (Sea & Coastal Festival)',
     date: '2026-10-26',
     endDate: '2026-10-28',
@@ -66,6 +63,7 @@ export const PANGASINAN_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'ev-hundred-islands-cleanup',
+    mapArea: 'Alaminos',
     title: 'Hundred Islands Marine Sanctuary Eco-Quest',
     date: '2026-10-14',
     municipality: 'Alaminos City',
@@ -91,6 +89,7 @@ export const PANGASINAN_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'ev-puto-calasiao-weekend',
+    mapArea: 'Calasiao',
     title: 'Calasiao Puto & Culinary Weekend Expo',
     date: '2026-10-17',
     municipality: 'Calasiao',
@@ -102,6 +101,7 @@ export const PANGASINAN_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'ev-bolinao-lighthouse-walk',
+    mapArea: 'Bolinao',
     title: 'Cape Bolinao Historical Sunset Trail',
     date: '2026-10-24',
     municipality: 'Bolinao',
@@ -114,6 +114,7 @@ export const PANGASINAN_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'ev-manaoag-pilgrim-feast',
+    mapArea: 'Manaoag',
     title: 'Minor Basilica of Manaoag Rosary Assembly',
     date: '2026-10-11',
     municipality: 'Manaoag',
@@ -126,6 +127,7 @@ export const PANGASINAN_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'ev-antong-falls-ecotrek',
+    mapArea: 'Sison',
     title: 'Antong Falls Protected Watershed Eco-Trek',
     date: '2026-10-31',
     municipality: 'Sison',
@@ -138,6 +140,7 @@ export const PANGASINAN_EVENTS: CalendarEvent[] = [
   },
   {
     id: 'ev-tayug-sunflower-harvest',
+    mapArea: 'Tayug',
     title: 'Tayug Agri-Park Sunflower Maze Opening',
     date: '2026-10-28',
     municipality: 'Tayug',
@@ -196,10 +199,60 @@ const CATEGORY_STYLES: Record<
   },
 };
 
-export function DashboardCalendar() {
-  // Current view date (Default October 2026)
-  const [viewDate, setViewDate] = useState(() => new Date(2026, 9, 13)); // Oct 13, 2026
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-18');
+/** Festivals, heritage events and food fairs come back every year; one-off rounds and quests do not. */
+const ANNUAL_CATEGORIES = new Set<CalendarEvent['category']>(['festival', 'cultural', 'market']);
+const DAY_MS = 86_400_000;
+
+/** Today's date in Manila as YYYY-MM-DD. */
+export function manilaDateString(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
+const shiftYear = (date: string, years: number) => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
+
+/**
+ * Moves each annual event to its current or next occurrence (so the calendar never goes stale)
+ * and drops one-off events that have ended. Dates stay YYYY-MM-DD strings.
+ */
+export function projectEvents(events: CalendarEvent[], today: string): CalendarEvent[] {
+  const out: CalendarEvent[] = [];
+  for (const ev of events) {
+    const end = ev.endDate ?? ev.date;
+    if (!ANNUAL_CATEGORIES.has(ev.category)) {
+      if (end >= today) out.push(ev);
+      continue;
+    }
+    let years = Number(today.slice(0, 4)) - Number(ev.date.slice(0, 4));
+    if (shiftYear(end, years) < today) years += 1;
+    out.push({ ...ev, date: shiftYear(ev.date, years), endDate: ev.endDate ? shiftYear(ev.endDate, years) : undefined });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+}
+
+/** Whole days from `today` to `date` (both YYYY-MM-DD). */
+export function daysBetween(today: string, date: string): number {
+  return Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS);
+}
+
+export function countdownLabel(ev: CalendarEvent, today: string): string {
+  if (ev.date <= today && (ev.endDate ?? ev.date) >= today) return ev.date === today && !ev.endDate ? 'Today' : 'Happening now';
+  const days = daysBetween(today, ev.date);
+  if (days === 1) return 'Tomorrow';
+  if (days < 14) return `In ${days} days`;
+  return `In ${Math.round(days / 7)} weeks`;
+}
+
+const formatDay = (date: string, options: Intl.DateTimeFormatOptions) =>
+  new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', ...options });
+
+export function DashboardCalendar({ today: todayProp }: { today?: string } = {}) {
+  const today = todayProp ?? manilaDateString();
+  const events = useMemo(() => projectEvents(PANGASINAN_EVENTS, today), [today]);
+  const upcoming = useMemo(() => events.filter((ev) => (ev.endDate ?? ev.date) >= today).slice(0, 3), [events, today]);
+  const firstFocus = upcoming[0] && upcoming[0].date > today ? upcoming[0].date : today;
+  const [isExpandedGrid, setIsExpandedGrid] = useState(false);
+  const [viewDate, setViewDate] = useState(() => new Date(Number(firstFocus.slice(0, 4)), Number(firstFocus.slice(5, 7)) - 1, 1));
+  const [selectedDate, setSelectedDate] = useState<string>(firstFocus);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const year = viewDate.getFullYear();
@@ -208,10 +261,11 @@ export function DashboardCalendar() {
   // Month navigation
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
   const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
-  const jumpToToday = () => {
-    setViewDate(new Date(2026, 9, 13));
-    setSelectedDate('2026-10-13');
+  const jumpTo = (date: string) => {
+    setViewDate(new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, 1));
+    setSelectedDate(date);
   };
+  const jumpToToday = () => jumpTo(today);
 
   // Days in month calculation
   const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 is Sunday
@@ -220,11 +274,11 @@ export function DashboardCalendar() {
 
   // Filter events
   const filteredEvents = useMemo(() => {
-    return PANGASINAN_EVENTS.filter((ev) => {
+    return events.filter((ev) => {
       if (selectedCategory !== 'all' && ev.category !== selectedCategory) return false;
       return true;
     });
-  }, [selectedCategory]);
+  }, [events, selectedCategory]);
 
   // Map events to date strings
   const eventsByDate = useMemo(() => {
@@ -234,14 +288,14 @@ export function DashboardCalendar() {
         if (!map[ev.date]) map[ev.date] = [];
         map[ev.date].push(ev);
       } else {
-        const start = new Date(ev.date);
-        const end = new Date(ev.endDate);
+        const start = new Date(`${ev.date}T00:00:00Z`);
+        const end = new Date(`${ev.endDate}T00:00:00Z`);
         const cur = new Date(start);
         while (cur <= end) {
           const key = cur.toISOString().split('T')[0];
           if (!map[key]) map[key] = [];
           map[key].push(ev);
-          cur.setDate(cur.getDate() + 1);
+          cur.setUTCDate(cur.getUTCDate() + 1);
         }
       }
     });
@@ -314,7 +368,59 @@ export function DashboardCalendar() {
         </div>
       </div>
 
-      {/* 2. Main Calendar Content: Grid + Selected Event Feed */}
+      {/* Plan 71: compact "coming up" strip by default; the month grid opens on demand. */}
+      <div className="px-4 pt-3 sm:px-5 lg:px-6 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-extrabold text-[#2C221E]">
+          {isExpandedGrid ? `${monthName} ${year}` : 'Coming up in Pangasinan'}
+          <span className="ml-2 text-[10px] font-bold text-[#837560]">Today · {formatDay(today, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+        </p>
+        <button
+          type="button"
+          aria-expanded={isExpandedGrid}
+          onClick={() => setIsExpandedGrid((open) => !open)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3DFD5] bg-[#FAF9F5] hover:bg-white px-2.5 py-1.5 text-[11px] font-black text-[#2D6A4F] transition cursor-pointer"
+        >
+          <CalendarIcon className="w-3.5 h-3.5" />
+          {isExpandedGrid ? 'Collapse calendar' : 'Expand full month'}
+        </button>
+      </div>
+
+      {!isExpandedGrid ? (
+        <div className="p-4 sm:p-5 lg:p-6 pt-3 sm:pt-3 lg:pt-3">
+          {upcoming.length === 0 ? (
+            <p className="rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5] p-4 text-xs text-[#837560]">No upcoming events listed yet.</p>
+          ) : (
+            <ul className="grid grid-cols-1 md:grid-cols-3 gap-3" aria-label="Upcoming events">
+              {upcoming.map((ev) => {
+                const style = CATEGORY_STYLES[ev.category];
+                return (
+                  <li key={ev.id} className={`min-w-0 rounded-2xl border ${style.border} ${style.lightBg} p-3.5 flex flex-col gap-2`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${style.badgeBg}`}>{style.label}</span>
+                      <span className="text-[10px] font-black text-[#2C221E] bg-white/80 border border-black/5 rounded-full px-2 py-0.5 shrink-0">
+                        {countdownLabel(ev, today)}
+                      </span>
+                    </div>
+                    <h3 className="text-xs font-extrabold text-[#2C221E] leading-snug">{ev.title}</h3>
+                    <p className="text-[10px] font-mono text-[#837560]">
+                      {formatDay(ev.date, { month: 'short', day: 'numeric' })}
+                      {ev.endDate ? ` – ${formatDay(ev.endDate, { month: 'short', day: 'numeric' })}` : ''}
+                    </p>
+                    <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <TownPill ev={ev} />
+                      {ev.actionUrl && (
+                        <Link href={ev.actionUrl} className="text-[11px] font-extrabold text-[#2D6A4F] hover:underline">
+                          {ev.actionLabel || 'View'} →
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : (
       <div className="p-4 sm:p-5 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Interactive Month Matrix */}
         <div className="lg:col-span-7 space-y-3">
@@ -384,7 +490,7 @@ export function DashboardCalendar() {
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
               const events = eventsByDate[dateStr] || [];
               const isSelected = selectedDate === dateStr;
-              const isToday = dateStr === '2026-10-13';
+              const isToday = dateStr === today;
 
               return (
                 <button
@@ -456,10 +562,7 @@ export function DashboardCalendar() {
             </div>
 
             <div className="font-bold text-[#2D6A4F]">
-              {new Date(selectedDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}: {activeEvents.length} {activeEvents.length === 1 ? 'event' : 'events'}
+              {formatDay(selectedDate, { month: 'short', day: 'numeric' })}: {activeEvents.length} {activeEvents.length === 1 ? 'event' : 'events'}
             </div>
           </div>
         </div>
@@ -472,12 +575,7 @@ export function DashboardCalendar() {
                 Schedule Feed
               </span>
               <h3 className="text-sm font-extrabold text-[#2C221E]">
-                {new Date(selectedDate).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {formatDay(selectedDate, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
               </h3>
             </div>
             <span className="px-2.5 py-0.5 rounded-full bg-stone-100 text-[#2C221E] text-[10px] font-extrabold">
@@ -493,14 +591,16 @@ export function DashboardCalendar() {
               <p className="text-[11px] text-[#837560] leading-relaxed">
                 Click any highlighted date with colored dots on the calendar to inspect provincial festivities and eco-bounties.
               </p>
-              <button
-                type="button"
-                onClick={() => setSelectedDate('2026-10-18')}
-                className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#2D6A4F] hover:underline cursor-pointer"
-              >
-                <span>Jump to Dagupan Bangus Festival (Oct 18)</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
+              {upcoming[0] && (
+                <button
+                  type="button"
+                  onClick={() => jumpTo(upcoming[0].date)}
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#2D6A4F] hover:underline cursor-pointer"
+                >
+                  <span>Jump to {upcoming[0].title} ({formatDay(upcoming[0].date, { month: 'short', day: 'numeric' })})</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
@@ -524,10 +624,7 @@ export function DashboardCalendar() {
                         </h4>
                       </div>
 
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-[#837560] shrink-0">
-                        <MapPin className="w-3 h-3 text-[#2D6A4F]" />
-                        <span>{ev.municipality}</span>
-                      </div>
+                      <TownPill ev={ev} />
                     </div>
 
                     {/* Event Description */}
@@ -558,6 +655,29 @@ export function DashboardCalendar() {
           )}
         </div>
       </div>
+      )}
     </section>
+  );
+}
+
+/** The event's town; opens the map focused on it when we know which town it is. */
+function TownPill({ ev }: { ev: CalendarEvent }) {
+  const body = (
+    <>
+      <MapPin className="w-3 h-3 text-[#2D6A4F] shrink-0" />
+      <span className="truncate">{ev.municipality}</span>
+    </>
+  );
+  if (!ev.mapArea) {
+    return <span className="flex items-center gap-1 text-[10px] font-bold text-[#837560] min-w-0">{body}</span>;
+  }
+  return (
+    <Link
+      href={`/map?area=${encodeURIComponent(ev.mapArea)}`}
+      title={`View ${ev.mapArea} on the map`}
+      className="flex items-center gap-1 text-[10px] font-bold text-[#837560] hover:text-[#2D6A4F] hover:underline min-w-0"
+    >
+      {body}
+    </Link>
   );
 }

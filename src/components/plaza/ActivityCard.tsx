@@ -6,6 +6,7 @@ import { formatActivityText } from './activityText';
 import { CommentThread } from './CommentThread';
 import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
 import { DisplayName } from '@/components/cosmetics/DisplayName';
+import { MissionPill } from '@/components/MissionPill';
 import { ProfileBanner } from '@/components/cosmetics/ProfileBanner';
 
 interface ActivityCardProps {
@@ -14,6 +15,8 @@ interface ActivityCardProps {
   onCheerToggle?: (activityId: string, cheered: boolean) => Promise<void>;
   onHideActivity?: (activityId: string) => Promise<void>;
   defaultCommentsOpen?: boolean;
+  missionHighlight?: boolean;
+  onCheerMissionDone?: () => void;
 }
 
 function timeAgo(dateString: string): string {
@@ -34,6 +37,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   onCheerToggle,
   onHideActivity,
   defaultCommentsOpen = false,
+  missionHighlight = false,
+  onCheerMissionDone,
 }) => {
   const [cheered, setCheered] = useState(activity.cheered_by_me);
   const [cheerCount, setCheerCount] = useState(activity.cheer_count);
@@ -49,6 +54,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       window.location.href = `/login?redirect=/plaza?activity=${activity.id}`;
       return;
     }
+    onCheerMissionDone?.();
     const nextState = !cheered;
     const nextCount = nextState ? cheerCount + 1 : Math.max(0, cheerCount - 1);
     // Optimistic toggle
@@ -180,12 +186,13 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       </div>
 
       {/* Actions (Cheer, Comment) */}
-      <div className="pt-2 flex items-center gap-3">
+      <div className="pt-2 flex items-center gap-3 flex-wrap">
         <button
           type="button"
+          id={missionHighlight ? 'mission-cheer-target' : undefined}
           onClick={handleCheerClick}
           aria-pressed={cheered}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition active:scale-95 ${missionHighlight ? 'mission-guidance-highlight ' : ''}${
             cheered
               ? 'bg-amber-100 text-amber-900 border border-amber-300'
               : 'bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-subtle)]/80 text-[var(--color-brand-brown)] border border-[var(--color-border-default)]'
@@ -194,6 +201,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           <span>👏</span>
           <span>{cheerCount}</span>
         </button>
+        {missionHighlight && <MissionPill>Tap to cheer</MissionPill>}
 
         <button
           type="button"

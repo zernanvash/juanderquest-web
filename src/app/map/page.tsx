@@ -9,6 +9,8 @@ import 'leaflet/dist/leaflet.css';
 import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { useAuth } from '@/lib/auth';
+import { MissionPill } from '@/components/MissionPill';
+import { useMissionHighlight } from '@/lib/mission-guidance';
 import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PinAimCard, PinReticle } from '@/components/PinAimCard';
@@ -234,6 +236,8 @@ export default function QuestMapPage() {
 
   // Explicit locate flow only: no location request before the traveler asks.
   const [locating, setLocating] = useState(false);
+  // Plan 71: the Check-in Daily Mission points at Locate (check-ins need you within 100 m).
+  const checkInMission = useMissionHighlight('check_in');
   const [locationNotice, setLocationNotice] = useState('');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [tripOverlay, setTripOverlay] = useState<MapOverlay | null>(null);
@@ -1319,13 +1323,14 @@ export default function QuestMapPage() {
                   <span>{pinPlacementActive ? 'Cancel' : 'Add spot'}</span>
                 </button>
 
+                <div className="relative shrink-0">
                 <button
                   type="button"
-                  onClick={handleUseMyLocation}
+                  onClick={() => { checkInMission.dismiss(); handleUseMyLocation(); }}
                   disabled={locating}
                   title="Use my location"
                   aria-label="Use my location"
-                  className="w-10 h-10 sm:w-auto sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer disabled:opacity-60 shrink-0"
+                  className={`${checkInMission.isHighlighted ? 'mission-guidance-highlight ' : ''}w-10 h-10 sm:w-auto sm:px-3 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E3DFD5] text-[#582F0E] hover:text-[#2D6A4F] hover:bg-white shadow-md inline-flex items-center justify-center gap-1.5 text-xs font-bold transition active:scale-95 cursor-pointer disabled:opacity-60 shrink-0`}
                 >
                   {locating ? (
                     <RotateCw className="w-4 h-4 animate-spin text-[#2D6A4F] shrink-0" />
@@ -1334,6 +1339,12 @@ export default function QuestMapPage() {
                   )}
                   <span className="hidden sm:inline">Locate</span>
                 </button>
+                {checkInMission.isHighlighted && (
+                  <MissionPill className="absolute top-full right-0 mt-2 w-max max-w-[min(240px,80vw)] whitespace-normal">
+                    Locate, then pick a spot within 100 m to check in
+                  </MissionPill>
+                )}
+                </div>
 
                 <button
                   type="button"

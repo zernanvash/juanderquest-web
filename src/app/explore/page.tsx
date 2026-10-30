@@ -46,6 +46,8 @@ import {
 
 import { SignInSheet } from '@/components/SignInSheet';
 import { getCategoryIllustrationUrl } from '@/components/DestinationMedia';
+import { MissionPill } from '@/components/MissionPill';
+import { useMissionHighlight } from '@/lib/mission-guidance';
 
 function getAuthorBadges(spotId: string, authorName: string, currentUser?: { displayName?: string }) {
   if (currentUser?.displayName && authorName.toLowerCase() === currentUser.displayName.toLowerCase()) {
@@ -68,6 +70,8 @@ export default function ExplorePage() {
   const [signInReason, setSignInReason] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedMunicipality, setSelectedMunicipality] = useState<string>('ALL');
+  // Plan 71: the Read-a-story Daily Mission points at the first destination's story link.
+  const storyMission = useMissionHighlight('read_story', { scrollElementId: 'mission-story-target', ready: !loading && spots.length > 0 });
   const { library: savedLibrary, toggle: toggleSaved, isSaved } = useSavedLibrary();
   const [scouts, setScouts] = useState<PublicTravelerSummary[]>([]);
   const [loadingScouts, setLoadingScouts] = useState(true);
@@ -444,11 +448,25 @@ export default function ExplorePage() {
                     : 'Pangasinan Tourism';
                   const topRecommendationReason = spot.recommendationReasons?.[0] ?? null;
 
+                  const storyTarget = index === 0 && storyMission.isHighlighted;
                   return (<React.Fragment key={spot.id}>
                     {featuredChoice && choiceInsertionIndex === index && <JuanChoiceSpotlightCard spotlight={featuredChoice} />}
                     <article
-                      className="bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden"
+                      className={`${storyTarget ? 'mission-guidance-highlight ' : ''}bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden`}
                     >
+                      {storyTarget && (
+                        <div className="px-4 pt-3 sm:px-5 flex flex-wrap items-center gap-2">
+                          <MissionPill>Daily Mission · Read a destination story</MissionPill>
+                          <Link
+                            id="mission-story-target"
+                            href={appRoutes.spot(spot.id)}
+                            onClick={storyMission.dismiss}
+                            className="text-[11px] font-black text-[var(--color-brand-primary)] hover:underline"
+                          >
+                            Read {spot.name}&apos;s story →
+                          </Link>
+                        </div>
+                      )}
                       {/* Compact Post Header & Caption Area */}
                       <div className="px-4 pt-3.5 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3 space-y-2">
                         {isFeaturedHero && (
