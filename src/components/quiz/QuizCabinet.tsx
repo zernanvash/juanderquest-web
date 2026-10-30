@@ -174,10 +174,12 @@ export function QuizCabinet({
   const handleSubmit = useCallback(async () => {
     if (!activeAttemptId) return;
 
-    const answersList = questions.map((q) => ({
-      question_id: q.id,
-      selected_option_id: state.answers[q.id] || '',
-    }));
+    // A question skipped with the Skip lifeline (and not answered afterwards) is sent as skipped; it earns no point.
+    const answersList = questions.map((q) =>
+      !state.answers[q.id] && state.skippedQuestions[q.id]
+        ? { question_id: q.id, skipped: true }
+        : { question_id: q.id, selected_option_id: state.answers[q.id] || '' }
+    );
 
     if (answersList.some((a) => !a.selected_option_id && !state.skippedQuestions[a.question_id])) {
       dispatch({
@@ -458,7 +460,7 @@ export function QuizCabinet({
                     ? 'bg-stone-100 text-stone-400 line-through cursor-not-allowed'
                     : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer shadow-2xs'
                 }`}
-                title="Skip Question"
+                title="Skip this question (it earns no point)"
               >
                 <SkipForward className="w-3 h-3 text-amber-700" />
                 <span>Skip</span>
