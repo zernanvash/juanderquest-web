@@ -250,7 +250,7 @@ export function DashboardCalendar({ today: todayProp }: { today?: string } = {})
   const events = useMemo(() => projectEvents(PANGASINAN_EVENTS, today), [today]);
   const upcoming = useMemo(() => events.filter((ev) => (ev.endDate ?? ev.date) >= today).slice(0, 3), [events, today]);
   const firstFocus = upcoming[0] && upcoming[0].date > today ? upcoming[0].date : today;
-  const [isExpandedGrid, setIsExpandedGrid] = useState(false);
+  const [isExpandedGrid, setIsExpandedGrid] = useState(true);
   const [viewDate, setViewDate] = useState(() => new Date(Number(firstFocus.slice(0, 4)), Number(firstFocus.slice(5, 7)) - 1, 1));
   const [selectedDate, setSelectedDate] = useState<string>(firstFocus);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

@@ -31,16 +31,17 @@ describe('calendar dates', () => {
 });
 
 describe('DashboardCalendar', () => {
-  it('opens on the next three events and expands to the month grid on demand', () => {
+  it('opens on the month grid and collapses to the next three events on demand', () => {
     render(<DashboardCalendar today="2026-10-30" />);
+    expect(screen.getByRole('button', { name: 'Previous month' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Collapse calendar' }).getAttribute('aria-expanded')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse calendar' }));
     const strip = screen.getByRole('list', { name: 'Upcoming events' });
     expect(strip.querySelectorAll('li')).toHaveLength(3);
     expect(screen.getByText('Antong Falls Protected Watershed Eco-Trek')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Previous month' })).toBeNull();
     expect(screen.getAllByRole('link', { name: /Sison/ })[0].getAttribute('href')).toBe('/map?area=Sison');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Expand full month' }));
-    expect(screen.getByRole('button', { name: 'Previous month' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Collapse calendar' }).getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Expand full month' }).getAttribute('aria-expanded')).toBe('false');
   });
 });
