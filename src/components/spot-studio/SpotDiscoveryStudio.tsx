@@ -159,7 +159,7 @@ export function SpotDiscoveryStudio({ initial }: { initial: InitialSpotLocation 
           {/* 1. Location stage */}
           <Section step={1} title="Where is it?">
             <div className="relative">
-              <MiniMapPreview lat={pin.lat} lng={pin.lng} zoom={pin.zoom} interactive reticleMode height="h-56 sm:h-72"
+              <MiniMapPreview lat={pin.lat} lng={pin.lng} zoom={pin.zoom} interactive reticleMode satelliteToggle height="h-56 sm:h-72"
                 hideBadge onLocationChange={(lat, lng, zoom) => movePin({ lat, lng, zoom }, 'map-crosshair')} />
               <div className="absolute right-2.5 top-2.5 z-[400] flex gap-1.5">
                 <button type="button" onClick={() => requestGps(false)} disabled={locating}
