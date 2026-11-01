@@ -116,11 +116,12 @@ export function SpotDiscoveryStudio({ initial }: { initial: InitialSpotLocation 
     }, DRAFT_SAVE_MS);
     return () => window.clearTimeout(timer);
   }, [pin, source, draft, recognition, router, composer.publishedSpot]);
+  // Clear after the published render, so a draft save already queued cannot write the published place back.
+  useEffect(() => { if (composer.publishedSpot) clearSpotDraft(); }, [composer.publishedSpot]);
 
   const handlePublish = async () => {
     const spot = await composer.publish();
     if (!spot) { if (fieldErrors.municipality || fieldErrors.address) setEditAddress(true); return; }
-    clearSpotDraft();
     triggerCelebration({ type: 'poppers', particleCount: 140 });
   };
 
