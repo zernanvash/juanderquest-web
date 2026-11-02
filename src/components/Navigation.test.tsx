@@ -178,4 +178,10 @@ describe('Navigation Red Notification Indicators', () => {
     // Sidepanel indicator should now be cleared as visited
     expect(screen.queryByTestId('sidepanel-drawer-notif-indicator')).toBeNull();
   });
+
+  it('does not render "About Project" or "My Submissions" in drawer or nav groups', () => {
+    render(<Navigation><div>Content</div></Navigation>);
+    expect(screen.queryByText('About Project')).toBeNull();
+    expect(screen.queryByText('My Submissions')).toBeNull();
+  });
 });

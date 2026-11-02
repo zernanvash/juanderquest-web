@@ -14,7 +14,6 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
-  History,
   X,
   Award,
   Bell,
@@ -400,13 +399,11 @@ export const Navigation: React.FC<{
         hasMerchantOwnership
           ? { label: 'Merchant Dashboard', href: '/merchant', icon: Store }
           : { label: 'Merchant Hub', href: '/affiliate', icon: Store },
-        { label: 'About Project', href: '/about', icon: ShieldCheck },
       ],
     },
     {
       label: 'Account',
       items: [
-        { label: 'My Submissions', href: '/history', icon: History },
         { label: 'Explorer Settings', href: '/settings', icon: Settings },
       ],
     },
