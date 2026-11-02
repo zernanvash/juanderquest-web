@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Navigation } from './Navigation';
+import { Check, Clock3, Flame, LockKeyhole, Share2, Trophy, Users, Vote, Zap } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { uuid } from '@/lib/api';
 import { appRoutes } from '@/lib/routes';
@@ -10,6 +10,7 @@ import { effectiveJuanChoiceStatus, getJuanChoiceCampaign, getJuanChoiceOverview
 
 import { getJuanChoicePresentation, isJuanChoiceEnvironmentTrusted } from '@/lib/juanchoice-presentation';
 import { triggerCelebration } from './CelebrationEffects';
+import { triggerTaskCompletion } from '@/lib/gamification';
 
 type PendingVote = { candidateId: string; expectedVersion: number; key: string };
 
@@ -56,9 +57,32 @@ export function JuanChoiceExperience({
   }, [campaignId]);
 
   const refresh = useCallback(async (id: string, signal?: AbortSignal) => {
-    const [nextDetail, nextMine] = await Promise.all([getJuanChoiceCampaign(id, signal), user ? getMyJuanChoiceState(id, signal) : Promise.resolve(null)]);
+    const nextDetail = await getJuanChoiceCampaign(id, signal);
     if (signal?.aborted) return;
-    setDetail(nextDetail); setMyState(nextMine); setBallot(nextMine?.ballot ?? null); setError('');
+    setDetail(nextDetail);
+    setError('');
+    if (!user) {
+      setMyState(null);
+      setBallot(null);
+      return;
+    }
+
+    try {
+      const nextMine = await getMyJuanChoiceState(id, signal);
+      if (signal?.aborted) return;
+      setMyState(nextMine);
+      setBallot(nextMine.ballot);
+    } catch {
+      if (signal?.aborted) return;
+      setMyState({
+        ballot: null,
+        eligibility: { eligible: false, reason: 'UNAVAILABLE', eligible_at: null },
+        can_vote_now: false,
+        vote_unavailable_reason: 'ELIGIBILITY_UNAVAILABLE',
+        server_time: null,
+      });
+      setBallot(null);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -77,8 +101,14 @@ export function JuanChoiceExperience({
 
   useEffect(() => {
     const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') setClock(performance.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return;
-      setClock(performance.now());
       if (!campaignId) void getJuanChoiceOverview().then(value => {
         const receivedAtMono = performance.now();
         setOverview({ ...value, receivedAtMono });
@@ -108,6 +138,7 @@ export function JuanChoiceExperience({
       const result = await putJuanChoiceBallot(selectedId, pending.candidateId, pending.expectedVersion, pending.key);
       setReceipt(result); setBallot(result.ballot); setMyState(null); setPending(null);
       triggerCelebration({ type: 'poppers', playAudio: true });
+      triggerTaskCompletion('daily_vote');
       void refresh(selectedId).catch(() => {});
     } catch (err) {
       if (err instanceof Error && err.message === 'PRESENTATION_ENVIRONMENT_MISMATCH') {
@@ -146,26 +177,168 @@ export function JuanChoiceExperience({
   const formatDate = (value:string) => new Date(value).toLocaleString('en-PH',{
     timeZone:overview?.region.timezone ?? 'Asia/Manila',dateStyle:'long',timeStyle:'short',
   });
+  const countdownTarget = campaign && status
+    ? Date.parse(status === 'scheduled' ? campaign.opens_at : campaign.closes_at)
+    : null;
+  const hasValidCountdown = countdownTarget !== null && Number.isFinite(countdownTarget) && serverNow !== null;
+  const countdownSeconds = countdownTarget !== null && Number.isFinite(countdownTarget) && serverNow !== null
+    ? Math.max(0, Math.floor((countdownTarget - serverNow) / 1000))
+    : 0;
+  const countdown = {
+    days: Math.floor(countdownSeconds / 86400),
+    hours: Math.floor((countdownSeconds % 86400) / 3600),
+    minutes: Math.floor((countdownSeconds % 3600) / 60),
+    seconds: countdownSeconds % 60,
+  };
+  const weekNumber = campaign ? (() => {
+    const date = new Date(campaign.opens_at);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    const weekOne = new Date(date.getFullYear(), 0, 4);
+    return 1 + Math.round(((date.getTime() - weekOne.getTime()) / 86400000 - 3 + (weekOne.getDay() + 6) % 7) / 7);
+  })() : null;
+  const totalVotes = detail?.standings.reduce((total, item) => total + item.votes, 0) ?? 0;
+  const roundOpensAt = campaign ? Date.parse(campaign.opens_at) : Number.NaN;
+  const roundClosesAt = campaign ? Date.parse(campaign.closes_at) : Number.NaN;
+  const roundProgress = campaign && serverNow !== null && Number.isFinite(roundOpensAt)
+      && Number.isFinite(roundClosesAt) && roundClosesAt > roundOpensAt
+    ? Math.min(100, Math.max(0, ((serverNow - roundOpensAt) / (roundClosesAt - roundOpensAt)) * 100))
+    : 0;
+  const retryLoad = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      if (selectedId) {
+        await refresh(selectedId);
+      } else {
+        const value = await getJuanChoiceOverview();
+        const receivedAtMono = performance.now();
+        setOverview({ ...value, receivedAtMono });
+        setClock(receivedAtMono);
+        setSelectedId(value.current?.id ?? null);
+      }
+    } catch (err) {
+      setError(juanChoiceErrorCode(err) === 'FEATURE_DISABLED'
+        ? 'JuanChoice is not open yet. Check back when the pilot begins.'
+        : selectedId === null
+          ? 'Campaigns could not be loaded. Please retry.'
+          : juanChoiceErrorCode(err) === 'CAMPAIGN_NOT_FOUND'
+            ? 'This campaign is unavailable.'
+            : 'Campaign details could not be loaded. Please retry.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  return <Navigation><div className="w-full space-y-5">
+  return <div className="w-full space-y-5">
     {presentationBuild && <div role="status" className="rounded-2xl border-2 border-amber-500 bg-amber-100 p-4 text-sm font-bold text-amber-950">
       Presentation demo — votes and Civic XP/stamps stay in a separate test database. They do not count toward official rankings or rewards.
     </div>}
     {overview && !environmentTrusted && <div role="alert" className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
       Voting configuration mismatch. Ballots are disabled here. Reload the page or ask the team to check the demo API.
     </div>}
-    <header className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 sm:p-8">
-      <p className="text-xs font-black uppercase tracking-widest text-amber-700">JuanChoice · community spotlight</p>
-      <h1 className="mt-2 text-3xl font-black text-[#582F0E]">{presentation.headerTitle}</h1>
-      <p className="mt-3 max-w-2xl text-sm text-[#514532]">{presentation.headerDescription}</p>
-    </header>
+    {campaign ? (
+      <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#A43118] via-[#B54517] to-[#5C300F] p-5 text-white shadow-xl sm:p-7">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-amber-300/10 blur-3xl" />
+        <div className="relative">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F5B726] px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#552C0B]">
+                <Trophy className="h-3.5 w-3.5" aria-hidden="true" /> JuanChoice
+              </span>
+              <span className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ${status === 'voting' ? 'bg-rose-500 text-white' : 'bg-white/20 text-white'}`}>
+                {status === 'voting' ? 'Live' : status}
+              </span>
+              {weekNumber !== null && <span className="rounded-full bg-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide">Week {weekNumber}</span>}
+              {status === 'voting' && countdownSeconds > 0 && countdownSeconds <= 86400 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-rose-900">
+                  <Flame className="h-3 w-3" aria-hidden="true" /> Final hours
+                </span>
+              )}
+            </div>
+            <Link href={currentUrl} className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-white/25">
+              <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> Share round
+            </Link>
+          </div>
+          <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">
+            {campaign.region} election · {status}
+          </p>
+          <h1 id="round-heading" className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
+            {presentation.mode === 'write_enabled' ? campaign.theme : presentation.headerTitle}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/85">
+            {presentation.mode === 'write_enabled'
+              ? 'Cast your ballot for this round’s community spotlight. Every eligible participant earns 25 Civic XP and one stamp, whichever destination wins.'
+              : presentation.headerDescription}
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-end justify-between gap-5">
+            <div>
+              <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white/75">
+                <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+                {status === 'scheduled' ? 'Voting opens in' : status === 'voting' ? 'Polls close in' : 'Round closed'}
+              </p>
+              {hasValidCountdown && status !== 'closed' && status !== 'finalized' && status !== 'archived' && status !== 'cancelled' ? (
+                <div className="flex items-center gap-1.5" aria-label={`${countdown.days} days, ${countdown.hours} hours, ${countdown.minutes} minutes, ${countdown.seconds} seconds`}>
+                  {[
+                    { value: countdown.days, label: 'Days' },
+                    { value: countdown.hours, label: 'Hrs' },
+                    { value: countdown.minutes, label: 'Min' },
+                    { value: countdown.seconds, label: 'Sec' },
+                  ].map((unit, index) => (
+                    <Fragment key={unit.label}>
+                      {index > 0 && <span className="px-0.5 text-xl font-black text-white/70">:</span>}
+                      <div className="flex min-w-[54px] flex-col items-center rounded-2xl border border-white/20 bg-black/20 px-2.5 py-1.5 sm:min-w-[66px] sm:px-3">
+                        <span className="text-2xl font-black tabular-nums sm:text-3xl">{String(unit.value).padStart(2, '0')}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/70">{unit.label}</span>
+                      </div>
+                    </Fragment>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-xl border border-white/15 bg-black/20 px-4 py-3 text-sm font-bold">This round has ended</p>
+              )}
+            </div>
+            <div className="grid min-w-[230px] grid-cols-3 gap-1.5 sm:gap-2">
+              {[
+                { icon: Vote, label: 'Votes', value: totalVotes },
+                { icon: Users, label: 'Your ballot', value: ballot ? 'Cast' : '—' },
+                { icon: Trophy, label: 'Contenders', value: detail?.standings.length ?? '—' },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex min-w-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-2 py-2.5 text-center">
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-white/70">
+                    <Icon className="h-3 w-3" aria-hidden="true" /> {label}
+                  </span>
+                  <span className="mt-1 truncate text-base font-black">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="h-2 overflow-hidden rounded-full bg-black/25">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#FFD54A] to-[#FF5B70] transition-[width] duration-500" style={{ width: `${roundProgress}%` }} />
+            </div>
+            <p className="mt-1.5 text-[10px] font-bold text-white/75">
+              {Math.round(roundProgress)}% of the round elapsed · participation earns 25 Civic XP and one stamp
+            </p>
+          </div>
+        </div>
+      </header>
+    ) : (
+      <header className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 sm:p-8">
+        <p className="text-xs font-black uppercase tracking-widest text-amber-700">JuanChoice · community spotlight</p>
+        <h1 className="mt-2 text-3xl font-black text-[#582F0E]">{presentation.headerTitle}</h1>
+        <p className="mt-3 max-w-2xl text-sm text-[#514532]">{presentation.headerDescription}</p>
+      </header>
+    )}
     {presentation.readOnlyNotice && (
       <div role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-medium text-amber-900 shadow-xs">
         {presentationBuild ? 'Demo voting is not open yet. You can inspect the presentation round without creating an official ballot.' : presentation.readOnlyNotice}
       </div>
     )}
     {loading && <p role="status" className="rounded-2xl bg-white p-6 text-[#514532]">Loading the current round…</p>}
-    {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Retry</button></div>}
+    {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">{error} <button className="underline" onClick={() => void retryLoad()}>Retry</button></div>}
     {!loading && !error && !campaign && <section className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6" aria-labelledby="next-round-heading">
       <h2 id="next-round-heading" className="text-xl font-black text-[#2C221E]">{presentation.nextRoundHeading}</h2>
       {overview?.next ? <p className="mt-2 text-sm text-[#514532]">{presentation.nextRoundWindowLabel} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time> and closes <time dateTime={overview.next.closes_at}>{formatDate(overview.next.closes_at)} PHT</time>{overview.next.theme ? ` · ${overview.next.theme}` : ''}.</p>
@@ -173,18 +346,32 @@ export function JuanChoiceExperience({
       <p className="mt-2 text-sm text-[#514532]">{presentation.educationalRewardCopy}</p>
       {overview?.notice && <p role="status" className="mt-3 text-sm text-[#514532]">{overview.notice.message}</p>}
     </section>}
-    {campaign && overview?.next && <p className="rounded-2xl border border-[#E3DFD5] bg-white p-4 text-sm text-[#514532]">{presentation.nextRoundPrefix} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time>.</p>}
     {campaign && <section className="space-y-5" aria-labelledby="round-heading">
-      <div className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase text-[#7D5800]">{campaign.region} · {status}</p><h2 id="round-heading" className="mt-1 text-2xl font-black text-[#2C221E]">{campaign.theme}</h2></div><Link href={currentUrl} className="rounded-full border border-[#E3DFD5] px-3 py-2 text-sm font-semibold text-[#3F6653]">Share round</Link></div>
-        <p className="mt-3 text-sm text-[#514532]">{presentation.roundWindowLabel}: <time dateTime={status === 'scheduled' ? campaign.opens_at : campaign.closes_at}>{new Date(status === 'scheduled' ? campaign.opens_at : campaign.closes_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT</time></p>
+      <div className="rounded-3xl border border-[#E3DFD5] bg-white p-5 shadow-xs sm:p-6">
+        <p className="text-sm text-[#514532]">{presentation.roundWindowLabel}: <time dateTime={status === 'scheduled' ? campaign.opens_at : campaign.closes_at}>{new Date(status === 'scheduled' ? campaign.opens_at : campaign.closes_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} PHT</time></p>
         {isPreviewActive && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Evaluator preview is read-only. Exit preview before voting.</p>}
         {!user && !authLoading && status === 'voting' && presentation.mode === 'write_enabled' && <p className="mt-3 text-sm text-[#514532]">Browse freely; <Link className="font-bold text-[#3F6653] underline" href={`/login?redirect=${encodeURIComponent(currentUrl)}`}>sign in</Link> to vote.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'ACCOUNT_TOO_NEW' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting unlocks after {myState.eligibility.eligible_at ? formatDate(myState.eligibility.eligible_at) : 'your account is 72 hours old'} or after one approved destination visit.</p>}
         {user && presentation.mode === 'write_enabled' && myState?.eligibility.reason === 'UNAVAILABLE' && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Voting eligibility could not be confirmed. Please try again later.</p>}
-        {ballot && <p className="mt-3 text-sm font-semibold text-[#2D6A4F]">Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'} · version {ballot.version}</p>}
+        {ballot && <p className="mt-3 flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-[#2D6A4F]"><Check className="h-4 w-4 shrink-0" aria-hidden="true" /> Your ballot: {detail.standings.find(item => item.candidate_id === ballot.candidate_id)?.spot_name ?? 'Previously selected destination'} · version {ballot.version}</p>}
         {receipt && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{presentationBuild ? 'Demo ballot recorded. +25 demo Civic XP and +1 demo stamp in the separate test database only' : 'Ballot recorded. +25 Civic XP and +1 stamp earned'}{receipt.replayed ? ' (receipt replayed)' : ''}; 0 mJDQ issued.</p>}
         {voteError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{voteError}</p>}
+        {status === 'voting' && countdownSeconds > 0 && countdownSeconds <= 86400 && (
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-800">
+            <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            Final 24 hours: voting closes soon. You can still vote or change your ballot until the round ends.
+          </p>
+        )}
+        {status === 'voting' && presentation.mode === 'write_enabled' && (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-[#FFFCF2] p-4">
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#8A5A00]">
+              <Zap className="h-4 w-4" aria-hidden="true" /> Your ballot
+            </p>
+            <p className="mt-1 text-sm text-[#514532]">
+              {ballot ? 'Your vote is recorded. You can change your destination before voting closes.' : 'Choose one destination below. Your free ballot earns 25 Civic XP and one stamp, regardless of the result.'}
+            </p>
+          </div>
+        )}
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">{detail.standings.map((item, index) => <article key={item.candidate_id} id={`choice-candidate-${item.candidate_id}`} className={`rounded-2xl border bg-white p-5 flex flex-col justify-between ${focusCandidateId === item.candidate_id ? 'border-[#FFB703] ring-2 ring-amber-200' : 'border-[#E3DFD5]'}`}>
         <div>
@@ -196,6 +383,7 @@ export function JuanChoiceExperience({
       {detail.standings.length === 0 && <p className="rounded-2xl bg-white p-6 text-[#514532]">No eligible destinations are listed for this round.</p>}
       {detail.result && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-[#582F0E]">{presentationBuild ? `Presentation demo result: ${detail.result.valid_ballots} demo ballots recorded in the separate test database. This rehearsal does not count toward official destination rankings or rewards.` : `Final result: ${detail.result.valid_ballots} valid ballots. ${detail.result.co_winner_ids.length === 0 ? 'No winner was declared.' : detail.result.co_winner_ids.length > 1 ? 'The round ended in a tie; all co-winners are preserved.' : 'One destination topped the community vote. Spotlight placement still requires a separate safety review.'}`}</p>}
     </section>}
+    {campaign && overview?.next && <p className="rounded-2xl border border-[#E3DFD5] bg-white p-4 text-sm text-[#514532]">{presentation.nextRoundPrefix} <time dateTime={overview.next.opens_at}>{formatDate(overview.next.opens_at)} PHT</time>.</p>}
     {overview?.previous && <section className="rounded-2xl border border-[#E3DFD5] bg-white p-5 sm:p-6" aria-labelledby="previous-results-heading">
       <p className="text-xs font-bold uppercase tracking-wide text-[#7D5800]">{overview.previous.period_label}</p>
       <h2 id="previous-results-heading" className="mt-1 text-xl font-black text-[#2C221E]">{presentationBuild ? 'Previous demo results' : 'Previous results'}</h2>
@@ -213,5 +401,5 @@ export function JuanChoiceExperience({
           : 'Our first round is underway. Results will appear after voting ends and the result is finalized.'}</p>
     </section>}
     {pending && <div role="dialog" aria-modal="true" aria-labelledby="vote-confirm-title" onKeyDown={event => { if (event.key === 'Escape' && !submitting) setPending(null); if (event.key === 'Tab') { if (event.shiftKey && document.activeElement === confirmRef.current) { event.preventDefault(); cancelRef.current?.focus(); } else if (!event.shiftKey && document.activeElement === cancelRef.current) { event.preventDefault(); confirmRef.current?.focus(); } } }} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 id="vote-confirm-title" className="text-xl font-black text-[#2C221E]">Confirm your JuanChoice ballot</h2><p className="mt-3 text-sm text-[#514532]">Vote for {detail?.standings.find(item => item.candidate_id === pending.candidateId)?.spot_name ?? 'this destination'}? This is free. {presentationBuild ? 'This is a presentation demo: the ballot and participation XP/stamp stay in the separate test database and do not count officially.' : 'Your participation reward is the same regardless of the result.'}</p><div className="mt-5 flex flex-wrap gap-3"><button ref={confirmRef} type="button" onClick={() => void submitVote()} disabled={submitting} className="rounded-lg bg-[#3F6653] px-5 py-3 font-bold text-white disabled:opacity-60">{submitting ? 'Recording…' : voteError ? 'Retry same vote' : 'Confirm vote'}</button><button ref={cancelRef} type="button" disabled={submitting} onClick={() => setPending(null)} className="rounded-lg border border-[#E3DFD5] px-5 py-3 font-semibold text-[#514532]">Cancel</button></div></div></div>}
-  </div></Navigation>;
+  </div>;
 }

@@ -57,7 +57,7 @@ export default function LoginPage() {
   };
 
   React.useEffect(() => {
-    if (isTravelerSession(user)) router.replace(redirectTarget() ?? '/quests');
+    if (isTravelerSession(user)) router.replace(redirectTarget() ?? '/dashboard/cozy');
   }, [user, router]);
 
   React.useEffect(() => {

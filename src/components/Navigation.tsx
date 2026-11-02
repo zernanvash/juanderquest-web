@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, adminHandoffUrl } from '@/lib/auth';
 import {
@@ -348,6 +349,7 @@ export const Navigation: React.FC<{
     label: string;
     href: string;
     icon: React.ElementType;
+    iconSrc?: string;
     flair?: string;
     badge?: string;
   }
@@ -360,7 +362,7 @@ export const Navigation: React.FC<{
     { label: 'Quests', href: '/quests', icon: Zap, flair: 'Bounties' },
     { label: 'JuanChoice', href: '/choice', icon: Award, flair: 'Free vote' },
     { label: 'Shop', href: '/shop', icon: ShoppingBag },
-    { label: 'Leaderboard', href: '/leaderboard', icon: Award },
+    { label: 'Plaza', href: '/plaza', icon: Award, iconSrc: '/icons/plaza.png' },
     hasMerchantOwnership
       ? { label: 'Merchant Dashboard', href: '/merchant', icon: Store, flair: 'Owner' }
       : { label: 'Merchant Hub', href: '/affiliate', icon: Store, flair: 'Partner' },
@@ -1042,13 +1044,22 @@ export const Navigation: React.FC<{
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-brand-primary)] hover:bg-[var(--color-bg-subtle)] font-medium'
                   }`}
                 >
-                  <Icon
-                    className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                      isDesktopDrawerCollapsed ? 'w-5 h-5' : 'w-4 h-4'
-                    } ${
-                      isActive ? 'text-[var(--color-brand-accent)]' : 'text-stone-500 group-hover:text-[var(--color-brand-primary)]'
-                    }`}
-                  />
+                  {item.iconSrc ? (
+                    <Image
+                      src={item.iconSrc}
+                      alt=""
+                      aria-hidden="true"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 shrink-0 object-contain transition-transform duration-200 group-hover:scale-110"
+                    />
+                  ) : (
+                    <Icon
+                      className={`w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                        isActive ? 'text-[var(--color-brand-accent)]' : 'text-stone-500 group-hover:text-[var(--color-brand-primary)]'
+                      }`}
+                    />
+                  )}
 
                   {!isDesktopDrawerCollapsed && (
                     <div className="flex-1 min-w-0 flex items-center justify-between gap-1.5">
@@ -1327,7 +1338,18 @@ export const Navigation: React.FC<{
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className="w-4 h-4" />
+                        {item.iconSrc ? (
+                          <Image
+                            src={item.iconSrc}
+                            alt=""
+                            aria-hidden="true"
+                            width={20}
+                            height={20}
+                            className="w-5 h-5 shrink-0 object-contain"
+                          />
+                        ) : (
+                          <Icon className="w-5 h-5" />
+                        )}
                         <span>{item.label}</span>
                       </div>
                       {item.flair && (

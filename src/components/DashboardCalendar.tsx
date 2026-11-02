@@ -201,16 +201,40 @@ export function DashboardCalendar() {
   const [viewDate, setViewDate] = useState(() => new Date(2026, 9, 13)); // Oct 13, 2026
   const [selectedDate, setSelectedDate] = useState<string>('2026-10-18');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [monthPickerYear, setMonthPickerYear] = useState(2026);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
 
   // Month navigation
-  const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
-  const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
+  const goToMonth = (targetYear: number, targetMonth: number) => {
+    const targetDateMonth = new Date(targetYear, targetMonth, 1);
+    const selectedDay = Number(selectedDate.slice(-2));
+    const day = Math.min(
+      selectedDay,
+      new Date(targetDateMonth.getFullYear(), targetDateMonth.getMonth() + 1, 0).getDate()
+    );
+    const targetDate = new Date(targetDateMonth.getFullYear(), targetDateMonth.getMonth(), day);
+
+    setViewDate(targetDateMonth);
+    setSelectedDate(
+      `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`
+    );
+    setIsMonthPickerOpen(false);
+  };
+  const changeMonth = (offset: number) => goToMonth(year, month + offset);
+  const prevMonth = () => changeMonth(-1);
+  const nextMonth = () => changeMonth(1);
   const jumpToToday = () => {
     setViewDate(new Date(2026, 9, 13));
     setSelectedDate('2026-10-13');
+    setIsMonthPickerOpen(false);
+  };
+  const jumpToFestival = () => {
+    setViewDate(new Date(2026, 9, 1));
+    setSelectedDate('2026-10-18');
+    setIsMonthPickerOpen(false);
   };
 
   // Days in month calculation
@@ -253,16 +277,18 @@ export function DashboardCalendar() {
     return eventsByDate[selectedDate] || [];
   }, [eventsByDate, selectedDate]);
 
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
   // Total active events count in this month
   const monthEventsCount = useMemo(() => {
     const set = new Set<string>();
     Object.entries(eventsByDate).forEach(([d, evs]) => {
-      if (d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)) {
+      if (d.startsWith(monthKey)) {
         evs.forEach((e) => set.add(e.id));
       }
     });
     return set.size;
-  }, [eventsByDate, year, month]);
+  }, [eventsByDate, monthKey]);
 
   return (
     <section className="bg-white rounded-3xl border border-[#E3DFD5] shadow-xs overflow-hidden">
@@ -319,15 +345,76 @@ export function DashboardCalendar() {
         {/* Left Column: Interactive Month Matrix */}
         <div className="lg:col-span-7 space-y-3">
           {/* Month Controller */}
-          <div className="flex items-center justify-between pb-2 border-b border-[#F2EFE9]">
+          <div className="relative flex items-center justify-between pb-2 border-b border-[#F2EFE9]">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-extrabold text-[#2C221E]">
+              <button
+                type="button"
+                onClick={() => {
+                  setMonthPickerYear(year);
+                  setIsMonthPickerOpen((open) => !open);
+                }}
+                aria-expanded={isMonthPickerOpen}
+                aria-controls="calendar-month-picker"
+                aria-label={`Choose month, currently ${monthName} ${year}`}
+                className="text-sm font-extrabold text-[#2C221E] hover:text-[#2D6A4F] hover:underline underline-offset-2"
+              >
                 {monthName} {year}
-              </span>
+              </button>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200">
                 {monthEventsCount} {monthEventsCount === 1 ? 'event' : 'events'}
               </span>
             </div>
+
+            {isMonthPickerOpen && (
+              <div
+                id="calendar-month-picker"
+                role="group"
+                aria-label="Choose calendar month"
+                className="absolute left-0 top-full z-20 mt-2 w-56 rounded-xl border border-[#E3DFD5] bg-white p-3 shadow-lg"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setMonthPickerYear((current) => current - 1)}
+                    aria-label="Previous year"
+                    className="rounded-md p-1 text-stone-600 hover:bg-stone-100"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs font-extrabold text-[#2C221E]">{monthPickerYear}</span>
+                  <button
+                    type="button"
+                    onClick={() => setMonthPickerYear((current) => current + 1)}
+                    aria-label="Next year"
+                    className="rounded-md p-1 text-stone-600 hover:bg-stone-100"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {Array.from({ length: 12 }, (_, monthIndex) => {
+                    const label = new Date(2026, monthIndex, 1).toLocaleString('default', { month: 'short' });
+                    const isCurrentMonth = year === monthPickerYear && month === monthIndex;
+
+                    return (
+                      <button
+                        key={monthIndex}
+                        type="button"
+                        onClick={() => goToMonth(monthPickerYear, monthIndex)}
+                        aria-pressed={isCurrentMonth}
+                        className={`rounded-md px-2 py-1.5 text-xs font-bold transition ${
+                          isCurrentMonth
+                            ? 'bg-[#2D6A4F] text-white'
+                            : 'text-[#514532] hover:bg-emerald-50 hover:text-[#2D6A4F]'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-1.5">
               <button
@@ -495,7 +582,7 @@ export function DashboardCalendar() {
               </p>
               <button
                 type="button"
-                onClick={() => setSelectedDate('2026-10-18')}
+                onClick={jumpToFestival}
                 className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#2D6A4F] hover:underline cursor-pointer"
               >
                 <span>Jump to Dagupan Bangus Festival (Oct 18)</span>

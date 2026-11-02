@@ -207,6 +207,33 @@ describe('JuanChoiceExperience component integration tests', () => {
     expect(screen.getByRole('button', { name: /Retry/i })).toBeTruthy();
   });
 
+  it('keeps campaign details visible when personal voting state is unavailable', async () => {
+    mockJuanChoice.getJuanChoiceOverview.mockResolvedValue(mockPresentationOverview);
+    mockJuanChoice.getJuanChoiceCampaign.mockResolvedValue(mockCampaignDetail);
+    mockJuanChoice.getMyJuanChoiceState.mockRejectedValue(new Error('Network Error'));
+
+    render(<JuanChoiceExperience isPresentation={true} />);
+
+    expect(await screen.findByText('Tondol White Sand Beach')).toBeTruthy();
+    expect(screen.getByText('Voting eligibility could not be confirmed. Please try again later.')).toBeTruthy();
+    expect(screen.queryByText('Campaign details could not be loaded. Please retry.')).toBeNull();
+  });
+
+  it('retries campaign details without reloading the page', async () => {
+    mockJuanChoice.getJuanChoiceOverview.mockResolvedValue(mockPresentationOverview);
+    mockJuanChoice.getJuanChoiceCampaign
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValue(mockCampaignDetail);
+    mockJuanChoice.getMyJuanChoiceState.mockResolvedValue(mockMyState);
+
+    render(<JuanChoiceExperience isPresentation={true} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('Tondol White Sand Beach')).toBeTruthy();
+    expect(mockJuanChoice.getJuanChoiceCampaign).toHaveBeenCalledTimes(2);
+  });
+
   it('handles FEATURE_DISABLED from overview during non-pilot mode', async () => {
     mockJuanChoice.getJuanChoiceOverview.mockRejectedValue(makeAxiosError('Disabled', 503, 'FEATURE_DISABLED'));
 

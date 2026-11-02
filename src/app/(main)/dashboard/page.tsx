@@ -1,13 +1,5 @@
-import { Quicksand } from 'next/font/google';
 import { pageMetadata } from '@/lib/page-metadata';
 import { CozyDashboardClient } from './cozy/CozyDashboardClient';
-
-const quicksand = Quicksand({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-  variable: '--font-quicksand',
-});
 
 export const metadata = pageMetadata(
   'JuanDer Without Limits - Island Explorer Hub',
@@ -16,9 +8,5 @@ export const metadata = pageMetadata(
 );
 
 export default function DashboardPage() {
-  return (
-    <div className={`${quicksand.className} ${quicksand.variable}`}>
-      <CozyDashboardClient />
-    </div>
-  );
+  return <CozyDashboardClient />;
 }

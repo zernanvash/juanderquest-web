@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   fetchMyProfile,
@@ -247,8 +246,7 @@ export default function SettingsPage() {
 
   return (
     <ErrorBoundary>
-      <Navigation>
-        <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <div className="max-w-4xl mx-auto space-y-6 pb-12">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-border-default)] pb-5">
             <div>
@@ -812,7 +810,6 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-      </Navigation>
     </ErrorBoundary>
   );
 }

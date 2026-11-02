@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { api, normalizeQuest, QuestModel, fetchCampaigns, CampaignModel } from '@/lib/api';
-import { fetchWithCache } from '@/lib/cache';
+import { QuestModel, fetchCampaigns, CampaignModel } from '@/lib/api';
+import { fetchQuestCatalog } from '@/lib/quest-catalog';
 import { useAuth } from '@/lib/auth';
-import { Navigation } from '@/components/Navigation';
 import { QuestCardSkeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useSavedLibrary } from '@/lib/saved-library';
@@ -82,19 +81,11 @@ function QuestsContent() {
     setCampaignError(null);
     try {
       const [questsResult, campaignsResult] = await Promise.allSettled([
-        fetchWithCache(
-          'quests_feed',
-          async () => {
-            const res = await api.get('/quests');
-            if (!res.data?.success) throw new Error('Quest feed unavailable');
-            return (res.data.data as Parameters<typeof normalizeQuest>[0][]).map(normalizeQuest);
-          },
-          { ttlMs: 120_000, forceRefresh }
-        ),
+        fetchQuestCatalog(forceRefresh),
         fetchCampaigns(),
       ]);
 
-      if (questsResult.status === 'fulfilled') setQuests(questsResult.value.data);
+      if (questsResult.status === 'fulfilled') setQuests(questsResult.value);
       else setQuestError('Could not reach the quest server.');
       if (campaignsResult.status === 'fulfilled') setCampaigns(campaignsResult.value);
       else setCampaignError('Event previews could not be loaded.');
@@ -206,8 +197,7 @@ function QuestsContent() {
   ];
 
   return (
-    <Navigation>
-      <ErrorBoundary fallbackTitle="Unable to display Quest Trails & Campaigns">
+    <ErrorBoundary fallbackTitle="Unable to display Quest Trails & Campaigns">
         <div className="space-y-6 w-full">
           {/* Header Banner & Sub-Feature Tabs */}
           <div className="bg-white rounded-2xl border border-[var(--color-border-default)] p-5 sm:p-7 lg:p-8 space-y-6 shadow-xs">
@@ -615,14 +605,13 @@ function QuestsContent() {
           )}
         </div>
       </ErrorBoundary>
-    </Navigation>
   );
 }
 
 export default function QuestsPage() {
   return (
     <ErrorBoundary>
-      <React.Suspense fallback={<Navigation><div className="p-8 text-center text-xs text-gray-500">Loading quests & events...</div></Navigation>}>
+      <React.Suspense fallback={<div className="p-8 text-center text-xs text-gray-500">Loading quests & events...</div>}>
         <QuestsContent />
       </React.Suspense>
     </ErrorBoundary>

@@ -1,292 +1,386 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  X,
-  Sparkles,
+  AlertTriangle,
   CheckCircle2,
-  ArrowRight,
+  Clock3,
+  Loader2,
+  MapPin,
+  RotateCcw,
+  RefreshCw,
+  Sparkles,
+  X,
 } from 'lucide-react';
-import { triggerCelebration } from '@/components/CelebrationEffects';
-
-export interface QuestItem {
-  id: string;
-  title: string;
-  description: string;
-  progress: number;
-  total: number;
-  icon: string;
-  category: 'daily' | 'milestone' | 'eco';
-  xpReward: number;
-  isClaimed?: boolean;
-}
+import { fetchSubmissions, type QuestModel, type SubmissionModel } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import { fetchQuestCatalog } from '@/lib/quest-catalog';
+import { CelebrationEffects, triggerCelebration } from '@/components/CelebrationEffects';
 
 interface QuestJournalModalProps {
   isOpen: boolean;
   onClose: () => void;
-  treesPlanted: number;
 }
 
-export function QuestJournalModal({
-  isOpen,
-  onClose,
-  treesPlanted,
-}: QuestJournalModalProps) {
-  const [activeTab, setActiveTab] = useState<'all' | 'daily' | 'milestones'>('all');
-  const [claimedQuestIds, setClaimedQuestIds] = useState<string[]>([]);
+type QuestCategoryFilter = 'all' | QuestModel['category'];
+
+const QUEST_FILTERS: { id: QuestCategoryFilter; label: string; icon: string }[] = [
+  { id: 'all', label: 'All Quests', icon: '🧭' },
+  { id: 'eco', label: 'Eco', icon: '🌿' },
+  { id: 'cultural', label: 'Cultural', icon: '🏛️' },
+  { id: 'food_trade', label: 'Culinary', icon: '🍜' },
+];
+
+const QUEST_CATEGORY_BADGE_STYLES: Record<QuestModel['category'], string> = {
+  eco: 'border-[#B8C6AA] bg-[#EEF2E7] text-[#496043]',
+  cultural: 'border-[#C4B8D0] bg-[#F1EDF5] text-[#655777]',
+  food_trade: 'border-[#D8BE91] bg-[#F7EEDC] text-[#765B35]',
+};
+
+export function QuestJournalModal({ isOpen, onClose }: QuestJournalModalProps) {
+  const { user } = useAuth();
+  const [quests, setQuests] = useState<QuestModel[]>([]);
+  const [submissionLoadResult, setSubmissionLoadResult] = useState<{
+    userId: string;
+    retryKey: number;
+    submissions: SubmissionModel[];
+    error: boolean;
+  } | null>(null);
+  const [activeFilter, setActiveFilter] = useState<QuestCategoryFilter>('all');
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [error, setError] = useState('');
+  const [retryKey, setRetryKey] = useState(0);
+  const [rewardNotice, setRewardNotice] = useState<{ title: string; points: number } | null>(null);
+  const [claimedQuestIds, setClaimedQuestIds] = useState<Set<string>>(() => new Set());
+  const lastAttemptedRetry = useRef(0);
+
+  const claimReward = (questId: string, notice: { title: string; points: number }) => {
+    setClaimedQuestIds((claimed) => new Set(claimed).add(questId));
+    setRewardNotice(notice);
+    triggerCelebration({ type: 'poppers', particleCount: 36, playAudio: false });
+  };
+
+  useEffect(() => {
+    if (!rewardNotice) return;
+    const timeout = window.setTimeout(() => setRewardNotice(null), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [rewardNotice]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let active = true;
+    const userId = user?.id;
+    const forceRefresh = retryKey > lastAttemptedRetry.current;
+    lastAttemptedRetry.current = retryKey;
+
+    const loadCatalog = fetchQuestCatalog(forceRefresh);
+    const loadSubmissions = userId ? fetchSubmissions() : Promise.resolve<SubmissionModel[]>([]);
+
+    void Promise.allSettled([loadCatalog, loadSubmissions]).then(([catalogResult, submissionsResult]) => {
+      if (!active) return;
+
+      if (catalogResult.status === 'fulfilled') {
+        setQuests(catalogResult.value);
+        setError('');
+      } else {
+        setError('Could not load quests. Please try again.');
+      }
+
+      if (userId) {
+        setSubmissionLoadResult({
+          userId,
+          retryKey,
+          submissions: submissionsResult.status === 'fulfilled' ? submissionsResult.value : [],
+          error: submissionsResult.status === 'rejected',
+        });
+      }
+      setHasLoaded(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen, retryKey, user?.id]);
 
   if (!isOpen) return null;
 
-  const quests: QuestItem[] = [
-    {
-      id: 'quest-eco-stars',
-      title: 'Reach 5-Star Eco-Rating on Island',
-      description: 'Keep Pangasinan pristine by completing coastal cleanups and eco-tours.',
-      progress: 4,
-      total: 5,
-      icon: '⭐',
-      category: 'milestone',
-      xpReward: 150,
-    },
-    {
-      id: 'quest-mangroves',
-      title: 'Plant 100 Mangrove Trees in Bani',
-      description: 'Support local biodiversity by planting native mangroves along Tambac Bay.',
-      progress: Math.min(100, treesPlanted),
-      total: 100,
-      icon: '🌲',
-      category: 'eco',
-      xpReward: 200,
-    },
-    {
-      id: 'quest-specialties',
-      title: 'Collect all Pangasinan Specialties',
-      description: 'Discover authentic local Bangus, Tupig, Alaminos Longganisa, and Buri craft spots.',
-      progress: 210,
-      total: 602,
-      icon: '📦',
-      category: 'milestone',
-      xpReward: 350,
-    },
-    {
-      id: 'quest-marine-sanctuaries',
-      title: 'Discover 80 Marine Sanctuaries',
-      description: 'Explore verified marine reserves across Bolinao, Alaminos, and Anda.',
-      progress: 43,
-      total: 80,
-      icon: '🐟',
-      category: 'milestone',
-      xpReward: 250,
-    },
-    {
-      id: 'quest-party-invite',
-      title: 'Invite 10 Fellow JuanDerers',
-      description: 'Assemble an expedition party with fellow travelers exploring Pangasinan.',
-      progress: 8,
-      total: 10,
-      icon: '🤝',
-      category: 'daily',
-      xpReward: 100,
-    },
-    {
-      id: 'quest-lucap-checkin',
-      title: 'Check in at Lucap Wharf Harbor',
-      description: 'Register GPS arrival at the gateway to the Hundred Islands National Park.',
-      progress: 1,
-      total: 1,
-      icon: '⛵',
-      category: 'daily',
-      xpReward: 50,
-    },
-  ];
-
-  const filteredQuests = quests.filter((q) => {
-    if (activeTab === 'daily') return q.category === 'daily';
-    if (activeTab === 'milestones') return q.category === 'milestone' || q.category === 'eco';
-    return true;
-  });
-
-  const handleClaim = (quest: QuestItem) => {
-    if (!claimedQuestIds.includes(quest.id)) {
-      setClaimedQuestIds((prev) => [...prev, quest.id]);
-      triggerCelebration({ type: 'confetti', count: 40, playAudio: true });
+  const filteredQuests = activeFilter === 'all'
+    ? quests
+    : quests.filter((quest) => quest.category === activeFilter);
+  const isLoading = isOpen && !hasLoaded && !error;
+  const currentSubmissionResult = user && submissionLoadResult?.userId === user.id &&
+    submissionLoadResult.retryKey === retryKey
+    ? submissionLoadResult
+    : null;
+  const submissions = currentSubmissionResult?.submissions ?? [];
+  const submissionsLoaded = !user || currentSubmissionResult !== null;
+  const submissionsError = currentSubmissionResult?.error ?? false;
+  const submissionByQuest = new Map<string, SubmissionModel>();
+  for (const submission of [...submissions].sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
+  )) {
+    const current = submissionByQuest.get(submission.questId);
+    if (!current || (submission.status === 'approved' && current.status !== 'approved')) {
+      submissionByQuest.set(submission.questId, submission);
     }
-  };
+  }
 
   return (
+    <>
+    <CelebrationEffects />
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="quest-modal-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs animate-in fade-in duration-200 sm:p-4"
       onClick={onClose}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl bg-[#FAF7F0] border-4 border-[#8C5E35] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-[#2D3A2F] relative animate-in zoom-in-95 duration-150"
+      <section
+        onClick={(event) => event.stopPropagation()}
+        className="quest-scroll-shell relative flex max-h-[90vh] w-full max-w-xl flex-col"
       >
-        {/* Top Wood Header Plaque */}
-        <div className="bg-gradient-to-r from-[#8C5E35] via-[#7B4E28] to-[#603816] text-[#FFF6E5] px-5 py-4 border-b-3 border-[#4A260F] flex items-center justify-center shadow-md relative text-center">
-          <div className="flex flex-col items-center justify-center">
-            <h3 id="quest-modal-title" className="font-black text-lg tracking-tight leading-none text-[#FFF6E5]">
-              Expedition Quest Journal
-            </h3>
-            <p className="text-[11px] text-[#F3D7A5] font-semibold mt-1">
-              Pangasinan Island Objectives &amp; Milestone Rewards
-            </p>
+        <div className="quest-scroll-roll quest-scroll-roll-top" aria-hidden="true" />
+
+        <div className="quest-scroll-paper">
+          <header className="quest-scroll-header relative z-10 flex h-10 shrink-0 items-center justify-center border-b-2 border-[#9A6035]/50 text-center text-[#572B20]">
+            <h2 id="quest-modal-title" className="relative -top-[3px] whitespace-nowrap text-xl font-black tracking-tight leading-none">
+              Quest Trails
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close Quest Trails"
+              className="quest-pixel-button quest-modal-close absolute right-4 z-20 flex h-7 w-7 items-center justify-center bg-[#7B382C] text-white"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </header>
+
+          <div className="shrink-0 border-b-2 border-dashed border-[#B68A55]/50 bg-[#EED9AE]/70 px-3 py-3 sm:px-5">
+            <div role="group" aria-label="Filter quests by category" className="flex flex-wrap justify-center gap-[9px]">
+              {QUEST_FILTERS.map((filter) => {
+                const isActive = activeFilter === filter.id;
+
+                return (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => setActiveFilter(filter.id)}
+                    aria-pressed={isActive}
+                    className={`quest-pixel-filter inline-flex items-center gap-1 px-2 py-1 text-[11px] font-extrabold ${
+                      isActive
+                        ? 'quest-pixel-filter-active bg-[#5C3A21] text-[#FFF8E1]'
+                        : 'bg-[#F0DCB8] text-[#5C3A21] hover:bg-[#EAD2AA]'
+                    }`}
+                  >
+                    <span aria-hidden="true">{filter.icon}</span>
+                    <span>{filter.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Close Quest Journal"
-            className="absolute right-4 top-4 w-8 h-8 rounded-full bg-[#3D1E0B]/60 hover:bg-[#3D1E0B] text-white flex items-center justify-center transition-all hover:scale-110 active:scale-95 border border-white/20 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Quest Filter Tabs */}
-        <div className="bg-[#EFEAE0] px-4 py-3 border-b border-[#DFD7C7] flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 text-center">
-          <div className="flex items-center justify-center gap-1.5 flex-wrap">
-            {[
-              { id: 'all', label: 'All Quests', count: quests.length },
-              { id: 'daily', label: 'Daily (24h)', count: 2 },
-              { id: 'milestones', label: 'Milestones', count: 4 },
-            ].map((tab) => (
+        <div className="quest-scroll-list min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm font-semibold text-[#55695A]">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading quest trails…
+            </div>
+          ) : error ? (
+            <div className="space-y-3 py-8 text-center">
+              <p role="alert" className="text-sm font-semibold text-red-700">{error}</p>
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as 'all' | 'daily' | 'milestones')}
-                className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
-                  activeTab === tab.id
-                    ? 'bg-[#245C36] text-white shadow-xs scale-102'
-                    : 'bg-[#FAF7F0] text-[#55695A] hover:bg-[#E3DCce]'
-                }`}
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setHasLoaded(false);
+                  setRetryKey((current) => current + 1);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#245C36] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#1B4332]"
               >
-                <span>{tab.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-[#DFD7C7] text-[#55695A]'}`}>
-                  {tab.count}
-                </span>
+                <RefreshCw className="h-3.5 w-3.5" />
+                Retry
               </button>
-            ))}
-          </div>
-
-          <span className="text-[10px] font-bold text-[#8C5E35] shrink-0">
-            Resets in 14h ⏰
-          </span>
-        </div>
-
-        {/* Scrollable Quest Cards List */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1">
-          {filteredQuests.map((quest) => {
-            const isCompleted = quest.progress >= quest.total;
-            const isClaimed = claimedQuestIds.includes(quest.id);
-            const pct = Math.min(100, Math.round((quest.progress / quest.total) * 100));
-
-            return (
-              <div
-                key={quest.id}
-                className="bg-[#FAF7F0] rounded-2xl p-4 sm:p-4.5 border border-[#E3DCce] hover:border-[#8C5E35]/40 transition-all shadow-xs"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-[#EFEAE0] border border-[#DFD7C7] flex items-center justify-center text-xl shrink-0 shadow-2xs">
-                      {quest.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="font-extrabold text-xs sm:text-sm text-[#1F452C] leading-tight">
-                        {quest.title}
-                      </h4>
-                      <p className="text-[11px] text-[#5D6B5F] mt-0.5 line-clamp-2 leading-relaxed">
-                        {quest.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <span className="shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5">
-                    <Sparkles className="w-3 h-3 text-amber-600" /> +{quest.xpReward} XP
-                  </span>
+            </div>
+          ) : filteredQuests.length === 0 ? (
+            <p className="py-12 text-center text-sm font-semibold text-[#55695A]">
+              {quests.length === 0
+                ? 'No quest trails are available right now.'
+                : 'No quests in this category yet. Try another filter.'}
+            </p>
+          ) : (
+            <>
+              {submissionsError && (
+                <div role="status" className="flex flex-wrap items-center justify-center gap-2 border-2 border-amber-700 bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-900">
+                  <span>Quest progress could not be checked. Your status may be out of date.</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasLoaded(false);
+                      setRetryKey((current) => current + 1);
+                    }}
+                    className="underline underline-offset-2"
+                  >
+                    Refresh
+                  </button>
                 </div>
+              )}
+              {filteredQuests.map((quest) => {
+                const submission = submissionByQuest.get(quest.id);
+                const isApproved = submission?.status === 'approved';
+                const isPending = submission?.status === 'pending';
+                const isRejected = submission?.status === 'rejected';
+                const rewardPoints = submission?.rewardPoints || quest.rewardPoints;
+                const isClaimed = claimedQuestIds.has(quest.id);
+                const showQuestStatus = !user || !submissionsLoaded || isApproved || isPending || isRejected;
 
-                {/* Progress Meter Bar */}
-                <div className="mt-2.5">
-                  <div className="flex items-center justify-between text-[11px] font-bold mb-1">
-                    <span className="text-[#6B5A47]">
-                      Progress: <strong className="text-[#1F452C]">{quest.progress}</strong> / {quest.total}
-                    </span>
-                    <span className="text-[#8C5E35] font-black">{pct}%</span>
-                  </div>
-
-                  <div className="w-full bg-[#DFD7C7] h-2.5 rounded-full overflow-hidden shadow-inner">
-                    <div
-                      className={`h-full transition-all duration-700 rounded-full ${
-                        isCompleted
-                          ? 'bg-emerald-500'
-                          : 'bg-gradient-to-r from-amber-400 to-[#245C36]'
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Action button if complete or in-progress */}
-                <div className="mt-3 pt-2 border-t border-[#EFEAE0] flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-[#8E9B90]">
-                    {isCompleted ? 'Objective Fulfilled! 🎉' : 'In Progress • Active Expedition'}
-                  </span>
-
-                  {isCompleted ? (
-                    <button
-                      onClick={() => handleClaim(quest)}
-                      disabled={isClaimed}
-                      className={`px-3 py-1 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                        isClaimed
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default'
-                          : 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#2B3B2E] shadow-xs hover:scale-105 active:scale-95'
-                      }`}
-                    >
-                      {isClaimed ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>Claimed</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Claim Reward (+{quest.xpReward} XP)</span>
-                        </>
-                      )}
-                    </button>
-                  ) : (
+                return (
+                  <article
+                    key={quest.id}
+                    className="quest-parchment-card group border-2 border-[#A96735] bg-white p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg"
+                  >
                     <Link
-                      href="/quests"
+                      href={`/quests/${quest.id}`}
                       onClick={onClose}
-                      className="text-[11px] font-bold text-[#245C36] hover:underline flex items-center gap-1"
+                      className="block rounded-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
                     >
-                      <span>Quest Details</span>
-                      <ArrowRight className="w-3 h-3" />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-sm font-extrabold leading-tight text-[#1F452C]">
+                              {quest.title}
+                            </h3>
+                            <span className={`quest-category-badge inline-flex items-center gap-1 border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-normal ${
+                              QUEST_CATEGORY_BADGE_STYLES[quest.category]
+                            }`}>
+                              <span aria-hidden="true">
+                                {QUEST_FILTERS.find((filter) => filter.id === quest.category)?.icon}
+                              </span>
+                              {QUEST_FILTERS.find((filter) => filter.id === quest.category)?.label ?? quest.category.replace('_', ' ')}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[#5D6B5F]">
+                            {quest.description}
+                          </p>
+                        </div>
+                        <span className={`quest-reward-stamp inline-flex shrink-0 items-center gap-1 border px-1.5 py-1 text-[9px] font-bold ${
+                          isApproved
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                            : 'border-[#D8BE91] bg-[#F7EEDC] text-[#765B35]'
+                        }`}>
+                          <Sparkles className="h-3 w-3 text-[#B87921]" />
+                          {isApproved ? `Earned +${rewardPoints}` : `+${quest.rewardPoints}`} mJDQ
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-semibold text-[#6B5A47]">
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-[#245C36]" />
+                          {quest.locationName}
+                        </span>
+                      </div>
                     </Link>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+
+                    {showQuestStatus && (
+                      <div className={`mt-3 flex flex-wrap items-center justify-between gap-2 border-t-2 border-dashed pt-2 text-[10px] font-black uppercase tracking-wide ${
+                        isApproved
+                          ? 'border-emerald-200 text-emerald-800'
+                          : isPending
+                            ? 'border-amber-200 text-amber-800'
+                            : isRejected
+                              ? 'border-red-200 text-red-800'
+                              : 'border-[#EFEAE0] text-[#245C36]'
+                      }`}>
+                      <span className="inline-flex items-center gap-1.5">
+                          {isApproved ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span>{isClaimed ? 'Reward claimed' : 'Claim your reward!'}</span>
+                            </>
+                          ) : isPending ? (
+                            <>
+                              <Clock3 className="h-4 w-4" />
+                              <span>Quest submitted · Reward after verification</span>
+                            </>
+                          ) : isRejected ? (
+                            <>
+                              <RotateCcw className="h-4 w-4" />
+                              <span>Revise your proof to earn rewards</span>
+                            </>
+                          ) : user ? (
+                            <>
+                              <Clock3 className="h-4 w-4" />
+                              <span>Checking your progress…</span>
+                            </>
+                          ) : (
+                            <span>View quest trail</span>
+                          )}
+                      </span>
+                      {isApproved && (
+                          <button
+                            type="button"
+                            onClick={() => claimReward(quest.id, { title: quest.title, points: rewardPoints })}
+                            disabled={isClaimed}
+                            className="quest-pixel-button inline-flex items-center gap-1.5 border-emerald-950 bg-[#245C36] px-2 py-1.5 text-[9px] font-black text-white hover:bg-[#1B4332] disabled:cursor-default disabled:bg-emerald-900 disabled:opacity-90"
+                          >
+                            {isClaimed ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-200" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                            )}
+                            {isClaimed ? 'Reward Claimed' : 'Claim your reward!'}
+                          </button>
+                      )}
+                      </div>
+                    )}
+                    {isRejected && submission.rejectionReason && (
+                      <p className="mt-2 flex items-start gap-1.5 border border-red-200 bg-red-50 px-2 py-1.5 text-[10px] font-semibold leading-relaxed text-red-800">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>Needs another try: {submission.rejectionReason}</span>
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
+            </>
+          )}
         </div>
 
-        {/* Modal Bottom Footer */}
-        <div className="bg-[#EFEAE0] p-3 px-5 border-t border-[#DFD7C7] flex items-center justify-between text-xs">
-          <span className="text-[#55695A] font-semibold text-[11px]">
-            Total Quests Completed: <strong className="text-[#1F452C]">1 / {quests.length}</strong>
-          </span>
-          <Link
-            href="/quests"
-            onClick={onClose}
-            className="font-extrabold text-[#245C36] hover:underline flex items-center gap-1"
-          >
-            <span>View Full Quest Catalog</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
         </div>
-      </div>
+
+        <div className="quest-scroll-roll quest-scroll-roll-bottom" aria-hidden="true" />
+      </section>
     </div>
+    {rewardNotice && (
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed bottom-5 right-5 z-[120] flex w-[min(24rem,calc(100%-2.5rem))] items-start gap-3 border-4 border-emerald-950 bg-[#1B4332] p-4 text-white shadow-[5px_5px_0_#5a331b] animate-in fade-in slide-in-from-bottom-3 duration-200"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-amber-300 bg-amber-400 text-emerald-950">
+          <Sparkles className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-black uppercase tracking-wide text-amber-200">
+            Reward received!
+          </span>
+          <span className="mt-1 block text-[11px] leading-relaxed">
+            {rewardNotice.title} is complete. +{rewardNotice.points} mJDQ was credited when your proof was approved.
+          </span>
+        </span>
+        <button
+          type="button"
+          onClick={() => setRewardNotice(null)}
+          aria-label="Dismiss reward notification"
+          className="p-1 text-white/80 hover:text-white"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    )}
+    </>
   );
 }

@@ -18,7 +18,6 @@ import {
   Vote,
   ShoppingBag
 } from 'lucide-react';
-import { Navigation } from '@/components/Navigation';
 
 export default function AboutPage() {
   const teamMembers = [
@@ -63,8 +62,7 @@ export default function AboutPage() {
   ];
 
   return (
-    <Navigation>
-      <div className="max-w-4xl mx-auto space-y-10 pb-12">
+    <div className="max-w-4xl mx-auto space-y-10 pb-12">
         {/* Header Hero */}
         <div className="theme-card p-6 sm:p-10 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-[var(--color-brand-primary)] text-xs font-semibold">
@@ -182,6 +180,5 @@ export default function AboutPage() {
           </div>
         </div>
       </div>
-    </Navigation>
   );
 }

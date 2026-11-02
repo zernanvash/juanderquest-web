@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { PreviewStatus } from './preview';
 import { invalidateCache } from './cache';
 import { isTravelerSession } from './traveler-session';
@@ -77,6 +77,7 @@ export const clearStoredSession = (): void => {
     storage.removeItem('jdq_token');
     storage.removeItem('jdq_user');
   }
+  localStorage.removeItem('jdq_guest_mode');
 };
 
 // A server outage does not invalidate an HttpOnly cookie. Only a definitive
@@ -91,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [sessionUnavailable, setSessionUnavailable] = useState(false);
   const [sessionRetry, setSessionRetry] = useState(0);
+  const authGeneration = useRef(0);
 
   // The old evaluator switch is retired. Fictional content has a dedicated,
   // read-only guest page; wallet sessions browse the ordinary app.
@@ -101,10 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let cancelled = false;
+    const generation = authGeneration.current;
     const restoreSession = async () => {
       setIsLoading(true);
       if (typeof window !== 'undefined' && localStorage.getItem('jdq_guest_mode') === 'true') {
-        if (!cancelled) {
+        if (!cancelled && authGeneration.current === generation) {
           setUser(DEV_BYPASS_USER);
           setWallet(DEV_BYPASS_WALLET);
           setToken('guest-session-token');
@@ -123,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           response = await api.post('/auth/session/upgrade', { remember_me: Boolean(localStorage.getItem('jdq_token')) }, { headers: { Authorization: `Bearer ${legacyToken}` } });
         }
         if (!response.data?.success) throw new Error('Session validation failed');
+        if (authGeneration.current !== generation) return;
         const restored = normalizeUser(response.data.data);
         clearStoredSession();
         if (!cancelled) {
@@ -131,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSessionUnavailable(false);
         }
       } catch (error) {
+        if (authGeneration.current !== generation) return;
         if (sessionFailureDisposition(error) === 'signed_out') {
           clearStoredSession();
           invalidateCache();
@@ -160,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && authGeneration.current === generation) setIsLoading(false);
       }
     };
     void restoreSession();
@@ -169,6 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const expireSession = () => {
+      if (localStorage.getItem('jdq_guest_mode') === 'true') return;
       clearStoredSession();
       invalidateCache();
       setToken(null);
@@ -430,6 +436,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginAsGuest = async (rememberMe: boolean = true): Promise<boolean> => {
+    authGeneration.current += 1;
     setIsLoading(true);
     try {
       const res = await api.post('/auth/guest-login', { remember_me: rememberMe });

@@ -31,7 +31,6 @@ import {
   Building2,
   Package,
 } from 'lucide-react';
-import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAuth } from '@/lib/auth';
 import {
@@ -210,8 +209,7 @@ export function DashboardClient() {
   };
 
   return (
-    <Navigation>
-      <ErrorBoundary fallbackTitle="Unable to load Explorer Dashboard">
+    <ErrorBoundary fallbackTitle="Unable to load Explorer Dashboard">
         <div className="max-w-7xl 2xl:max-w-[1560px] mx-auto space-y-8 pb-16">
           {/* Cozy Island Dashboard Switcher Banner */}
           <div className="bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#582F0E] text-white rounded-3xl p-4 sm:p-5 shadow-sm border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -503,7 +501,6 @@ export function DashboardClient() {
             </div>
           </div>
         </div>
-      </ErrorBoundary>
-    </Navigation>
+    </ErrorBoundary>
   );
 }

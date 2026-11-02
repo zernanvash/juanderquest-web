@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const latestAndroidApk = "https://github.com/zernanvash/juanderquest-mobile/releases/latest/download/juanderquest-latest.apk";
-const localApiPort = process.env.NODE_ENV === "production" ? 4000 : 4100;
+const defaultApiProxyTarget = process.env.NODE_ENV === "production"
+  ? "http://127.0.0.1:4000"
+  : "https://api.juanderquest.app";
 
 const rawDistDir = process.env.NEXT_DIST_DIR?.trim();
 const allowedDistDirs = new Set([".next", ".next-presentation", ".next-catalog-dev", ".next-alpha-release"]);
@@ -54,7 +56,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/v1/:path*",
-        destination: `${apiProxyTarget ?? `http://127.0.0.1:${localApiPort}`}/api/v1/:path*`,
+        destination: `${apiProxyTarget ?? defaultApiProxyTarget}/api/v1/:path*`,
       },
     ];
   },

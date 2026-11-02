@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { api, normalizeQuest, QuestModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
 import { useAuth } from '@/lib/auth';
-import { Navigation } from '@/components/Navigation';
 import { Skeleton } from '@/components/Skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
@@ -63,8 +62,7 @@ export default function QuestDetailClient() {
   if (isLoading) return null;
 
   return (
-    <Navigation>
-      <ErrorBoundary fallbackTitle="Unable to display Quest Details">
+    <ErrorBoundary fallbackTitle="Unable to display Quest Details">
         <div className="space-y-6">
           {/* Breadcrumbs */}
           <div className="flex items-center justify-between">
@@ -301,7 +299,6 @@ export default function QuestDetailClient() {
             </div>
           )}
         </div>
-      </ErrorBoundary>
-    </Navigation>
+    </ErrorBoundary>
   );
 }

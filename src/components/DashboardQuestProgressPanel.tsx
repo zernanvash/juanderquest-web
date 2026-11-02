@@ -17,7 +17,8 @@ import {
   Flame,
   Award,
 } from 'lucide-react';
-import { fetchQuests, fetchSubmissions, QuestModel, SubmissionModel } from '@/lib/api';
+import { fetchSubmissions, QuestModel, SubmissionModel } from '@/lib/api';
+import { fetchQuestCatalog } from '@/lib/quest-catalog';
 import { useAuth } from '@/lib/auth';
 
 interface DashboardQuestProgressPanelProps {
@@ -38,7 +39,7 @@ export function DashboardQuestProgressPanel({ className = '' }: DashboardQuestPr
       try {
         setLoading(true);
         const [questsData, subsData] = await Promise.allSettled([
-          fetchQuests(),
+          fetchQuestCatalog(),
           user ? fetchSubmissions() : Promise.resolve([]),
         ]);
 

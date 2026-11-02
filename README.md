@@ -16,6 +16,8 @@ bun dev
 
 Open [http://127.0.0.1:3100](http://127.0.0.1:3100) with your browser to see the result. Port 3000 is reserved for the public-alpha tunnel origin.
 
+In local development, `/api/v1/*` requests are proxied to `https://api.juanderquest.app` by default. This includes write requests, so changes made while developing may affect production data. Set `API_PROXY_TARGET` to a local API server URL when you want to use a local backend instead. Production builds continue to proxy to the API server on `127.0.0.1:4000`.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

@@ -7,7 +7,6 @@ import type { Map as LeafletMap, FeatureGroup as LeafletFeatureGroup, TileLayer 
 import 'leaflet/dist/leaflet.css';
 import { api, normalizeQuest, normalizeSpot, QuestModel, SpotModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
-import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { createQuestPinHtml, createSpotPinHtml, createAreaHitboxHtml } from '@/lib/map-icons';
 import { declutterItems } from '@/lib/map-declutter';
@@ -271,6 +270,26 @@ export default function QuestMapPage() {
       map.fitBounds(L.latLngBounds(allCoordinatesRef.current).pad(0.12));
     } else {
       map.flyTo(PANGASINAN_CENTER, REGIONAL_ZOOM, { duration: 1.0 });
+    }
+  }, []);
+
+  // Center on a wide geographic area (e.g. Pangasinan province, Bolinao municipality)
+  const handleSelectArea = useCallback((area: AreaDefinition) => {
+    setActiveArea((prev) => (prev?.id === area.id ? prev : area));
+    setSelectedItem(null);
+    setIsDesktopCollapsed(true);
+    setMobileSnap('peek');
+    const map = mapInstanceRef.current || retainedMap;
+    if (map) {
+      try {
+        if ((map as any)._loaded) {
+          map.flyTo(area.center, area.zoom, { duration: 1.0 });
+        } else {
+          map.setView(area.center, area.zoom);
+        }
+      } catch (e) {
+        console.warn('Map camera flight deferred:', e);
+      }
     }
   }, []);
 
@@ -663,25 +682,7 @@ export default function QuestMapPage() {
     handleSelectItem,
   ]);
 
-  // Center on a wide geographic area (e.g. Pangasinan province, Bolinao municipality)
-  const handleSelectArea = useCallback((area: AreaDefinition) => {
-    setActiveArea((prev) => (prev?.id === area.id ? prev : area));
-    setSelectedItem(null);
-    setIsDesktopCollapsed(true);
-    setMobileSnap('peek');
-    const map = mapInstanceRef.current || retainedMap;
-    if (map) {
-      try {
-        if ((map as any)._loaded) {
-          map.flyTo(area.center, area.zoom, { duration: 1.0 });
-        } else {
-          map.setView(area.center, area.zoom);
-        }
-      } catch (e) {
-        console.warn('Map camera flight deferred:', e);
-      }
-    }
-  }, []);
+
 
   // Clear area filter and return to full archipelago view
   const handleClearActiveArea = useCallback(() => {
@@ -701,20 +702,19 @@ export default function QuestMapPage() {
   }, []);
 
   return (
-    <Navigation fullBleed>
-      <ErrorBoundary fallbackTitle="Unable to display destination map">
-        <Suspense fallback={null}>
-          <MapUrlSync
-            onSelectArea={handleSelectArea}
-            onSelectSpot={handleSelectSpot}
-            onSelectQuest={handleSelectQuest}
-            spots={spots}
-            quests={quests}
-          />
-        </Suspense>
+    <ErrorBoundary fallbackTitle="Unable to display destination map">
+      <Suspense fallback={null}>
+        <MapUrlSync
+          onSelectArea={handleSelectArea}
+          onSelectSpot={handleSelectSpot}
+          onSelectQuest={handleSelectQuest}
+          spots={spots}
+          quests={quests}
+        />
+      </Suspense>
 
-        <div className="relative w-full h-full min-h-0 flex-1 bg-stone-100 overflow-hidden select-none">
-          {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
+      <div className="relative w-full h-[calc(100vh-3.5rem)] min-h-[600px] bg-stone-100 rounded-3xl overflow-hidden border-2 border-[#DFD7C7] shadow-md select-none">
+        {/* Edge-to-Edge Full Screen Leaflet Map Canvas */}
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
 
           {/* UNIFIED RESPONSIVE MAP WORKSPACE PANEL */}
@@ -1101,6 +1101,5 @@ export default function QuestMapPage() {
           )}
         </div>
       </ErrorBoundary>
-    </Navigation>
   );
 }

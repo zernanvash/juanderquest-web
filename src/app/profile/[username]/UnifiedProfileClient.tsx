@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth, adminHandoffUrl } from '@/lib/auth';
 import { api, isUnauthorizedError, normalizeSubmission, type SubmissionModel } from '@/lib/api';
 import { fetchWithCache } from '@/lib/cache';
-import { Navigation } from '@/components/Navigation';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   fetchMyProfile,
@@ -61,6 +60,8 @@ import {
   SAMPLE_USER_BADGES,
   type UserBadge,
 } from '@/lib/badges';
+import { PassportModal } from '@/components/PassportModal';
+import { SCOUT_TIERS } from '@/lib/gamification';
 
 interface UnifiedProfileClientProps {
   username: string;
@@ -80,15 +81,29 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
 
   // Determine if viewing own profile
   const isMine = Boolean(
-    user &&
-    (
-      cleanParam === 'me' ||
-      (userHandle && cleanParam === userHandle) ||
-      (userSeedId && cleanParam === userSeedId) ||
-      (userId && cleanParam === userId) ||
-      (userDisplayNameNorm && cleanParam === userDisplayNameNorm)
-    )
+    cleanParam === 'me' ||
+    cleanParam === 'guest' ||
+    cleanParam === 'juan_traveler' ||
+    (user &&
+      (
+        (userHandle && cleanParam === userHandle) ||
+        (userSeedId && cleanParam === userSeedId) ||
+        (userId && cleanParam === userId) ||
+        (userDisplayNameNorm && cleanParam === userDisplayNameNorm)
+      )
+    ) ||
+    (!user && (cleanParam === 'me' || cleanParam === 'guest' || cleanParam === 'juan_traveler'))
   );
+
+  const effectiveUser = user || {
+    id: 'guest',
+    displayName: 'Juan Traveler',
+    handle: 'juan_traveler',
+    seedId: 'guest:juan',
+    role: 'traveler' as const,
+    points: 640,
+    avatarUrl: '/cozy/juander_mascot.jpg',
+  };
 
   // Own Profile States
   const [myProfile, setMyProfile] = useState<AuthenticatedUserProfile | null>(null);
@@ -104,6 +119,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
 
   // Modals & UI Controls
   const [modalType, setModalType] = useState<'followers' | 'following' | null>(null);
+  const [isPassportOpen, setIsPassportOpen] = useState(false);
   const [badgeFilterTab, setBadgeFilterTab] = useState<'all' | 'nft' | 'achievement' | 'civic'>('all');
   const [selectedBadgeModal, setSelectedBadgeModal] = useState<UserBadge | null>(null);
   const [activeBadgeIds, setActiveBadgeIds] = useState<string[]>(() => getActiveNametagBadgeIds());
@@ -117,7 +133,22 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
 
   // Load Own Profile Details
   const loadMyData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setMyProfile({
+        id: effectiveUser.id,
+        display_name: effectiveUser.displayName,
+        handle: effectiveUser.handle,
+        bio: 'Passionate archipelago ranger & eco-tourism explorer 🌴 Collecting municipal stamps across Pangasinan.',
+        status_text: 'Active on Pangasinan Trails',
+        created_at: new Date().toISOString(),
+        is_public: true,
+        follower_count: 8,
+        following_count: 4,
+        scout_reputation: 640,
+      });
+      setLoadingSubmissions(false);
+      return;
+    }
     try {
       const [profileRes, engagementRes] = await Promise.allSettled([
         fetchMyProfile(),
@@ -151,7 +182,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
     } finally {
       setLoadingSubmissions(false);
     }
-  }, [user]);
+  }, [user, effectiveUser.id, effectiveUser.displayName, effectiveUser.handle]);
 
   // Load Other Traveler Public Details
   const loadPublicData = useCallback(async (target: string) => {
@@ -218,9 +249,8 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
   });
 
   return (
-    <Navigation>
-      <ErrorBoundary fallbackTitle="Unable to display traveler profile">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pb-16">
+    <ErrorBoundary fallbackTitle="Unable to display traveler profile">
+      <div className="w-full space-y-8 pb-16">
           {/* ======================================================== */}
           {/* CASE 1: Loading State */}
           {/* ======================================================== */}
@@ -311,7 +341,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                 <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
                   {/* Expedition Cover & Identity Card */}
                   <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
-                    <div className="relative h-32 sm:h-36 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
+                    <div className="relative h-[133px] sm:h-[149px] bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
                       <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
                       <div className="absolute bottom-2.5 right-3 flex items-center gap-1.5 text-white/90 text-[10px] font-bold uppercase tracking-wider bg-black/35 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
                         <Compass className="h-3 w-3 text-[#FFB703]" />
@@ -486,30 +516,30 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                   </div>
 
                   {/* Interactive Soulbound Badges & NFT Trophy Showcase */}
-                  <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
+                  <section className="space-y-5 rounded-3xl border border-[#E3DFD5] bg-white p-5 shadow-xs sm:p-7">
+                    <div className="flex flex-col justify-between gap-3 border-b border-[#E3DFD5] pb-4 sm:flex-row sm:items-center">
                       <div>
                         <div className="flex items-center gap-2">
-                          <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
-                          <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
+                          <Award className="h-5 w-5 text-[var(--color-brand-primary)]" />
+                          <h2 className="text-base font-black text-[var(--color-brand-brown)] sm:text-lg">
                             Soulbound Badges &amp; NFT Showcase
                           </h2>
                         </div>
-                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                           Base L2 Soulbound achievements and gamified expedition tokens. Click any badge to inspect.
                         </p>
                       </div>
 
                       {/* Filter tabs */}
-                      <div className="flex items-center gap-1 p-1 bg-[#FAF9F5] border border-[#E3DFD5] rounded-xl self-start sm:self-center">
+                      <div className="flex items-center gap-1 self-start rounded-xl border border-[#E3DFD5] bg-[#FAF9F5] p-1 sm:self-center">
                         {(['all', 'nft', 'achievement', 'civic'] as const).map((tab) => (
                           <button
                             key={tab}
                             type="button"
                             onClick={() => setBadgeFilterTab(tab)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition capitalize cursor-pointer ${
+                            className={`cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-bold capitalize transition ${
                               badgeFilterTab === tab
-                                ? 'bg-[var(--color-brand-primary)] text-white shadow-2xs'
+                                ? 'bg-[#F5C45E] text-[#292313] shadow-2xs'
                                 : 'text-[#837560] hover:text-[#2C221E]'
                             }`}
                           >
@@ -520,52 +550,49 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
 
                     {/* Badges Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                       {filteredBadges.map((badge) => (
                         <div
                           key={badge.id}
                           onClick={() => setSelectedBadgeModal(badge)}
-                          className="p-4 rounded-2xl border border-[#E3DFD5] hover:border-[#2D6A4F] bg-white hover:bg-[#FAF9F5]/70 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 relative overflow-hidden group"
+                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-[#E3DFD5] bg-[#FAF9F5] p-3 text-center shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D9AE4E] hover:bg-white hover:shadow-md sm:p-4"
                         >
                           {badge.isNft && (
-                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[badge-glint_2s_ease-in-out_infinite] pointer-events-none" />
+                            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[badge-glint_2s_ease-in-out_infinite]" />
                           )}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs`}>
-                              <span>{badge.icon}</span>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                badge.rarity === 'legendary'
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                  : badge.rarity === 'epic'
-                                  ? 'bg-purple-100 text-purple-900 border border-purple-300'
-                                  : badge.rarity === 'rare'
-                                  ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                                  : 'bg-stone-100 text-stone-700 border border-stone-200'
-                              }`}>
-                                {badge.rarity}
-                              </span>
-                              {badge.isNft && (
-                                <span className="text-[9px] font-mono font-bold text-amber-700">
-                                  {badge.tokenId}
-                                </span>
-                              )}
+                          <div className="mb-3 flex min-h-24 items-center justify-center rounded-xl border border-[#EEE8DC] bg-[#F1EEE7]">
+                            <div className={`flex h-16 w-16 items-center justify-center rounded-2xl border text-3xl shadow-2xs sm:h-[4.5rem] sm:w-[4.5rem] ${badge.themeColor.bg} ${badge.themeColor.border}`}>
+                              <span aria-hidden="true">{badge.icon}</span>
                             </div>
                           </div>
 
-                          <div className="mt-3">
-                            <h4 className="text-xs sm:text-sm font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
+                          <div className="flex min-h-8 items-center justify-center gap-1.5">
+                            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                                badge.rarity === 'legendary'
+                                  ? 'border-amber-300 bg-amber-50 text-amber-900'
+                                  : badge.rarity === 'epic'
+                                  ? 'border-purple-200 bg-purple-50 text-purple-900'
+                                  : badge.rarity === 'rare'
+                                  ? 'border-sky-200 bg-sky-50 text-sky-900'
+                                  : 'border-stone-200 bg-stone-100 text-stone-700'
+                              }`}>
+                                {badge.rarity}
+                            </span>
+                            {badge.isNft && <span className="font-mono text-[9px] font-bold text-amber-800">{badge.tokenId}</span>}
+                          </div>
+
+                          <div className="mt-2">
+                            <h4 className="truncate text-xs font-black text-[#2C221E] transition group-hover:text-[#2D6A4F] sm:text-sm">
                               {badge.name}
                             </h4>
-                            <p className="text-[11px] text-[#837560] line-clamp-2 mt-1 leading-relaxed">
+                            <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#837560] sm:text-[11px]">
                               {badge.description}
                             </p>
                           </div>
 
-                          <div className="mt-3 pt-2.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] font-bold text-[#2D6A4F]">
-                            <span>{badge.network || 'Off-chain'}</span>
-                            <span className="group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                          <div className="mt-3 flex items-center justify-between gap-1 border-t border-[#E3DFD5] pt-2.5 text-[9px] font-bold text-[#837560] sm:text-[10px]">
+                            <span className="truncate">{badge.network || 'Off-chain'}</span>
+                            <span className="flex shrink-0 items-center gap-0.5 text-[#2D6A4F] transition-transform group-hover:translate-x-0.5">
                               Inspect <ChevronRight className="w-3 h-3" />
                             </span>
                           </div>
@@ -636,90 +663,131 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
           {/* ======================================================== */}
           {/* CASE 5: Own Profile — Exclusive Passport & Showcase (Widescreen) */}
           {/* ======================================================== */}
-          {!authLoading && isMine && user && (() => {
-            const displayName = myProfile?.display_name?.trim() || user.displayName?.trim() || 'Explorer';
-            const handleText = myProfile?.handle?.trim() || user.seedId?.trim() || 'traveler';
+          {!authLoading && isMine && (() => {
+            const activeUser = user || effectiveUser;
+            const displayName = myProfile?.display_name?.trim() || activeUser.displayName?.trim() || 'Explorer';
+            const handleText = myProfile?.handle?.trim() || activeUser.handle?.trim() || 'traveler';
             const initials = displayName
               .split(' ')
               .filter(Boolean)
               .slice(0, 2)
               .map((w) => w[0]?.toUpperCase() || '')
               .join('') || 'ME';
-            const joinedYear = myProfile?.created_at ? new Date(myProfile.created_at).getFullYear() : 2026;
-            const currentPoints = user.points ?? 0;
-            const currentLevel = Math.floor(currentPoints / 50) + 1;
-            const pointsInLevel = currentPoints % 50;
-            const nextLevelProgress = Math.min(100, Math.round((pointsInLevel / 50) * 100));
-
+            const currentPoints = activeUser.points ?? 640;
+            const currentTier = SCOUT_TIERS.slice().reverse().find((tier) => currentPoints >= tier.minXp) ?? SCOUT_TIERS[0];
+            const tierProgress = currentTier.maxXp >= 99999
+              ? 100
+              : Math.min(100, ((currentPoints - currentTier.minXp) / (currentTier.maxXp - currentTier.minXp)) * 100);
             return (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Left Column: Sticky Identity Passport Sidebar (4 cols) */}
-                <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
+              <div className="mx-auto w-full space-y-6" style={{ maxWidth: 'var(--profile-max-width, 1280px)' }}>
+                <div>
                   {/* Passport Cover Banner & Header Card */}
-                  <section className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
-                    <div className="relative h-32 sm:h-36 bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] overflow-hidden">
+                  <section id="profile-overview" className="overflow-hidden rounded-3xl border border-[#E3DFD5] bg-white shadow-xs">
+                    <div aria-label="Profile banner" className="relative isolate h-44 overflow-hidden bg-gradient-to-r from-[#1B4332] via-[#2D6A4F] to-[#40916C] sm:h-56 md:h-64">
+                      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-2/3 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
                       <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#FAF9F5_1px,transparent_1px)] [background-size:16px_16px]" />
-                      <div className="absolute bottom-2.5 right-3 flex items-center gap-1.5 text-white/90 text-[10px] font-bold uppercase tracking-wider bg-black/35 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-                        <Compass className="h-3 w-3 text-[#FFB703]" />
-                        <span>Your Passport · Member {joinedYear}</span>
+                      <div className="absolute right-3 top-3 z-[2] flex items-center gap-2 sm:right-4 sm:top-4">
+                        <Link
+                          href="/settings"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/40 bg-white/95 px-3.5 py-2 text-xs font-extrabold text-[var(--color-brand-brown)] shadow-xs transition hover:border-[var(--color-brand-primary)] hover:bg-white"
+                        >
+                          <Settings className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
+                          <span>Edit Profile</span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => void logout()}
+                          title="Sign Out"
+                          className="inline-flex cursor-pointer items-center gap-1 rounded-xl border border-white/20 bg-black/25 px-3 py-2 text-xs font-bold text-white transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <LogOut className="h-3.5 w-3.5 text-red-300" />
+                          <span>Sign Out</span>
+                        </button>
                       </div>
                     </div>
 
-                    <div className="px-5 pb-5 sm:px-6 sm:pb-6">
-                      <div className="-mt-12 sm:-mt-14 flex items-end justify-between gap-3">
-                        {/* Avatar */}
-                        <div className="relative flex h-24 w-24 sm:h-26 sm:w-26 shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-2xl font-black text-[#582F0E] shadow-md ring-2 ring-[#2D6A4F]/20 overflow-hidden">
-                          {user.avatarUrl ? (
-                            <img src={user.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{initials || 'ME'}</span>
-                          )}
+                    <div className="px-5 pb-6 sm:px-8">
+                      <div className="-mt-16 flex flex-col justify-between gap-4 sm:-mt-20 sm:flex-row sm:items-end">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
+                          <div className="relative z-10 flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-gradient-to-br from-[#FFB703] to-[#F59E0B] text-3xl font-black text-[#582F0E] shadow-lg ring-2 ring-[#2D6A4F]/20 sm:h-36 sm:w-36 sm:text-4xl">
+                            {activeUser.avatarUrl ? (
+                              <img src={activeUser.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                            ) : (
+                              <span>{initials || 'ME'}</span>
+                            )}
+                          </div>
+
+                          <div className="relative z-10 min-w-0 space-y-1.5 pt-1 sm:translate-y-8 sm:pb-2 sm:pt-0">
+                            <h1 className="max-w-full break-words text-xl font-black tracking-tight text-[#2C221E] sm:text-2xl md:text-3xl">
+                              {displayName}
+                            </h1>
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs sm:text-sm">
+                              <span className="max-w-full break-all font-bold text-[var(--color-brand-primary)]">
+                                @{handleText}
+                              </span>
+                              <UserBadgesRow isCurrentUser size="sm" />
+                              <span
+                                className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase ${
+                                  myProfile?.is_public
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                    : 'border-stone-200 bg-stone-100 text-stone-600'
+                                }`}
+                              >
+                                {myProfile?.is_public ? 'Public' : 'Private'}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs sm:text-sm">
+                              <button type="button" onClick={() => setModalType('followers')} className="cursor-pointer font-bold text-stone-700 hover:text-[var(--color-brand-primary)]">
+                                <strong className="text-[var(--color-brand-primary)]">{myProfile?.follower_count ?? 0}</strong> followers
+                              </button>
+                              <button type="button" onClick={() => setModalType('following')} className="cursor-pointer font-bold text-stone-700 hover:text-[var(--color-brand-primary)]">
+                                <strong className="text-[var(--color-brand-primary)]">{myProfile?.following_count ?? 0}</strong> following
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Edit in Settings Button */}
-                        <div className="pb-1">
-                          <Link
-                            href="/settings"
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)] text-xs font-extrabold text-[var(--color-brand-brown)] shadow-xs transition cursor-pointer hover:bg-[var(--color-bg-subtle)]"
-                          >
-                            <Settings className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                            <span>Edit in Settings</span>
-                          </Link>
+                        {/* Explorer level */}
+                        <div className="relative w-full min-w-[240px] shrink-0 overflow-hidden rounded-[1.4rem] border border-[#F7D77B]/35 bg-gradient-to-br from-[#49300E] via-[#805916] to-[#3E2A0C] p-4 text-white shadow-[0_8px_24px_rgba(92,62,15,0.24)] sm:w-[290px]">
+                          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-[#FFD166]/15 blur-2xl" />
+                          <div className="relative flex items-center gap-3.5">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#FFF0B3]/70 bg-gradient-to-br from-[#FFF0A8] via-[#E6AB35] to-[#9A6315] text-[#51350B] shadow-[inset_0_1px_8px_rgba(255,255,255,0.45)]">
+                              <Award className="h-8 w-8 drop-shadow-[0_2px_4px_rgba(22,5,40,0.45)]" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span className="text-xl font-black italic tracking-tight text-[#FFD76A]">
+                                  Lv {currentTier.level}
+                                </span>
+                                <span className="whitespace-nowrap text-[10px] font-extrabold uppercase tracking-wide text-[#FFE7A0]">
+                                  {currentPoints} XP
+                                </span>
+                              </div>
+                              <p className="truncate text-xs font-semibold text-white/90">
+                                {currentTier.title}
+                              </p>
+                              <div
+                                role="progressbar"
+                                aria-label="Level progress"
+                                aria-valuenow={Math.round(tierProgress)}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                className="mt-2 h-2 w-full overflow-hidden rounded-full border border-[#FFE7A0]/25 bg-black/35"
+                              >
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-[#D99A22] via-[#FFD65A] to-[#FFF0A8] shadow-[0_0_8px_rgba(255,214,90,0.6)]"
+                                  style={{ width: `${Math.max(6, tierProgress)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Display Name + Nametag Badges Row */}
-                      <div className="mt-3 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h1 className="truncate text-lg sm:text-xl font-black text-[#2C221E]">
-                            {displayName}
-                          </h1>
-                          <UserBadgesRow isCurrentUser size="sm" />
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap text-xs">
-                          <span className="font-bold text-[var(--color-brand-primary)]">
-                            @{handleText}
-                          </span>
-                          <span className="shrink-0 rounded-full bg-[var(--color-brand-primary)]/10 border border-[var(--color-brand-primary)]/20 px-2 py-0.2 text-[9px] font-black uppercase text-[var(--color-brand-primary)]">
-                            {user.role === 'admin' ? 'ADMINISTRATOR' : 'YOU (OWNER)'}
-                          </span>
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-0.2 text-[9px] font-black uppercase border ${
-                              myProfile?.is_public
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                : 'bg-stone-100 text-stone-600 border-stone-200'
-                            }`}
-                          >
-                            {myProfile?.is_public ? 'Public' : 'Private'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Bio & Status Bubble */}
-                      <div className="mt-4 space-y-2 border-t border-[#F2EFE9] pt-3.5">
+                      <div className="mt-8 flex flex-col justify-between gap-3 border-t border-[#F2EFE9] pt-4 text-xs sm:text-sm md:flex-row md:items-center">
+                        <div className="max-w-2xl space-y-1.5">
                         {myProfile?.status_text && (
-                          <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E3DFD5]/60 text-xs font-semibold text-[#582F0E] italic flex items-start gap-1.5">
+                          <div className="mb-2 flex items-start gap-1.5 rounded-xl border border-[#E3DFD5]/60 bg-[#FAF9F5] p-2.5 text-xs font-semibold italic text-[#582F0E]">
                             <span className="text-[#FFB703] font-serif text-sm leading-none">&ldquo;</span>
                             <span>{myProfile.status_text}</span>
                             <span className="text-[#FFB703] font-serif text-sm leading-none">&rdquo;</span>
@@ -738,69 +806,62 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                             to write your traveler bio.
                           </p>
                         )}
-                      </div>
-
-                      {/* Visual Level XP Bar */}
-                      <div className="mt-4 p-3.5 rounded-2xl bg-[#FAF9F5] border border-[#E3DFD5] space-y-2">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="flex items-center gap-1.5 text-[#582F0E]">
-                            <Award className="w-3.5 h-3.5 text-[#FFB703]" />
-                            <span>Level {currentLevel} Explorer</span>
-                          </span>
-                          <span className="text-[11px] text-[#2D6A4F] font-black">
-                            {currentPoints} PTS ({nextLevelProgress}% to Lv. {currentLevel + 1})
-                          </span>
                         </div>
-                        <div className="w-full bg-[#E3DFD5]/70 h-2 rounded-full overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-[#2D6A4F] to-[#40916C] h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.max(6, nextLevelProgress)}%` }}
-                          />
-                        </div>
-                        <p className="text-[10px] text-[#837560]">
-                          Earn XP by verifying visits via Haversine GPS (&le;100m) and completing trails.
-                        </p>
-                      </div>
-
-                      {/* Social Followers & Following */}
-                      {myProfile && (
-                        <div className="mt-4 pt-3.5 border-t border-[#F2EFE9] grid grid-cols-2 gap-2">
+                        <div className="flex shrink-0 items-center md:self-center">
                           <button
                             type="button"
-                            onClick={() => setModalType('followers')}
-                            className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700 transition cursor-pointer"
+                            onClick={() => setIsPassportOpen(true)}
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[var(--color-border-default)] bg-white px-3.5 py-2 text-xs font-extrabold uppercase tracking-wide text-[var(--color-brand-brown)] shadow-xs transition hover:border-[var(--color-brand-primary)] hover:bg-[var(--color-bg-subtle)]"
                           >
-                            <Users className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                            <span className="text-[var(--color-brand-primary)]">{myProfile.follower_count}</span>
-                            <span className="text-[11px]">Followers</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setModalType('following')}
-                            className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-stone-50 hover:bg-stone-100 border border-stone-200 text-xs font-bold text-stone-700 transition cursor-pointer"
-                          >
-                            <UserCheck className="w-3.5 h-3.5 text-[var(--color-brand-primary)]" />
-                            <span className="text-[var(--color-brand-primary)]">{myProfile.following_count}</span>
-                            <span className="text-[11px]">Following</span>
+                            <Compass className="h-3.5 w-3.5 text-[#FFB703]" />
+                            <span>Open Passport</span>
                           </button>
                         </div>
-                      )}
+                      </div>
+
+                <nav aria-label="Profile sections" className="relative mt-4 flex flex-wrap items-center gap-2 border-t border-[#F2EFE9] pt-3 sm:flex-nowrap sm:overflow-x-auto">
+                  <a href="#profile-overview" className="inline-flex items-center gap-2 rounded-full bg-[#2D6A4F] px-4 py-2 text-xs font-bold text-white">
+                    <Compass className="h-4 w-4" aria-hidden="true" />Overview
+                  </a>
+                  <a href="#profile-badges" className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold text-[#837560] hover:bg-[#F5F2EC]">
+                    <Award className="h-4 w-4" aria-hidden="true" />Badges &amp; Achievements
+                  </a>
+                  <a href="#profile-submissions" className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold text-[#837560] hover:bg-[#F5F2EC]">
+                    <History className="h-4 w-4" aria-hidden="true" />Submissions &amp; GPS Proof
+                  </a>
+                  <Link href="/settings" className="ml-auto inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold text-[#837560] hover:bg-[#F5F2EC]">
+                    <Settings className="h-4 w-4" aria-hidden="true" />Settings
+                  </Link>
+                </nav>
                     </div>
                   </section>
+                </div>
+
+                <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.7fr)]">
+                  <aside className="space-y-6">
 
                   {/* Sovereign Credentials Card */}
-                  <div className="theme-card p-4 space-y-3">
+                  <section className="theme-card space-y-3 p-4">
                     <div className="flex items-center justify-between text-xs font-bold text-[#582F0E] uppercase tracking-wider">
                       <div className="flex items-center gap-2">
                         <ShieldCheck className="w-4 h-4 text-[#2D6A4F]" />
-                        <span>Sovereign Credentials</span>
+                        <span>Intro &amp; Passport</span>
                       </div>
                       <Link href="/settings" className="text-[10px] text-[#2D6A4F] font-bold hover:underline">
-                        Manage
+                        Edit
                       </Link>
                     </div>
                     <div className="divide-y divide-[#F2EFE9] text-xs">
+                      <div className="py-2 flex items-center justify-between gap-3">
+                        <span className="text-[#837560]">Base Region</span>
+                        <span className="text-right font-bold text-[#2C221E]">Pangasinan, Region 1</span>
+                      </div>
+                      <div className="py-2 flex items-center justify-between">
+                        <span className="text-[#837560]">Profile Visibility</span>
+                        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-bold text-stone-600">
+                          {myProfile?.is_public ? 'Public' : 'Private'}
+                        </span>
+                      </div>
                       <div className="py-2 flex items-center justify-between">
                         <span className="text-[#837560]">Active Nametag Badges</span>
                         <span className="font-bold text-[#2D6A4F]">
@@ -810,6 +871,10 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                       <div className="py-2 flex items-center justify-between">
                         <span className="text-[#837560]">GPS Validation Engine</span>
                         <span className="font-bold text-[#2C221E]">Haversine &le; 100m</span>
+                      </div>
+                      <div className="py-2 flex items-center justify-between">
+                        <span className="text-[#837560]">Joined JuanDerQuest</span>
+                        <span className="font-bold text-[#2C221E]">{myProfile?.created_at ? new Date(myProfile.created_at).getFullYear() : '2026'}</span>
                       </div>
                       <div className="py-2 flex items-center justify-between">
                         <span className="text-[#837560]">Network Ledger</span>
@@ -832,46 +897,37 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                         </div>
                       )}
                     </div>
-                    <div className="pt-2 border-t border-[#F2EFE9] flex items-center justify-between gap-2">
+                    <div className="pt-2 border-t border-[#F2EFE9]">
                       <Link
                         href="/settings"
-                        className="text-xs font-bold text-[var(--color-brand-brown)] hover:text-[var(--color-brand-primary)] flex items-center gap-1.5 transition"
+                        className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand-brown)] transition hover:text-[var(--color-brand-primary)]"
                       >
                         <Settings className="w-3.5 h-3.5" />
                         <span>Settings</span>
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => void logout()}
-                        className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition cursor-pointer"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Sign Out</span>
-                      </button>
                     </div>
-                  </div>
-                </div>
+                  </section>
+                  </aside>
 
-                {/* Right Column: Passport Showcase, Badges & Activity (8 cols) */}
-                <div className="lg:col-span-8 space-y-6">
+                <div className="min-w-0 space-y-6">
                   {/* Top 4 Metrics Ribbon */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {/* Wallet Balances */}
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#2D6A4F] flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                    <div className="theme-card rounded-2xl p-4 text-center">
+                      <div className="mx-auto mb-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-[#2D6A4F] shadow-2xs">
                         <Wallet className="w-4 h-4" />
                       </div>
                       <div className="text-xl font-black text-[#2D6A4F]">
                         {wallet ? `${wallet.balanceMjdq.toLocaleString()}` : 'Unavailable'}
                       </div>
                       <div className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        mJDQ Balance
+                        Available mJDQ
                       </div>
                     </div>
 
                     {/* XP Points */}
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                    <div className="theme-card rounded-2xl p-4 text-center">
+                      <div className="mx-auto mb-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-800 shadow-2xs">
                         <Award className="w-4 h-4" />
                       </div>
                       <div className="text-xl font-black text-[#582F0E]">
@@ -883,8 +939,8 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
 
                     {/* Streak */}
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                    <div className="theme-card rounded-2xl p-4 text-center">
+                      <div className="mx-auto mb-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-800 shadow-2xs">
                         <Flame className="w-4 h-4 text-orange-600" />
                       </div>
                       <div className="text-xl font-black text-orange-950">
@@ -896,8 +952,8 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
 
                     {/* Unique Destinations */}
-                    <div className="theme-card p-4 text-center">
-                      <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mx-auto mb-1.5 shadow-2xs">
+                    <div className="theme-card rounded-2xl p-4 text-center">
+                      <div className="mx-auto mb-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-800 shadow-2xs">
                         <Compass className="w-4 h-4 text-purple-700" />
                       </div>
                       <div className="text-xl font-black text-purple-950">
@@ -910,30 +966,30 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                   </div>
 
                   {/* Interactive Soulbound Badges & NFT Trophy Showcase */}
-                  <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--color-border-default)]">
+                  <section id="profile-badges" className="scroll-mt-24 space-y-5 rounded-3xl border border-[#E3DFD5] bg-white p-5 shadow-xs sm:p-7">
+                    <div className="flex flex-col justify-between gap-3 border-b border-[#E3DFD5] pb-4 sm:flex-row sm:items-center">
                       <div>
                         <div className="flex items-center gap-2">
-                          <Award className="w-5 h-5 text-[var(--color-brand-primary)]" />
-                          <h2 className="text-base sm:text-lg font-black text-[var(--color-brand-brown)]">
+                          <Award className="h-5 w-5 text-[var(--color-brand-primary)]" />
+                          <h2 className="text-base font-black text-[var(--color-brand-brown)] sm:text-lg">
                             Soulbound Badges &amp; NFT Showcase
                           </h2>
                         </div>
-                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                           Tap any badge to inspect metadata, contract details, and pin to your username nametag.
                         </p>
                       </div>
 
                       {/* Filter tabs */}
-                      <div className="flex items-center gap-1 p-1 bg-[#FAF9F5] border border-[#E3DFD5] rounded-xl self-start sm:self-center">
+                      <div className="flex items-center gap-1 self-start rounded-xl border border-[#E3DFD5] bg-[#FAF9F5] p-1 sm:self-center">
                         {(['all', 'nft', 'achievement', 'civic'] as const).map((tab) => (
                           <button
                             key={tab}
                             type="button"
                             onClick={() => setBadgeFilterTab(tab)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition capitalize cursor-pointer ${
+                            className={`cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-bold capitalize transition ${
                               badgeFilterTab === tab
-                                ? 'bg-[var(--color-brand-primary)] text-white shadow-2xs'
+                                ? 'bg-[#F5C45E] text-[#292313] shadow-2xs'
                                 : 'text-[#837560] hover:text-[#2C221E]'
                             }`}
                           >
@@ -944,65 +1000,62 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     </div>
 
                     {/* Badges Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                       {filteredBadges.map((badge) => {
                         const isPinned = activeBadgeIds.includes(badge.id);
                         return (
                           <div
                             key={badge.id}
                             onClick={() => setSelectedBadgeModal(badge)}
-                            className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:-translate-y-0.5 relative overflow-hidden group ${
+                            className={`group relative cursor-pointer overflow-hidden rounded-2xl border p-3 text-center shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${
                               isPinned
-                                ? 'bg-amber-50/40 border-amber-300 ring-1 ring-amber-400/30'
-                                : 'bg-white border-[#E3DFD5] hover:border-[#2D6A4F] hover:bg-[#FAF9F5]/70'
+                                ? 'border-[#D9AE4E]/70 bg-amber-50 ring-1 ring-[#D9AE4E]/30'
+                                : 'border-[#E3DFD5] bg-[#FAF9F5] hover:border-[#D9AE4E] hover:bg-white'
                             }`}
                           >
                             {badge.isNft && (
-                              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[badge-glint_2s_ease-in-out_infinite] pointer-events-none" />
+                              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent group-hover:animate-[badge-glint_2s_ease-in-out_infinite]" />
                             )}
-                            <div className="flex items-start justify-between gap-2">
-                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 border ${badge.themeColor.bg} ${badge.themeColor.border} shadow-2xs`}>
-                                <span>{badge.icon}</span>
-                              </div>
-                              <div className="flex flex-col items-end gap-1">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                  badge.rarity === 'legendary'
-                                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                    : badge.rarity === 'epic'
-                                    ? 'bg-purple-100 text-purple-900 border border-purple-300'
-                                    : badge.rarity === 'rare'
-                                    ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                                    : 'bg-stone-100 text-stone-700 border border-stone-200'
-                                }`}>
-                                  {badge.rarity}
-                                </span>
-                                {badge.isNft && (
-                                  <span className="text-[9px] font-mono font-bold text-amber-700">
-                                    {badge.tokenId}
-                                  </span>
-                                )}
+                            <div className="mb-3 flex min-h-24 items-center justify-center rounded-xl border border-[#EEE8DC] bg-[#F1EEE7]">
+                              <div className={`flex h-16 w-16 items-center justify-center rounded-2xl border text-3xl shadow-2xs sm:h-[4.5rem] sm:w-[4.5rem] ${badge.themeColor.bg} ${badge.themeColor.border}`}>
+                                <span aria-hidden="true">{badge.icon}</span>
                               </div>
                             </div>
 
-                            <div className="mt-3">
-                              <h4 className="text-xs sm:text-sm font-black text-[#2C221E] group-hover:text-[#2D6A4F] transition truncate">
+                            <div className="flex min-h-8 items-center justify-center gap-1.5">
+                              <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                                  badge.rarity === 'legendary'
+                                    ? 'border-amber-300 bg-amber-50 text-amber-900'
+                                    : badge.rarity === 'epic'
+                                    ? 'border-purple-200 bg-purple-50 text-purple-900'
+                                    : badge.rarity === 'rare'
+                                    ? 'border-sky-200 bg-sky-50 text-sky-900'
+                                    : 'border-stone-200 bg-stone-100 text-stone-700'
+                                }`}>
+                                  {badge.rarity}
+                              </span>
+                              {badge.isNft && <span className="font-mono text-[9px] font-bold text-amber-800">{badge.tokenId}</span>}
+                            </div>
+
+                            <div className="mt-2">
+                              <h4 className="truncate text-xs font-black text-[#2C221E] transition group-hover:text-[#2D6A4F] sm:text-sm">
                                 {badge.name}
                               </h4>
-                              <p className="text-[11px] text-[#837560] line-clamp-2 mt-1 leading-relaxed">
+                              <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#837560] sm:text-[11px]">
                                 {badge.description}
                               </p>
                             </div>
 
-                            <div className="mt-3 pt-2.5 border-t border-[#F2EFE9] flex items-center justify-between text-[10px] font-bold">
+                            <div className="mt-3 flex items-center justify-between gap-1 border-t border-[#E3DFD5] pt-2.5 text-[9px] font-bold sm:text-[10px]">
                               {isPinned ? (
-                                <span className="text-amber-800 flex items-center gap-1 font-extrabold">
-                                  <Check className="w-3 h-3 text-emerald-600" /> Active on Nametag
+                                <span className="flex items-center gap-1 truncate font-extrabold text-amber-800">
+                                  <Check className="h-3 w-3 shrink-0 text-emerald-600" /> Active on Nametag
                                 </span>
                               ) : (
-                                <span className="text-[#837560]">Tap to inspect &amp; pin</span>
+                                <span className="truncate text-[#837560]">Tap to inspect &amp; pin</span>
                               )}
-                              <span className="text-[#2D6A4F] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                                Details <ChevronRight className="w-3 h-3" />
+                              <span className="flex shrink-0 items-center gap-0.5 text-[#2D6A4F] transition-transform group-hover:translate-x-0.5">
+                                Details <ChevronRight className="h-3 w-3" />
                               </span>
                             </div>
                           </div>
@@ -1071,7 +1124,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                   )}
 
                   {/* Submission & Proof History */}
-                  <section className="bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs">
+                  <section id="profile-submissions" className="scroll-mt-24 bg-white rounded-3xl border border-[var(--color-border-default)] p-5 sm:p-7 shadow-xs">
                     <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border-default)]">
                       <div className="flex items-center gap-2">
                         <History className="w-5 h-5 text-[var(--color-brand-primary)]" />
@@ -1140,6 +1193,8 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                   <BaseSepoliaReadiness signedInSeedId={user.seedId} />
                 </div>
 
+                </div>
+
                 {/* Follow List Modal */}
                 {modalType && (
                   <FollowListModal
@@ -1151,6 +1206,7 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
                     ownerView={true}
                   />
                 )}
+                <PassportModal isOpen={isPassportOpen} onClose={() => setIsPassportOpen(false)} />
               </div>
             );
           })()}
@@ -1256,6 +1312,5 @@ export function UnifiedProfileClient({ username }: UnifiedProfileClientProps) {
           )}
         </div>
       </ErrorBoundary>
-    </Navigation>
   );
 }
