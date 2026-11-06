@@ -135,7 +135,7 @@ export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
             alt="Juan, the JuanDerQuest guide"
             width={92}
             height={152}
-            className={styles.sprite}
+            className={`${styles.sprite} ${styles.heroSprite}`}
           />
         </header>
 

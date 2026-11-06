@@ -107,6 +107,12 @@
   overflow: hidden;
 }
 
+.heroSprite {
+  /* Juan shrinks on narrow phones so the title stays on one line. */
+  width: clamp(56px, 18vw, 92px);
+  height: auto;
+}
+
 .heroText {
   flex: 1;
   min-width: 0;
@@ -115,7 +121,8 @@
 
 .title {
   margin: 4px 0 6px;
-  font-size: clamp(20px, 5.5vw, 34px);
+  /* Silkscreen is wide: "JUANDERQUEST" must fit beside Juan on a 320px phone. */
+  font-size: clamp(16px, 4.6vw, 34px);
   line-height: 1.15;
   color: var(--white);
   text-shadow: 3px 3px 0 var(--ink);
