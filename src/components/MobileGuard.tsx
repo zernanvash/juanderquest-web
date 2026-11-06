@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { Download, X, Sparkles, Smartphone, ChevronRight } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 
@@ -60,8 +61,10 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Show banner only on mobile devices if not dismissed
-  const showBanner = !isDismissed && (isAndroid || isIOS);
+  const pathname = usePathname();
+
+  // Show banner only on mobile devices if not dismissed, and not on the download page itself.
+  const showBanner = !isDismissed && (isAndroid || isIOS) && pathname !== '/download';
 
   return (
     <>

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Navigation } from '@/components/Navigation';
 import { API_BASE_URL } from '@/lib/api';
+import { DitherBackdrop } from './DitherBackdrop';
 import styles from './download.module.css';
 import { pixelBody, pixelTitle } from './fonts';
 import { designLine, previousReleases, releaseNotes, type ApkRelease } from './releases';
@@ -34,6 +34,15 @@ function formatDate(iso: string): string {
     timeZone: 'Asia/Manila',
   });
 }
+
+const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
+
+const FEATURES: [string, string][] = [
+  ['Quests & rewards', 'Check in at real places, finish tasks, earn mJDQ points and badges.'],
+  ['AR treasure', 'Find gems in augmented reality, guided by Juan.'],
+  ['Turn-by-turn routes', 'Navigate Pangasinan with our own routing and map.'],
+  ['JuanChoice', 'Vote each week for the spot travelers should visit next.'],
+];
 
 export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
   const [version, setVersion] = useState<VersionMeta | null>(null);
@@ -84,183 +93,182 @@ export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
   const older = currentCode === undefined ? [] : previousReleases(releases, currentCode);
   const notes = version ? releaseNotes(version.changelog) : '';
   const size = version ? formatSize(version.sizeBytes) : '';
+  const date = version ? formatDate(version.publishedAt) : '';
 
   return (
-    <Navigation>
-      <div className={`${pixelTitle.variable} ${pixelBody.variable} ${styles.page}`}>
+    <main className={cx(pixelTitle.variable, pixelBody.variable, styles.screen)}>
+      <DitherBackdrop top="#0d1b2a" bottom="#414844" />
+
+      <div className={styles.column}>
+        {/* Top bar, like the app's: square ink buttons with a paper outline */}
+        <nav className={styles.topBar} aria-label="Download page">
+          <Link
+            href="/explore"
+            className={cx(styles.box, styles.flat, styles.inkBox, styles.iconButton)}
+            aria-label="Open the website"
+          >
+            <span aria-hidden="true" style={{ fontFamily: 'var(--font-pixel-body), monospace', fontSize: 20 }}>
+              ◀
+            </span>
+          </Link>
+          <button
+            type="button"
+            className={cx(styles.box, styles.flat, styles.inkBox, styles.iconButton)}
+            onClick={() =>
+              copy(new URL(DIRECT_API_DOWNLOAD_URL, window.location.origin).toString(), setIsCopied)
+            }
+          >
+            {isCopied ? 'Copied!' : 'Share'}
+          </button>
+        </nav>
+
+        {/* Brand, like the app's start screen */}
+        <header className={styles.brand}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="" width={260} height={260} className={styles.logo} />
+          <h1 className={styles.title}>JuanDerQuest</h1>
+          <p className={styles.tagline}>Community-powered travel &amp; discovery</p>
+        </header>
+
         {isInAppBrowser && (
-          <div role="alert" className={`${styles.box} ${styles.alert} ${styles.alertWarn}`}>
-            <span className={styles.badge}>!</span>
-            <div className={styles.body}>
-              <p className={styles.label}>Open in your browser</p>
-              <p>
-                In-app browsers (Messenger, Instagram, TikTok) often block APK downloads. Tap the
-                ••• menu and choose &quot;Open in Chrome&quot;.
-              </p>
-            </div>
+          <div role="alert" className={cx(styles.box, styles.gold, styles.panel)}>
+            <p className={styles.heading}>Open in your browser</p>
+            <p className={styles.small} style={{ color: 'var(--ink)' }}>
+              In-app browsers (Messenger, Instagram, TikTok) often block APK downloads. Tap ••• and
+              choose &quot;Open in Chrome&quot;.
+            </p>
           </div>
         )}
 
         {isIOS && (
-          <div role="status" className={`${styles.box} ${styles.alert} ${styles.alertInfo}`}>
-            <span className={styles.badge}>i</span>
-            <div className={styles.body}>
-              <p className={styles.label}>Android only for now</p>
-              <p>
-                The app is for Android phones. On iPhone you can explore quests and the map right
-                here on the web.
-              </p>
-              <div className={styles.actions} style={{ marginTop: 10 }}>
-                <Link href="/quests" className={`${styles.button} ${styles.secondary} ${styles.small}`}>
-                  Browse quests
-                </Link>
-                <Link href="/map" className={`${styles.button} ${styles.secondary} ${styles.small}`}>
-                  Open map
-                </Link>
-              </div>
+          <div role="status" className={cx(styles.box, styles.parchment, styles.panel)}>
+            <p className={styles.heading}>Android only for now</p>
+            <p className={styles.small}>
+              The app is for Android phones. On iPhone you can explore right here on the web.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+              <Link href="/quests" className={cx(styles.box, styles.green, styles.button, styles.smallButton)}>
+                <span className={styles.buttonText}>Browse quests</span>
+              </Link>
+              <Link href="/map" className={cx(styles.box, styles.parchment, styles.button, styles.smallButton)}>
+                Open map
+              </Link>
             </div>
           </div>
         )}
 
-        {/* Hero */}
-        <header className={styles.hero}>
-          <div className={styles.heroText}>
-            <span className={`${styles.badge} ${styles.badgeGreen}`}>Android · Beta</span>
-            <h1 className={styles.title}>JuanDerQuest</h1>
-            <p className={styles.heroLine}>Quests, AR and maps for exploring Pangasinan.</p>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/pixel/juanIdle.png"
-            alt="Juan, the JuanDerQuest guide"
-            width={92}
-            height={152}
-            className={`${styles.sprite} ${styles.heroSprite}`}
-          />
-        </header>
-
         {/* Latest release */}
-        <section aria-labelledby="latest-heading" className={`${styles.box} ${styles.parchment} ${styles.latest}`}>
-          <div className={styles.latestHead}>
-            <span className={`${styles.badge} ${styles.badgeNew}`}>New</span>
+        <section aria-labelledby="latest-heading" className={cx(styles.box, styles.parchment, styles.panel)}>
+          <div className={styles.panelHead}>
+            <span className={cx(styles.box, styles.gold, styles.badge, styles.badgeNew)}>New</span>
             <h2 id="latest-heading" className={styles.heading}>
               Latest version
             </h2>
           </div>
 
-          <div>
+          <div className={styles.latestRow}>
             <div className={styles.version} data-testid="latest-version">
               {version ? `v${version.versionName}` : versionFailed ? 'Latest' : '…'}
             </div>
-            {version && (
-              <div className={styles.meta} style={{ marginTop: 8 }}>
-                {designLine(version.versionName)} · build {version.versionCode}
-                {formatDate(version.publishedAt) && ` · ${formatDate(version.publishedAt)}`}
-                {size && ` · ${size}`}
-              </div>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/pixel/juanIdle.png"
+              alt=""
+              width={23}
+              height={38}
+              className={cx(styles.sprite, styles.juan)}
+            />
           </div>
+
+          {version && (
+            <div className={styles.chipRow}>
+              <span className={cx(styles.box, styles.flat, styles.slot, styles.chip)}>
+                {designLine(version.versionName)} · Beta · build {version.versionCode}
+              </span>
+              {date && <span className={cx(styles.box, styles.flat, styles.slot, styles.chip)}>{date}</span>}
+            </div>
+          )}
 
           {notes && <p className={styles.notes}>{notes}</p>}
 
           {downloadStarted && (
-            <div className={styles.toast} role="status">
-              Downloading… check your notifications or Downloads folder for{' '}
-              <span className={styles.code}>{version?.fileName ?? 'the APK'}</span>.
+            <div className={cx(styles.box, styles.flat, styles.slot, styles.toast)} role="status">
+              Downloading… check your notifications or Downloads folder.
             </div>
           )}
 
-          <div className={styles.actions}>
-            <a
-              href={DIRECT_API_DOWNLOAD_URL}
-              download={version?.fileName}
-              onClick={() => {
-                setDownloadStarted(true);
-                setTimeout(() => setDownloadStarted(false), 8000);
-              }}
-              className={`${styles.button} ${styles.primary}`}
-              data-testid="download-latest"
-            >
-              ▼ Download APK{size ? ` (${size})` : ''}
-            </a>
-            <button
-              type="button"
-              onClick={() =>
-                copy(
-                  typeof window !== 'undefined'
-                    ? new URL(DIRECT_API_DOWNLOAD_URL, window.location.origin).toString()
-                    : DIRECT_API_DOWNLOAD_URL,
-                  setIsCopied,
-                )
-              }
-              className={`${styles.button} ${styles.secondary}`}
-            >
-              {isCopied ? 'Copied!' : 'Copy link'}
-            </button>
-          </div>
-
-          {isAndroid && (
-            <p className={styles.meta} style={{ margin: 0 }}>
-              ✓ Works on your phone (Android 8.0 or newer).
-            </p>
-          )}
+          <a
+            href={DIRECT_API_DOWNLOAD_URL}
+            download={version?.fileName}
+            onClick={() => {
+              setDownloadStarted(true);
+              setTimeout(() => setDownloadStarted(false), 8000);
+            }}
+            className={cx(styles.box, styles.green, styles.button)}
+            style={{ minHeight: 56 }}
+            data-testid="download-latest"
+          >
+            <span className={styles.buttonText}>Download APK</span>
+          </a>
+          <p className={styles.small}>
+            {size ? `${size} · ` : ''}
+            {isAndroid ? 'Works on your phone (Android 8.0+)' : 'For Android 8.0 or newer'}
+          </p>
         </section>
 
         {/* Older versions */}
         {older.length > 0 && (
-          <details className={`${styles.box} ${styles.paper} ${styles.details}`} data-testid="older-versions">
+          <details
+            className={cx(styles.box, styles.flat, styles.inkBox, styles.details)}
+            data-testid="older-versions"
+          >
             <summary className={styles.summary}>
               <span className={styles.heading}>Older versions ({older.length})</span>
               <span className={styles.arrow} aria-hidden="true">
                 ▶
               </span>
             </summary>
-            <div className={styles.olderBody}>
-              <p className={styles.featureText}>
-                Android can&apos;t install an older version over a newer one. Uninstall
-                JuanDerQuest first; your account and progress stay on the server, but anything
-                not yet synced from the phone is lost.
-              </p>
-              <ul className={styles.olderList}>
-                {older.map((release) => (
-                  <li key={release.versionCode} className={`${styles.slot} ${styles.olderItem}`}>
-                    <div>
-                      <div className={styles.olderName}>v{release.versionName}</div>
-                      <div className={styles.meta}>
-                        <span className={styles.chip}>{designLine(release.versionName)}</span>{' '}
-                        build {release.versionCode}
-                        {formatDate(release.publishedAt) && ` · ${formatDate(release.publishedAt)}`}
-                        {formatSize(release.sizeBytes) && ` · ${formatSize(release.sizeBytes)}`}
-                      </div>
+            <p className={cx(styles.small, styles.onDark)}>
+              Android can&apos;t install an older version over a newer one. Uninstall JuanDerQuest
+              first. Your account and progress stay on the server; anything not yet synced from the
+              phone is lost.
+            </p>
+            <ul className={styles.olderList}>
+              {older.map((release) => (
+                <li
+                  key={release.versionCode}
+                  className={cx(styles.box, styles.flat, styles.slot, styles.olderItem)}
+                >
+                  <div>
+                    <div className={styles.olderName}>v{release.versionName}</div>
+                    <div className={styles.olderMeta}>
+                      {designLine(release.versionName)} · build {release.versionCode}
+                      {formatDate(release.publishedAt) && ` · ${formatDate(release.publishedAt)}`}
+                      {formatSize(release.sizeBytes) && ` · ${formatSize(release.sizeBytes)}`}
                     </div>
-                    <a
-                      href={release.url}
-                      rel="noopener noreferrer"
-                      className={`${styles.button} ${styles.secondary} ${styles.small}`}
-                    >
-                      ▼ v{release.versionName}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  </div>
+                  <a
+                    href={release.url}
+                    rel="noopener noreferrer"
+                    className={cx(styles.box, styles.parchment, styles.button, styles.smallButton)}
+                  >
+                    Download
+                  </a>
+                </li>
+              ))}
+            </ul>
           </details>
         )}
 
         {/* What's inside */}
-        <section aria-labelledby="inside-heading" className={`${styles.box} ${styles.wood}`}>
+        <section aria-labelledby="inside-heading" className={cx(styles.box, styles.wood, styles.panel)}>
           <h2 id="inside-heading" className={styles.heading} style={{ color: 'var(--sun)' }}>
             What&apos;s inside
           </h2>
-          <div className={styles.grid} style={{ marginTop: 12 }}>
-            {[
-              ['Quests & rewards', 'Check in at real places, finish tasks and earn mJDQ points and badges.'],
-              ['AR treasure', 'Find gems in augmented reality, guided by Juan.'],
-              ['Turn-by-turn routes', 'Navigate Pangasinan with our own routing server and map.'],
-              ['JuanChoice', 'Vote each week for the spot travelers should visit next.'],
-            ].map(([title, text]) => (
-              <div key={title} className={styles.slot}>
-                <h3 className={`${styles.label} ${styles.featureTitle}`}>
+          <div className={styles.grid}>
+            {FEATURES.map(([title, text]) => (
+              <div key={title} className={cx(styles.box, styles.flat, styles.slot, styles.feature)}>
+                <h3 className={styles.featureTitle}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/pixel/questMarker.png" alt="" width={19} height={19} className={styles.sprite} />
                   {title}
@@ -272,27 +280,22 @@ export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
         </section>
 
         {/* Install guide */}
-        <section aria-labelledby="install-heading" className={`${styles.box} ${styles.paper}`}>
+        <section aria-labelledby="install-heading" className={cx(styles.box, styles.parchment, styles.panel)}>
           <h2 id="install-heading" className={styles.heading}>
             How to install
           </h2>
           <ol className={styles.steps}>
             <li>
-              <span>
-                Tap <strong>Download APK</strong>. If Chrome warns you, tap &quot;Download anyway&quot;.
-              </span>
+              <span>Tap Download APK. If Chrome warns you, tap &quot;Download anyway&quot;.</span>
             </li>
             <li>
-              <span>
-                Open <span className={styles.code}>{version?.fileName ?? 'the APK'}</span> from your
-                notifications or Downloads folder.
-              </span>
+              <span>Open the APK from your notifications or Downloads folder.</span>
             </li>
             <li>
               <span>If asked, allow your browser to &quot;Install unknown apps&quot;.</span>
             </li>
             <li>
-              <span>Tap Install, then open JuanDerQuest. Updates install in place from the app.</span>
+              <span>Tap Install, then open JuanDerQuest. Later updates install from inside the app.</span>
             </li>
           </ol>
         </section>
@@ -304,17 +307,18 @@ export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
           {version?.sha256 && (
             <span>
               SHA-256 <span className={styles.code}>{version.sha256.slice(0, 16)}…</span>{' '}
-              <button type="button" className={styles.linkButton} onClick={() => copy(version.sha256, setIsHashCopied)}>
+              <button
+                type="button"
+                className={styles.linkButton}
+                onClick={() => copy(version.sha256, setIsHashCopied)}
+              >
                 {isHashCopied ? 'Copied!' : 'Copy'}
               </button>
             </span>
           )}
-        </footer>
-
-        <div className={styles.back}>
           <Link href="/explore">Explore on the web instead ▶</Link>
-        </div>
+        </footer>
       </div>
-    </Navigation>
+    </main>
   );
 }
