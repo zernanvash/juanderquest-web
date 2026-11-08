@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Box, Gem, Sparkles, Smartphone, RotateCcw } from 'lucide-react';
-import { ArCfg } from '../types';
+import { ArCfg, ArGame } from '../types';
 import { MiniMapPreview } from '@/components/MiniMapPreview';
 
 interface ArPanelProps {
@@ -25,8 +25,19 @@ const AR_COLORS: { hex: ArCfg['color']; name: string; bgClass: string }[] = [
   { hex: '#E11D48', name: 'Ruby', bgClass: 'bg-[#E11D48]' },
 ];
 
+// Plan 77: the games are played in the app; the web only picks one.
+const AR_GAMES: { id: ArGame; label: string }[] = [
+  { id: 'collect', label: 'Collect the relic' },
+  { id: 'tumbang_preso', label: 'Tumbang Preso (played in the app)' },
+  { id: 'shooting_hoop', label: 'Ring Shoot (played in the app)' },
+  { id: 'pana', label: 'Pana (played in the app)' },
+  { id: 'pabitin_palayok', label: 'Pukpok Palayok (played in the app)' },
+  { id: 'sipa', label: 'Sipa Rally (played in the app)' },
+];
+
 export function ArPanel({ config, destinationCoords, onChange }: ArPanelProps) {
   const { fence, object, color } = config;
+  const game = config.game ?? 'collect';
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const radius = Number(e.target.value);
@@ -56,6 +67,21 @@ export function ArPanel({ config, destinationCoords, onChange }: ArPanelProps) {
         </div>
       </div>
 
+      <div className="space-y-1.5">
+        <label htmlFor="ar-game" className="text-xs font-bold text-stone-700">Game</label>
+        <select
+          id="ar-game"
+          value={game}
+          onChange={(e) => onChange({ ...config, game: e.target.value as ArGame })}
+          className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800"
+        >
+          {AR_GAMES.map((g) => (
+            <option key={g.id} value={g.id}>{g.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {game === 'collect' && (<>
       {/* 3D Model Picker */}
       <div className="space-y-1.5">
         <label className="text-xs font-bold text-stone-700">3D Virtual Object</label>
@@ -105,6 +131,8 @@ export function ArPanel({ config, destinationCoords, onChange }: ArPanelProps) {
           })}
         </div>
       </div>
+
+      </>)}
 
       {/* AR Viewfinder Perimeter Fence */}
       <div className="space-y-2 pt-2">
