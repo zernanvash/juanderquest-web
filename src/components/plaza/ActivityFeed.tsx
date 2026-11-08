@@ -7,8 +7,8 @@ import { SuggestedExplorers } from './SuggestedExplorers';
 
 interface ActivityFeedProps {
   activities: ActivityItem[];
-  feedScope: 'mixed' | 'following';
-  onFeedScopeChange: (scope: 'mixed' | 'following') => void;
+  feedScope: 'mixed' | 'following' | 'town';
+  onFeedScopeChange: (scope: 'mixed' | 'following' | 'town') => void;
   loading: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
@@ -102,6 +102,18 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
             }`}
           >
             Following
+          </button>
+          <button
+            type="button"
+            onClick={() => onFeedScopeChange('town')}
+            aria-pressed={feedScope === 'town'}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              feedScope === 'town'
+                ? 'bg-white text-[var(--color-brand-brown)] shadow-xs border border-[var(--color-border-default)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-brand-brown)]'
+            }`}
+          >
+            Town activity
           </button>
         </div>
       </div>

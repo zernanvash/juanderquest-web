@@ -45,7 +45,8 @@ export interface ActivityItem {
   };
   municipality: string | null;
   payload: Record<string, any>;
-  reason: 'following' | 'you' | 'nearby';
+  reason: 'following' | 'you' | 'nearby' | 'rival' | 'saved_spot';
+  reason_label?: string;
   cheer_count: number;
   cheered_by_me: boolean;
   comment_count: number;
@@ -134,6 +135,7 @@ export interface TownsResponseData {
 export interface FeedResponseData {
   items: ActivityItem[];
   next_cursor: string | null;
+  reason?: string;
   degraded?: boolean;
 }
 
@@ -159,7 +161,7 @@ export async function getTowns(): Promise<TownsResponseData | null> {
 }
 
 export async function getFeed(params: {
-  scope?: 'mixed' | 'following';
+  scope?: 'mixed' | 'following' | 'town';
   cursor?: string;
   limit?: number;
 }): Promise<FeedResponseData> {

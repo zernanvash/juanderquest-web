@@ -61,7 +61,9 @@ function PlazaContent() {
   const [towns, setTowns] = useState<TownEntry[]>([]);
 
   // Feed state
-  const [feedScope, setFeedScope] = useState<'mixed' | 'following'>('mixed');
+  const [feedScope, setFeedScope] = useState<'mixed' | 'following' | 'town'>(
+    queryBoard === 'following' ? 'following' : queryBoard === 'town' ? 'town' : 'mixed'
+  );
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedCursor, setFeedCursor] = useState<string | null>(null);
@@ -254,7 +256,16 @@ function PlazaContent() {
       <PlazaHeader
         board={board}
         period={period}
-        onBoardChange={setBoard}
+        onBoardChange={(nextBoard) => {
+          setBoard(nextBoard);
+          setFeedScope(
+            nextBoard === 'following'
+              ? 'following'
+              : nextBoard === 'town'
+              ? 'town'
+              : 'mixed'
+          );
+        }}
         onPeriodChange={setPeriod}
         resetsInSeconds={standingsData?.week?.resets_in_seconds}
       />

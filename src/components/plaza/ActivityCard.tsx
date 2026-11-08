@@ -115,18 +115,28 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
               {/* Context chip */}
               {activity.reason === 'following' && (
                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
-                  Following
+                  {activity.reason_label || 'Following'}
                 </span>
               )}
               {activity.reason === 'you' && (
                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
-                  You
+                  {activity.reason_label || 'You'}
                 </span>
               )}
-              {activity.reason === 'nearby' && activity.municipality && (
+              {activity.reason === 'rival' && (
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900">
+                  {activity.reason_label || 'Leaderboard Rival'}
+                </span>
+              )}
+              {activity.reason === 'saved_spot' && (
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-stone-100 text-stone-800">
+                  {activity.reason_label || 'At a spot you saved'}
+                </span>
+              )}
+              {activity.reason === 'nearby' && (activity.reason_label || activity.municipality) && (
                 <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
                   <MapPin className="w-3 h-3" />
-                  <span>Near {activity.municipality}</span>
+                  <span>{activity.reason_label || `Near ${activity.municipality}`}</span>
                 </span>
               )}
             </div>

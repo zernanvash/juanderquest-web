@@ -296,6 +296,47 @@ describe('PlazaPage Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('No home town set for this traveler yet')).toBeDefined();
+      expect(mockGetFeed).toHaveBeenCalledWith(expect.objectContaining({ scope: 'town' }));
+    });
+  });
+
+  it('renders PlazaRanker v2 reason_label badge on activity cards', async () => {
+    mockGetFeed.mockResolvedValueOnce({
+      items: [
+        {
+          id: 'act_202',
+          verb: 'quest_completed',
+          actor: {
+            user_id: 'u_1',
+            display_name: 'Aira Leader',
+            handle: 'aira_coast',
+            avatar_url: '',
+            is_following: false,
+          },
+          subject: {
+            type: 'quest',
+            id: 'q_1',
+            title: 'Hundred Islands Trail',
+            href: '/quests/q_1',
+          },
+          municipality: 'Alaminos City',
+          payload: { points: 100 },
+          reason: 'rival',
+          reason_label: 'Rival · #4 This Week',
+          cheer_count: 2,
+          cheered_by_me: false,
+          comment_count: 1,
+          can_hide: true,
+          created_at: '2026-10-17T03:00:00Z',
+        },
+      ],
+      next_cursor: null,
+    });
+
+    render(<PlazaPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Rival · #4 This Week')).toBeDefined();
     });
   });
 });
