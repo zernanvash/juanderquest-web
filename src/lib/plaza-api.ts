@@ -45,7 +45,7 @@ export interface ActivityItem {
   };
   municipality: string | null;
   payload: Record<string, any>;
-  reason: 'following' | 'you' | 'nearby' | 'rival' | 'saved_spot';
+  reason: 'following' | 'you' | 'nearby' | 'rival' | 'saved_spot' | 'popular';
   reason_label?: string;
   cheer_count: number;
   cheered_by_me: boolean;

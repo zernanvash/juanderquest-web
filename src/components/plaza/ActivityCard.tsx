@@ -133,6 +133,11 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
                   {activity.reason_label || 'At a spot you saved'}
                 </span>
               )}
+              {activity.reason === 'popular' && (
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-orange-100 text-orange-900">
+                  {activity.reason_label || 'Popular in Plaza'}
+                </span>
+              )}
               {activity.reason === 'nearby' && (activity.reason_label || activity.municipality) && (
                 <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
                   <MapPin className="w-3 h-3" />
