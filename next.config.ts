@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { appOnlyRedirects } from "./src/config/appOnlyRoutes";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const latestAndroidApk = "https://github.com/zernanvash/juanderquest-mobile/releases/latest/download/juanderquest-latest.apk";
@@ -76,9 +77,8 @@ const nextConfig: NextConfig = {
   ...(disableDevIndicators ? { devIndicators: false } : {}),
   async redirects() {
     return [
-      { source: "/leaderboard", destination: "/plaza", permanent: true },
+      ...appOnlyRedirects(),
       { source: "/download/juanderquest-latest.apk", destination: "/api/v1/app/download", permanent: false },
-      { source: "/spots/new", destination: "/map/add-spot", permanent: false },
     ];
   },
   async rewrites() {

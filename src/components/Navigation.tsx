@@ -36,6 +36,7 @@ import { getNotifications, markAllNotificationsRead, markNotificationRead, type 
 import { CosmeticAvatar } from '@/components/cosmetics/CosmeticAvatar';
 import { DisplayName } from '@/components/cosmetics/DisplayName';
 import { StampBalanceChip } from '@/components/stamps/StampBalanceChip';
+import { appOnlyFeatureFor } from '@/config/appOnlyRoutes';
 
 export interface NavigationNotification {
   id: string;
@@ -379,8 +380,9 @@ export const Navigation: React.FC<{
   );
 
   // Primary destinations stay unlabeled at the top; secondary areas are grouped
-  // so the rail stays scannable. Only availability flair (Soon) survives.
-  const navGroups: NavGroup[] = [
+  // so the rail stays scannable. Flair marks availability: Soon, or App for
+  // features that are only in the Android app (they open /download).
+  const navGroups: NavGroup[] = ([
     {
       items: [
         { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
@@ -407,7 +409,10 @@ export const Navigation: React.FC<{
         { label: 'Explorer Settings', href: '/settings', icon: Settings },
       ],
     },
-  ];
+  ] as NavGroup[]).map((group) => ({
+    ...group,
+    items: group.items.map((item) => (appOnlyFeatureFor(item.href) ? { ...item, flair: 'App' } : item)),
+  }));
 
   // Compute Gamified Level & XP (Level = points / 50 + 1)
   const currentPoints = user?.points ?? 0;
@@ -469,7 +474,7 @@ export const Navigation: React.FC<{
       {/* Compact Mobile/Tablet Top Bar (Hidden on desktop lg+) */}
       <header className="lg:hidden sticky top-0 z-40 shrink-0 h-14 bg-white/95 backdrop-blur-md border-b border-[var(--color-border-default)] px-3 sm:px-4 flex items-center justify-between shadow-xs gap-2">
         {/* Brand Logo & Title */}
-        <Link href="/dashboard" className="flex items-center gap-2 group shrink-0" title="JuanDerQuest — Home">
+        <Link href="/explore" className="flex items-center gap-2 group shrink-0" title="JuanDerQuest — Explore">
           <div className="w-8 h-8 rounded-xl bg-white border border-[var(--color-border-default)] p-1 flex items-center justify-center shadow-xs">
             <img src="/logo.png" alt="JuanDerQuest" width="24" height="24" className="w-6 h-6 object-contain" />
           </div>
@@ -627,9 +632,9 @@ export const Navigation: React.FC<{
           {/* Top Brand Logo & Collapse / Expand Toggle Header */}
           <div className="h-14 px-3 border-b border-[var(--color-border-default)]/60 flex items-center justify-between shrink-0">
             <Link
-              href="/dashboard"
+              href="/explore"
               className={`flex items-center group shrink-0 ${isDesktopDrawerCollapsed ? 'w-full justify-center' : 'gap-2.5'}`}
-              title="JuanDerQuest — Home"
+              title="JuanDerQuest — Explore"
             >
               <div className="w-8 h-8 rounded-xl bg-white border border-[var(--color-border-default)] p-1 flex items-center justify-center shadow-xs group-hover:border-[var(--color-brand-primary)]/60 transition-colors duration-200">
                 <img src="/logo.png" alt="JuanDerQuest" width="24" height="24" className="w-6 h-6 object-contain" />

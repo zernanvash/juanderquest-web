@@ -55,7 +55,7 @@ export default function LoginPage() {
   };
 
   React.useEffect(() => {
-    if (isTravelerSession(user, shouldStayInTravelerApp())) router.replace(redirectTarget() ?? '/quests');
+    if (isTravelerSession(user, shouldStayInTravelerApp())) router.replace(redirectTarget() ?? '/explore');
   }, [user, router]);
 
   React.useEffect(() => {
@@ -69,7 +69,7 @@ export default function LoginPage() {
   }, []);
 
   const finish = (ok: boolean) => {
-    if (ok) router.push(redirectTarget() ?? '/onboarding/interests');
+    if (ok) router.push(redirectTarget() ?? '/explore');
     else setError('Authentication failed. Please check your credentials.');
   };
 

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_BASE_URL } from '@/lib/api';
+import { appOnlyLabel } from '@/config/appOnlyRoutes';
 import { DitherBackdrop } from './DitherBackdrop';
 import styles from './download.module.css';
 import { pixelBody, pixelTitle } from './fonts';
@@ -53,12 +54,14 @@ export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
   const [isAndroid, setIsAndroid] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+  const [appOnly, setAppOnly] = useState<string | null>(null);
 
   useEffect(() => {
     const ua = navigator.userAgent || '';
     setIsAndroid(/Android/i.test(ua));
     setIsIOS(/iPhone|iPad|iPod/i.test(ua));
     setIsInAppBrowser(/FBAN|FBAV|Instagram|TikTok|Line|MicroMessenger|Snapchat/i.test(ua));
+    setAppOnly(appOnlyLabel(new URLSearchParams(window.location.search).get('feature')));
 
     // The promoted build (the in-app update channel), not GitHub's newest build.
     fetch(`${API_BASE_URL}/app/version`)
@@ -130,6 +133,23 @@ export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
           <p className={styles.tagline}>Community-powered travel &amp; discovery</p>
         </header>
 
+        {appOnly && (
+          <div role="status" data-testid="app-only-notice" className={cx(styles.box, styles.gold, styles.panel)}>
+            <p className={styles.heading}>{appOnly}: in the app only</p>
+            <p className={styles.small} style={{ color: 'var(--ink)' }}>
+              This part of JuanDerQuest is only in the Android app. On the web you can still explore spots and the map.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+              <Link href="/explore" className={cx(styles.box, styles.parchment, styles.button, styles.smallButton)}>
+                Explore spots
+              </Link>
+              <Link href="/map" className={cx(styles.box, styles.parchment, styles.button, styles.smallButton)}>
+                Open map
+              </Link>
+            </div>
+          </div>
+        )}
+
         {isInAppBrowser && (
           <div role="alert" className={cx(styles.box, styles.gold, styles.panel)}>
             <p className={styles.heading}>Open in your browser</p>
@@ -147,8 +167,8 @@ export function DownloadClient({ releases }: { releases: ApkRelease[] }) {
               The app is for Android phones. On iPhone you can explore right here on the web.
             </p>
             <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-              <Link href="/quests" className={cx(styles.box, styles.green, styles.button, styles.smallButton)}>
-                <span className={styles.buttonText}>Browse quests</span>
+              <Link href="/explore" className={cx(styles.box, styles.green, styles.button, styles.smallButton)}>
+                <span className={styles.buttonText}>Explore spots</span>
               </Link>
               <Link href="/map" className={cx(styles.box, styles.parchment, styles.button, styles.smallButton)}>
                 Open map
