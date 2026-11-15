@@ -37,7 +37,11 @@ export interface ArCfg {
   fence: GeoFence;
   object: 'token' | 'gem' | 'beacon' | 'box';
   color: '#FFB703' | '#2D6A4F' | '#3B82F6' | '#E11D48';
+  /** Plan 77: a mini-game played in the Android app instead of collecting the relic. */
+  game?: ArGame;
 }
+
+export type ArGame = 'collect' | 'tumbang_preso' | 'shooting_hoop' | 'pana' | 'pabitin_palayok' | 'sipa';
 
 export type InAppTask =
   | { kind: 'complete_quiz'; quiz_id: string }
