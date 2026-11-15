@@ -21,11 +21,11 @@ describe('root entry routing', () => {
     expect(mocks.redirect).toHaveBeenCalledWith('/download');
   });
 
-  it('keeps non-Android visitors on the normal app entry', async () => {
+  it('sends non-Android visitors to Explore (the dashboard is app-only)', async () => {
     mocks.headers.mockResolvedValue({ get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' });
 
     await RootPage();
 
-    expect(mocks.redirect).toHaveBeenCalledWith('/dashboard');
+    expect(mocks.redirect).toHaveBeenCalledWith('/explore');
   });
 });
