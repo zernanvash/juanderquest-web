@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isResourceId } from '@/lib/routes';
-import { loadSukiProgram } from './loader';
+import { loadSukiProgram, safeLogoUrl } from './loader';
 import styles from './suki.module.css';
 
 /**
@@ -18,7 +18,8 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const program = await loadSukiProgram(id);
+  const result = await loadSukiProgram(id);
+  const program = result.kind === 'found' ? result.program : null;
   const title = program ? `${program.merchant.name} Suki Card | JuanDerQuest` : 'Suki Card | JuanDerQuest';
   return {
     title: { absolute: title },
@@ -32,13 +33,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SukiLandingPage({ params }: Props) {
   const { id } = await params;
   if (!isResourceId(id)) notFound();
-  const program = await loadSukiProgram(id);
+  const result = await loadSukiProgram(id);
+  const program = result.kind === 'found' ? result.program : null;
+  const logo = safeLogoUrl(program?.merchant.logo_url);
   return (
     <main className={styles.page}>
       <section className={styles.card}>
+        <p className={styles.kicker}>Suki Card</p>
         {program ? (
           <>
-            <p className={styles.kicker}>Suki Card</p>
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className={styles.logo} src={logo} alt={`${program.merchant.name} logo`} width={72} height={72} />
+            ) : null}
             <h1 className={styles.shop}>{program.merchant.name}</h1>
             {program.merchant.municipality ? <p className={styles.town}>{program.merchant.municipality}</p> : null}
             <div className={styles.reward}>
@@ -47,22 +54,30 @@ export default async function SukiLandingPage({ params }: Props) {
                 Visit <strong>{program.visits_required} times</strong>: {program.reward_text}
               </p>
             </div>
-            <p className={styles.note}>
-              One visit a day, collected at the shop counter in the JuanDerQuest app. Every visit also counts
-              toward your passport missions and explorer badges.
-            </p>
+            {program.status === 'paused' ? (
+              <p className={styles.note}>This Suki Card is paused right now. Ask the shop when it starts again.</p>
+            ) : (
+              <p className={styles.note}>
+                One visit a day, collected at the shop in the JuanDerQuest app. Every visit also counts toward your
+                passport missions and explorer badges.
+              </p>
+            )}
+          </>
+        ) : result.kind === 'disabled' ? (
+          <>
+            <h1 className={styles.shop}>Suki Cards are coming soon</h1>
+            <p className={styles.note}>Get the app now and start collecting visits as soon as Suki Cards open.</p>
           </>
         ) : (
           <>
-            <p className={styles.kicker}>Suki Card</p>
-            <h1 className={styles.shop}>This Suki Card is not available</h1>
-            <p className={styles.note}>It may be paused or replaced. Ask the shop for its current QR.</p>
+            <h1 className={styles.shop}>This Suki Card was not found</h1>
+            <p className={styles.note}>It may have been replaced. Ask the shop for its current QR.</p>
           </>
         )}
         <Link className={styles.cta} href="/download">
           Get JuanDerQuest
         </Link>
-        <p className={styles.note}>Already have the app? Open it and tap Shop → Suki Cards → Scan Suki.</p>
+        <p className={styles.note}>Already have the app? Open it and tap Scan Suki.</p>
       </section>
     </main>
   );
