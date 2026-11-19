@@ -25,6 +25,8 @@ const EXACT_PUBLIC_PATHS = new Set([
   '/search',
   '/login',
   '/download',
+  // Owner 2026-11-19: anyone can report a bug, signed in or not.
+  '/report-bug',
   '/affiliate',
   '/privacy',
   '/terms',

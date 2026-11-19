@@ -4,6 +4,7 @@ import { isPublicPage } from './public-routes';
 describe('isPublicPage', () => {
   it('marks core browse, discovery, and legal routes as public', () => {
     expect(isPublicPage('/')).toBe(true);
+    expect(isPublicPage('/report-bug')).toBe(true);
     expect(isPublicPage('/explore')).toBe(true);
     expect(isPublicPage('/map')).toBe(true);
     expect(isPublicPage('/quests')).toBe(true);
