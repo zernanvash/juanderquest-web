@@ -214,7 +214,7 @@
       "minzoom": 12,
       "layout": {
         "symbol-placement": "line",
-        "text-field": "{name}",
+        "text-field": "{name:latin}",
         "text-font": ["Noto Sans Regular"],
         "text-size": 11
       },
@@ -230,7 +230,7 @@
       "source": "openmaptiles",
       "source-layer": "water_name",
       "layout": {
-        "text-field": "{name}",
+        "text-field": "{name:latin}",
         "text-font": ["Noto Sans Regular"],
         "text-size": 12
       },
