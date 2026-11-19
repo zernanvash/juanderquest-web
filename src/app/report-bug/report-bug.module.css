@@ -1,0 +1,238 @@
+.screen {
+  --u: 2px;
+  --ink: #0d1b2a;
+  --slate: #414844;
+  --stone: #717973;
+  --mist: #c1c8c2;
+  --paper: #faf9f5;
+  --white: #ffffff;
+  --green-deep: #1b4332;
+  --green: #3f6653;
+  --sun: #ffb703;
+  --wood-deep: #3e1f0a;
+
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-pixel-title), var(--font-pixel-body), monospace;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+}
+
+@media (min-width: 768px) {
+  .screen {
+    --u: 3px;
+  }
+}
+
+.column {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 560px;
+  padding: 16px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header {
+  text-align: center;
+}
+
+.title {
+  margin: 4px 0 6px;
+  font-size: clamp(22px, 6vw, 30px);
+  color: var(--sun);
+  text-shadow: calc(var(--u) * 1.5) calc(var(--u) * 1.5) 0 var(--wood-deep);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--paper);
+  text-transform: uppercase;
+}
+
+.box {
+  border-style: solid;
+  border-width: calc(var(--u) * 4) calc(var(--u) * 5) calc(var(--u) * 5) calc(var(--u) * 4);
+  border-image-slice: 4 5 5 4 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+  background: none;
+}
+
+.flat {
+  border-width: calc(var(--u) * 4);
+  border-image-slice: 4 fill;
+}
+
+.parchment {
+  border-image-source: url('/pixel/box-parchment.png');
+  color: var(--ink);
+}
+
+.green {
+  border-image-source: url('/pixel/box-green.png');
+  color: var(--white);
+}
+
+.gold {
+  border-image-source: url('/pixel/box-gold.png');
+  color: var(--ink);
+}
+
+.red {
+  border-image-source: url('/pixel/box-red.png');
+  color: var(--white);
+}
+
+.slot {
+  border-image-source: url('/pixel/box-slot.png');
+  color: var(--ink);
+}
+
+.inkBox {
+  border-image-source: url('/pixel/box-ink.png');
+  color: var(--paper);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: none;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+
+.panel {
+  padding: 12px 10px;
+}
+
+.heading {
+  margin: 0 0 8px;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.small {
+  margin: 0;
+  font-size: 12px;
+  color: var(--slate);
+  font-family: system-ui, -apple-system, sans-serif;
+  letter-spacing: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--wood-deep);
+}
+
+.chipGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catChip {
+  padding: 4px 8px;
+  font-family: var(--font-pixel-title), var(--font-pixel-body), monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  background: var(--white);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 4px 14px;
+  font: inherit;
+  font-size: 14px;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.smallButton {
+  min-height: 40px;
+  font-size: 12px;
+  padding: 0 10px;
+}
+
+.buttonText {
+  text-shadow: calc(var(--u)) calc(var(--u)) 0 var(--ink);
+}
+
+.errorBox {
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.refBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 8px 10px;
+}
+
+.refCode {
+  font-size: 18px;
+  color: var(--green-deep);
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}

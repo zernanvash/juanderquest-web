@@ -184,6 +184,60 @@
   gap: 12px;
 }
 
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctaWrap {
+  position: relative;
+}
+
+.sparklePixel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.tickerSlot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 6px 8px;
+  background: rgba(13, 27, 42, 0.06);
+  border: 2px solid rgba(13, 27, 42, 0.2);
+  font-size: 11px;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--wood-deep);
+}
+
+.tickerDot {
+  color: var(--green-deep);
+  flex-shrink: 0;
+}
+
+.disclaimerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
 .brand {
   display: flex;
   flex-direction: column;
