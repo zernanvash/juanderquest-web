@@ -10,11 +10,13 @@ import { appOnlyLabel } from '@/config/appOnlyRoutes';
 import { DitherBackdrop } from './DitherBackdrop';
 import styles from './download.module.css';
 import { pixelBody, pixelTitle } from './fonts';
+import { AR_SANDBOX_URL, designLine, previousReleases, type ApkRelease } from './releases';
 
 const DIRECT_API_DOWNLOAD_URL = `${API_BASE_URL}/app/download`;
 
 interface VersionMeta {
   versionName: string;
+  versionCode: number;
   fileName: string;
   sizeBytes: number;
 }
@@ -61,7 +63,7 @@ const HIGHLIGHTS = [
   'Vote weekly in JuanChoice for top local spots',
 ];
 
-export function DownloadClient() {
+export function DownloadClient({ releases = [] }: { releases?: ApkRelease[] }) {
   const containerRef = useRef<HTMLElement>(null);
   const ctaWrapRef = useRef<HTMLDivElement>(null);
 
@@ -88,6 +90,7 @@ export function DownloadClient() {
         if (!res?.success || !data?.versionName) return;
         setVersion({
           versionName: String(data.versionName ?? ''),
+          versionCode: typeof data.versionCode === 'number' ? data.versionCode : 0,
           fileName: String(data.fileName ?? 'juanderquest-beta.apk'),
           sizeBytes: typeof data.sizeBytes === 'number' ? data.sizeBytes : 0,
         });
@@ -206,6 +209,7 @@ export function DownloadClient() {
 
   const betaLabel = formatBetaVersion(version?.versionName);
   const size = version ? formatSize(version.sizeBytes) : '';
+  const older = version?.versionCode ? previousReleases(releases, version.versionCode) : [];
   const reportBugHref = `/report-bug?version=${encodeURIComponent(betaLabel)}`;
 
   return (
@@ -429,6 +433,55 @@ export function DownloadClient() {
             </li>
           </ol>
         </section>
+
+        {/* Other versions (owner 2026-11-24): the AR sandbox, then builds older than the promoted one */}
+        <details className={cx(styles.box, styles.parchment, styles.panel, styles.details)} data-testid="other-versions">
+          <summary className={styles.summary}>
+            <span className={styles.heading}>Other versions</span>
+            <span className={styles.arrow} aria-hidden="true">
+              ▶
+            </span>
+          </summary>
+          <ul className={styles.olderList}>
+            <li className={cx(styles.box, styles.flat, styles.slot, styles.olderItem)} data-testid="ar-sandbox">
+              <div>
+                <div className={styles.olderName}>JDQ AR Sandbox</div>
+                <div className={styles.olderMeta}>AR mini-games test app · installs beside JuanDerQuest</div>
+              </div>
+              <a
+                href={AR_SANDBOX_URL}
+                rel="noopener noreferrer"
+                className={cx(styles.box, styles.parchment, styles.button, styles.smallButton)}
+              >
+                Download
+              </a>
+            </li>
+            {older.map((release) => (
+              <li key={release.versionCode} className={cx(styles.box, styles.flat, styles.slot, styles.olderItem)}>
+                <div>
+                  <div className={styles.olderName}>v{release.versionName}</div>
+                  <div className={styles.olderMeta}>
+                    {designLine(release.versionName)} · build {release.versionCode}
+                    {formatSize(release.sizeBytes) && ` · ${formatSize(release.sizeBytes)}`}
+                  </div>
+                </div>
+                <a
+                  href={release.url}
+                  rel="noopener noreferrer"
+                  className={cx(styles.box, styles.parchment, styles.button, styles.smallButton)}
+                >
+                  v{release.versionName}
+                </a>
+              </li>
+            ))}
+          </ul>
+          {older.length > 0 && (
+            <p className={styles.small}>
+              Android can&apos;t install an older JuanDerQuest over a newer one: uninstall it first. Your account and
+              progress stay on the server.
+            </p>
+          )}
+        </details>
 
         <footer className={styles.footer}>
           <div className={styles.footerLinks}>

@@ -29,6 +29,15 @@ export function releaseAssetUrl(tag: string, fileName: string): string {
   return `https://github.com/${REPO}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(fileName)}`;
 }
 
+/**
+ * JDQ AR Sandbox (owner 2026-11-24): the standalone AR mini-game test app, listed under Other
+ * versions. Its own app ID (.arsandbox), so it installs beside JuanDerQuest. Its tag does not
+ * match `android-v…`, so it never enters the release history or the update channel.
+ */
+export const AR_SANDBOX_TAG = 'ar-sandbox-v1.0.0';
+export const AR_SANDBOX_FILE = 'jdq-ar-sandbox-v1.0.0.apk';
+export const AR_SANDBOX_URL = releaseAssetUrl(AR_SANDBOX_TAG, AR_SANDBOX_FILE);
+
 /** v0.1.199 is always listed, even if the GitHub API is unreachable or rate-limited. */
 export const CLASSIC_RELEASE: ApkRelease = {
   versionName: '0.1.199',
