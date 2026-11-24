@@ -20,8 +20,14 @@ describe('Plan 107 Suki landing loader', () => {
             visits_required: 10,
             mode: 'standee',
             status: 'active',
+            tiers: [
+              { visit_number: 5, reward_text: '₱15 off drink', reward_tag: '₱15 OFF', icon_key: 'discount' },
+              { visit_number: 10, reward_text: 'Free iced coffee', reward_tag: 'FREE', icon_key: 'coffee' },
+            ],
+            points: { enabled: true, per_visit: 10, pesos_per_point: 20 },
             merchant: { id: 'm1', name: 'Aling Nena Cafe', municipality: 'Dagupan City', logo_url: null },
           },
+          points_menu: [{ id: 'pm1', title: 'Cookie', points_cost: 30, icon_key: 'snack' }],
           my_card: null,
           rewards: [],
         },
@@ -31,6 +37,8 @@ describe('Plan 107 Suki landing loader', () => {
     const result = await loadSukiProgram('suki_abc');
     expect(result.kind).toBe('found');
     expect(result.kind === 'found' && result.program.merchant.name).toBe('Aling Nena Cafe');
+    expect(result.kind === 'found' && result.program.tiers?.length).toBe(2);
+    expect(result.kind === 'found' && result.pointsMenu.length).toBe(1);
     expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/suki\/programs\/suki_abc$/);
   });
 

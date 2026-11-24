@@ -2,6 +2,26 @@ import { cache } from 'react';
 import { isResourceId } from '@/lib/routes';
 import { getServerApiBaseUrl } from '@/lib/search';
 
+export interface PublicSukiTier {
+  visit_number: number;
+  reward_text: string;
+  reward_tag: string;
+  icon_key?: string;
+}
+
+export interface PublicSukiPointsConfig {
+  enabled: boolean;
+  per_visit: number;
+  pesos_per_point?: number | null;
+}
+
+export interface PublicSukiPointsMenuItem {
+  id: string;
+  title: string;
+  points_cost: number;
+  icon_key?: string;
+}
+
 export interface PublicSukiProgram {
   id: string;
   title: string;
@@ -10,12 +30,15 @@ export interface PublicSukiProgram {
   visits_required: number;
   mode: 'standee' | 'staff_scan';
   status?: 'active' | 'paused';
+  skin_key?: string;
+  tiers?: PublicSukiTier[];
+  points?: PublicSukiPointsConfig;
   merchant: { id: string; name: string; municipality: string | null; logo_url: string | null };
 }
 
 /** `disabled`: Suki Cards are switched off (503 SUKI_DISABLED); `missing`: no such card, or the API failed. */
 export type SukiLoadResult =
-  | { kind: 'found'; program: PublicSukiProgram }
+  | { kind: 'found'; program: PublicSukiProgram; pointsMenu: PublicSukiPointsMenuItem[] }
   | { kind: 'disabled' }
   | { kind: 'missing' };
 
@@ -30,7 +53,10 @@ export const loadSukiProgram = cache(async (id: string): Promise<SukiLoadResult>
     if (response.status === 503 && body?.error?.code === 'SUKI_DISABLED') return { kind: 'disabled' };
     if (!response.ok) return { kind: 'missing' };
     const program = body?.data?.program as PublicSukiProgram | undefined;
-    return body?.success && program?.id ? { kind: 'found', program } : { kind: 'missing' };
+    const pointsMenu = Array.isArray(body?.data?.points_menu)
+      ? (body.data.points_menu as PublicSukiPointsMenuItem[])
+      : [];
+    return body?.success && program?.id ? { kind: 'found', program, pointsMenu } : { kind: 'missing' };
   } catch {
     return { kind: 'missing' };
   }

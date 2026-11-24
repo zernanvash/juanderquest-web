@@ -35,7 +35,9 @@ export default async function SukiLandingPage({ params }: Props) {
   if (!isResourceId(id)) notFound();
   const result = await loadSukiProgram(id);
   const program = result.kind === 'found' ? result.program : null;
+  const pointsMenu = result.kind === 'found' ? result.pointsMenu : [];
   const logo = safeLogoUrl(program?.merchant.logo_url);
+  const tiers = program?.tiers && program.tiers.length > 0 ? program.tiers : null;
   return (
     <main className={styles.page}>
       <section className={styles.card}>
@@ -48,12 +50,46 @@ export default async function SukiLandingPage({ params }: Props) {
             ) : null}
             <h1 className={styles.shop}>{program.merchant.name}</h1>
             {program.merchant.municipality ? <p className={styles.town}>{program.merchant.municipality}</p> : null}
-            <div className={styles.reward}>
-              <span className={styles.tag}>{program.reward_tag}</span>
-              <p>
-                Visit <strong>{program.visits_required} times</strong>: {program.reward_text}
-              </p>
-            </div>
+            {tiers && tiers.length > 1 ? (
+              <div className={styles.reward}>
+                <p className={styles.ladderHeading}>Milestone rewards</p>
+                <ul className={styles.ladderList}>
+                  {tiers.map((tier) => (
+                    <li key={tier.visit_number} className={styles.ladderItem}>
+                      <span className={styles.tag}>{tier.reward_tag}</span>
+                      <span>
+                        Visit <strong>{tier.visit_number}</strong>: {tier.reward_text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className={styles.reward}>
+                <span className={styles.tag}>{program.reward_tag}</span>
+                <p>
+                  Visit <strong>{program.visits_required} times</strong>: {program.reward_text}
+                </p>
+              </div>
+            )}
+            {program.points?.enabled ? (
+              <div className={styles.pointsBox}>
+                <p className={styles.pointsTitle}>Earn Suki Points</p>
+                <p className={styles.pointsSub}>
+                  +{program.points.per_visit} pts every visit
+                  {program.points.pesos_per_point ? ` · +1 pt per ₱${program.points.pesos_per_point} spent` : ''}
+                </p>
+                {pointsMenu.length > 0 ? (
+                  <ul className={styles.pointsList}>
+                    {pointsMenu.slice(0, 4).map((item) => (
+                      <li key={item.id}>
+                        {item.title} — <strong>{item.points_cost} pts</strong>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
             {program.status === 'paused' ? (
               <p className={styles.note}>This Suki Card is paused right now. Ask the shop when it starts again.</p>
             ) : (
