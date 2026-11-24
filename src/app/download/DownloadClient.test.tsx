@@ -65,4 +65,26 @@ describe('Plan 114: Commercial DownloadClient', () => {
     expect(screen.queryByText(/dev\.zernanvash\.juanderquest/i)).toBeNull();
     expect(screen.queryByText(/build 225/i)).toBeNull();
   });
+
+  it('lists the JDQ AR Sandbox and builds older than the promoted one under Other versions', async () => {
+    const rel = (versionName: string, versionCode: number) => ({
+      versionName,
+      versionCode,
+      tag: `android-v${versionName}+${versionCode}.1`,
+      fileName: `juanderquest-${versionName}.apk`,
+      url: `https://x/${versionCode}.apk`,
+      sizeBytes: 0,
+      publishedAt: '',
+    });
+    render(<DownloadClient releases={[rel('0.4.0', 227), rel('0.3.10', 225), rel('0.3.9', 224)]} />);
+
+    const hrefs = () =>
+      Array.from(screen.getByTestId('other-versions').querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    await waitFor(() => expect(hrefs()).toContain('https://x/224.apk'));
+    expect(hrefs()).not.toContain('https://x/225.apk');
+    expect(hrefs()).not.toContain('https://x/227.apk');
+    expect(screen.getByTestId('ar-sandbox').querySelector('a')?.getAttribute('href')).toBe(
+      'https://github.com/zernanvash/juanderquest-mobile/releases/download/ar-sandbox-v1.0.0/jdq-ar-sandbox-v1.0.0.apk',
+    );
+  });
 });
