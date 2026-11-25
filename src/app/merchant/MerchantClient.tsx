@@ -264,7 +264,7 @@ export function MerchantClient() {
           </div>
           <h2 className="text-2xl font-bold text-[#1B4332] mb-2">No Active Merchant Workspace</h2>
           <p className="text-sm text-[#666] mb-6 leading-relaxed">
-            Your account does not currently own a verified merchant establishment on JuanDerQuest. If you represent a Pangasinan tourism business, you can apply in minutes through our partner portal.
+            Your account does not currently own a verified merchant establishment on JuanDerQuest. If you represent a local tourism business, you can apply in minutes through our partner portal.
           </p>
           <div className="flex justify-center gap-4">
             <Link

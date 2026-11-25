@@ -38,7 +38,7 @@ export function ConnectWalletPromptModal({
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-50 text-amber-700"><Wallet aria-hidden="true" /></span>
         <h2 id="connect-wallet-title" className="text-lg font-black text-[#582f0e]">Connect a wallet to continue</h2>
         <p className="text-sm text-stone-600">
-          You can explore Pangasinan, earn EXP and browse the shop without a wallet. To get
+          You can explore destinations, earn EXP and browse the shop without a wallet. To get
           {' '}<strong>&ldquo;{itemTitle || 'this reward'}&rdquo;</strong>, link a Web3 wallet to your account. Your progress stays the same.
         </p>
         <div className="space-y-2">

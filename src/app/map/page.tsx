@@ -1468,7 +1468,7 @@ export default function QuestMapPage() {
                   <div className="min-w-0 flex-1">
                     <h2 className="text-xs font-black text-[#582F0E] truncate">Destination Map</h2>
                     <p className="text-[10px] text-[#837560] font-semibold truncate leading-tight">
-                      {quests.length + spots.length} places pinned across Pangasinan
+                      {quests.length + spots.length} places pinned across the Ilocos Region
                     </p>
                   </div>
                 </div>

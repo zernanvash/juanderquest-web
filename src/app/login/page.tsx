@@ -266,7 +266,7 @@ export default function LoginPage() {
             JuanDerQuest Passport
           </h1>
           <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
-            Unified sign-in for Pangasinan travelers, cultural scouts, and municipal explorers.
+            Unified sign-in for travelers, cultural scouts, and municipal explorers.
           </p>
         </div>
 

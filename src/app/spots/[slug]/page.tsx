@@ -15,6 +15,7 @@ interface PublicSpot {
   name: string;
   description: string;
   municipality: string;
+  address?: string;
   category?: string;
   gps_lat?: number;
   gps_lng?: number;
@@ -23,6 +24,13 @@ interface PublicSpot {
 }
 
 export const dynamic = 'force-dynamic';
+
+const REGION_I_PROVINCES = ['Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan'];
+
+/** Province named in the address (catalog covers Region I), else the region itself. */
+function regionFromAddress(address?: string): string {
+  return REGION_I_PROVINCES.find((p) => address?.includes(p)) ?? 'Ilocos Region';
+}
 
 const loadPublicSpot = cache(async (identifier: string): Promise<PublicSpot | null> => {
   if (!isResourceId(identifier)) return null;
@@ -87,7 +95,7 @@ export default async function SpotDetailPage({ params }: Props) {
         address: {
           '@type': 'PostalAddress',
           addressLocality: spot.municipality,
-          addressRegion: 'Pangasinan',
+          addressRegion: regionFromAddress(spot.address),
           addressCountry: 'PH',
         },
         geo:

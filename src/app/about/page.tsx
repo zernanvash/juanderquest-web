@@ -58,7 +58,7 @@ export default function AboutPage() {
     {
       icon: ShieldCheck,
       title: 'Authentic Heritage First',
-      desc: 'Designed to celebrate local identities and support communities, beginning with our Pangasinan pilot.',
+      desc: 'Designed to celebrate local identities and support communities, beginning with the Ilocos Region.',
     },
   ];
 
@@ -77,7 +77,7 @@ export default function AboutPage() {
           </h1>
 
           <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
-            A gamified tourism platform for discovering destinations, preserving heritage, and supporting local businesses. Our first pilot and current destination catalog are in Pangasinan.
+            A gamified tourism platform for discovering destinations, preserving heritage, and supporting local businesses. Our destination catalog covers the Ilocos Region (Region I).
           </p>
         </div>
 

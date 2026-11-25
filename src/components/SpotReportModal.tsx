@@ -177,7 +177,7 @@ export function SpotReportModal({
         {!submitted ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-xs text-[#514532] leading-relaxed">
-              Help preserve Pangasinan tourism data integrity. Select the issue that best describes why this destination post requires moderation:
+              Help keep destination data accurate. Select the issue that best describes why this destination post requires moderation:
             </p>
 
             {/* Reasons List */}

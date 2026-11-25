@@ -71,7 +71,7 @@ const INITIAL_NOTIFICATIONS: NavigationNotification[] = [
   {
     id: 'notif-welcome',
     title: 'Welcome to JuanDerQuest',
-    description: 'Explore Pangasinan destinations, verify arrivals, and earn civic tokens.',
+    description: 'Explore Ilocos Region destinations, verify arrivals, and earn civic tokens.',
     time: '1d ago',
     href: '/dashboard',
     read: true,
@@ -541,7 +541,7 @@ export const Navigation: React.FC<{
                     <div className="py-6 text-center text-stone-400">
                       <Bell className="w-6 h-6 mx-auto mb-1 text-stone-300" />
                       <p className="text-xs font-semibold">No recent activity</p>
-                      <p className="text-[10px] text-stone-400 mt-0.5">Explore Pangasinan or complete quests to see updates here.</p>
+                      <p className="text-[10px] text-stone-400 mt-0.5">Explore destinations or complete quests to see updates here.</p>
                     </div>
                   ) : (
         allNotifications.map((item) => (
@@ -747,7 +747,7 @@ export const Navigation: React.FC<{
                     <div className="py-6 text-center text-stone-400">
                       <Bell className="w-6 h-6 mx-auto mb-1 text-stone-300" />
                       <p className="text-xs font-semibold">No recent activity</p>
-                      <p className="text-[10px] text-stone-400 mt-0.5">Explore Pangasinan or complete quests to see updates here.</p>
+                      <p className="text-[10px] text-stone-400 mt-0.5">Explore destinations or complete quests to see updates here.</p>
                     </div>
                   ) : (
                     allNotifications.map((item) => (
@@ -1145,7 +1145,7 @@ export const Navigation: React.FC<{
               ) : (
                 <div className="mb-4 p-3 rounded-2xl bg-[var(--color-bg-subtle)] border border-[var(--color-border-default)]">
                   <p className="text-xs text-[var(--color-brand-brown)] font-medium mb-2.5">
-                    Connect wallet or sign in to save badges and Pangasinan quests.
+                    Connect wallet or sign in to save badges and quests.
                   </p>
                   <Link
                     href="/login"

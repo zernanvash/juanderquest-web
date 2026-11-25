@@ -159,7 +159,7 @@ export function SpotCommentSection({ spotId, spotName, onRequireSignIn }: SpotCo
               id: 'local-demo-1',
               spot_id: spotId,
               user_id: 'u-demo-1',
-              author_name: 'Pangasinan Explorer',
+              author_name: 'Local Explorer',
               author_badge: 'Explorer',
               content: `Great spot to visit! 🌊 Highly recommend visiting during early morning or sunset hours. ✨`,
               helpful_count: 5,
@@ -665,7 +665,7 @@ export function SpotCommentSection({ spotId, spotName, onRequireSignIn }: SpotCo
 
                 {/* Comment Footer: Like Action */}
                 <div className="flex items-center justify-between pt-1 pl-9">
-                  <span className="text-[10px] text-stone-400">Pangasinan Community</span>
+                  <span className="text-[10px] text-stone-400">Community</span>
 
                   <button
                     type="button"

@@ -1123,7 +1123,7 @@ export function VectorMapCanvas({
           <div className="flex items-center gap-1 text-[10px] text-[#582F0E]/80 mt-0.5 mb-1.5 truncate">
             <MapPin className="w-3 h-3 text-[#2D6A4F] shrink-0" />
             <span className="truncate">
-              {hoverCard.spot.municipality || 'Pangasinan'}
+              {hoverCard.spot.municipality || 'Ilocos Region'}
             </span>
           </div>
 

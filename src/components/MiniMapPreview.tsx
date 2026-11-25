@@ -329,7 +329,7 @@ export function MiniMapPreview({
             <div className="flex items-center gap-1.5 min-w-0">
               <MapPin className="w-3.5 h-3.5 text-[#FFB703] shrink-0" />
               <span className="truncate font-bold">
-                {name || address || municipality || 'Pangasinan'}
+                {name || address || municipality || 'Ilocos Region'}
               </span>
             </div>
             {!interactive && (

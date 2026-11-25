@@ -332,7 +332,7 @@ export default function ExplorePage() {
             <div className="bg-white rounded-2xl p-4 border border-[var(--color-border-default)] shadow-xs space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h1 className="text-lg sm:text-xl font-black text-[var(--color-brand-brown)] tracking-tight">
-                  Explore Pangasinan
+                  Explore the Ilocos Region
                 </h1>
               </div>
 
@@ -445,7 +445,7 @@ export default function ExplorePage() {
 
                   const displayAuthorName = spot.sourceName?.trim()
                     ? spot.sourceName
-                    : 'Pangasinan Tourism';
+                    : 'Local Tourism';
                   const topRecommendationReason = spot.recommendationReasons?.[0] ?? null;
 
                   const storyTarget = index === 0 && storyMission.isHighlighted;

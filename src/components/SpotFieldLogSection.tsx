@@ -216,7 +216,7 @@ export function SpotFieldLogSection({
     if (!content.trim() || submitting) return;
 
     setSubmitting(true);
-    const authorName = user?.displayName || authorNameInput.trim() || 'Pangasinan Scout';
+    const authorName = user?.displayName || authorNameInput.trim() || 'Local Scout';
 
     try {
       const res = await api.post(`/spots/${spotId}/comments`, {
