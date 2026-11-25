@@ -10,12 +10,12 @@ import { WalletAccessGate } from '@/components/WalletAccessGate';
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://juanderquest.app'),
   title: { default: 'JuanDerQuest — Discover Local Journeys', template: '%s | JuanDerQuest' },
-  description: 'Discover community-powered destinations, quests, and local experiences. Explore our Pangasinan pilot on JuanDerQuest.',
+  description: 'Discover community-powered destinations, quests, and local experiences across the Philippines on JuanDerQuest.',
   robots: process.env.NEXT_PUBLIC_JDQ_PRESENTATION_MODE === 'true'
     ? { index: false, follow: false, noarchive: true, nocache: true }
     : undefined,
-  openGraph: { title: 'JuanDerQuest — Discover Local Journeys', description: 'Discover community-powered destinations and local experiences, beginning with Pangasinan.', url: '/', siteName: 'JuanDerQuest', images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'JuanDerQuest community-powered tourism' }], locale: 'en_PH', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'JuanDerQuest — Discover Local Journeys', description: 'Discover community-powered destinations and local experiences, beginning with Pangasinan.', images: ['/opengraph-image'] },
+  openGraph: { title: 'JuanDerQuest — Discover Local Journeys', description: 'Discover community-powered destinations and local experiences across the Philippines.', url: '/', siteName: 'JuanDerQuest', images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'JuanDerQuest community-powered tourism' }], locale: 'en_PH', type: 'website' },
+  twitter: { card: 'summary_large_image', title: 'JuanDerQuest — Discover Local Journeys', description: 'Discover community-powered destinations and local experiences across the Philippines.', images: ['/opengraph-image'] },
   icons: { icon: '/favicon.ico', apple: '/logo.png' },
 };
 
