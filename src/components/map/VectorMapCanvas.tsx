@@ -5,6 +5,7 @@ import type { Map as MapLibreMap, GeoJSONSource, MapMouseEvent } from 'maplibre-
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   AdminAreaDetailModel,
+  SpotMarkerKind,
   SpotModel,
   fetchAdminAreas,
   fetchAdminAreaDetail,
@@ -14,9 +15,180 @@ import {
 import { buildInvertedMask } from '@/lib/map-mask';
 import { isPointInsideGeometry } from '@/lib/map-geometry';
 import { SpotPostingPin } from '@/lib/spot-posting';
-import { MapPin, Navigation, Eye, Award } from 'lucide-react';
+import { MapPin, Navigation, Eye, Award, Store } from 'lucide-react';
 import Link from 'next/link';
 import { appRoutes } from '@/lib/routes';
+
+export const PIN_IMAGE_IDS = {
+  spot: 'jdq-pin-spot',
+  merchant: 'jdq-pin-merchant',
+  quest: 'jdq-pin-quest',
+  selected: 'jdq-pin-selected',
+  slimmer: 'jdq-pin-slimmer',
+} as const;
+
+export const SPOT_PIN_ICON_EXPRESSION = [
+  'match',
+  ['get', 'marker_kind'],
+  'quest',
+  PIN_IMAGE_IDS.quest,
+  'merchant',
+  PIN_IMAGE_IDS.merchant,
+  PIN_IMAGE_IDS.spot,
+] as const;
+
+export function resolveSpotMarkerKind(
+  spot: Pick<SpotModel, 'markerKind' | 'isLocalPartner' | 'localPartner' | 'activeQuestCount' | 'questId'>,
+): SpotMarkerKind {
+  if (spot.markerKind === 'quest' || spot.markerKind === 'merchant' || spot.markerKind === 'spot') {
+    return spot.markerKind;
+  }
+  if ((spot.activeQuestCount ?? 0) > 0 || Boolean(spot.questId)) {
+    return 'quest';
+  }
+  if (spot.isLocalPartner || spot.localPartner != null) {
+    return 'merchant';
+  }
+  return 'spot';
+}
+
+export function mergeAreaSpotMarkerMetadata(areaSpots: SpotModel[], catalogSpots: SpotModel[]): SpotModel[] {
+  if (!catalogSpots.length) return areaSpots;
+  const byId = new Map(catalogSpots.map((spot) => [spot.id, spot]));
+  return areaSpots.map((areaSpot) => {
+    const match = byId.get(areaSpot.id);
+    if (!match) return areaSpot;
+    return {
+      ...areaSpot,
+      markerKind: match.markerKind ?? areaSpot.markerKind,
+      isLocalPartner: match.isLocalPartner ?? areaSpot.isLocalPartner,
+      merchantId: match.merchantId ?? areaSpot.merchantId ?? null,
+      merchantName: match.merchantName ?? areaSpot.merchantName ?? null,
+      localPartner: match.localPartner ?? areaSpot.localPartner ?? null,
+      activeQuestCount: match.activeQuestCount ?? areaSpot.activeQuestCount,
+      activeQuestIds: match.activeQuestIds ?? areaSpot.activeQuestIds,
+    };
+  });
+}
+
+export function hasLocalPartnerMarkers(spots: SpotModel[]): boolean {
+  return spots.some(
+    (s) => s.markerKind === 'merchant' || s.isLocalPartner === true || s.localPartner != null,
+  );
+}
+
+export function MapMarkerLegend({ spots }: { spots: SpotModel[] }) {
+  const showLocalPartner = hasLocalPartnerMarkers(spots);
+  return (
+    <div
+      data-testid="map-marker-legend"
+      aria-label="Map marker legend"
+      className="pointer-events-auto inline-flex flex-wrap items-center gap-2 rounded-2xl border border-[#E3DFD5] bg-white/95 px-3 py-1.5 text-[11px] font-bold text-[#2C221E] shadow-md backdrop-blur-md"
+    >
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#2D6A4F] ring-1 ring-[#1B4332]" />
+        <span>Destination</span>
+      </span>
+      {showLocalPartner ? (
+        <span className="inline-flex items-center gap-1.5" data-testid="legend-local-partner">
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#D97706] ring-1 ring-[#92400E]" />
+          <span>Local Partner</span>
+        </span>
+      ) : null}
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#FFB703] ring-1 ring-[#582F0E]" />
+        <span>Quest Available</span>
+      </span>
+    </div>
+  );
+}
+
+type PinVariant = 'spot' | 'merchant' | 'quest';
+
+export function registerHierarchicalPinImages(
+  map: { hasImage: (name: string) => boolean; addImage: (name: string, image: ImageData) => unknown },
+) {
+  const registerPinImage = (
+    name: string,
+    width: number,
+    height: number,
+    selected: boolean,
+    variant: PinVariant,
+  ) => {
+    if (map.hasImage(name)) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const cx = width / 2;
+    const cy = selected ? 12 : variant === 'quest' ? 11 : 10;
+
+    // Subtle ground drop shadow
+    ctx.beginPath();
+    ctx.ellipse(cx, height - 2, selected ? 6 : 5, selected ? 1.8 : 1.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = selected ? 'rgba(0, 0, 0, 0.30)' : 'rgba(0, 0, 0, 0.22)';
+    ctx.fill();
+
+    if (selected) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, 11.2, 0, Math.PI * 2);
+      ctx.strokeStyle = '#FFB703';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+    }
+
+    const palette =
+      variant === 'quest'
+        ? { fill: '#FFB703', stroke: '#582F0E', center: '#582F0E' }
+        : variant === 'merchant'
+          ? { fill: '#D97706', stroke: '#78350F', center: '#FFFFFF' }
+          : { fill: '#2D6A4F', stroke: '#1B4332', center: '#FFFFFF' };
+
+    const path = new Path2D(
+      selected
+        ? 'M13 2C7.47715 2 3 6.47715 3 12C3 19.2 11.6 27.8 12.3 28.5C12.7 28.9 13.3 28.9 13.7 28.5C14.4 27.8 23 19.2 23 12C23 6.47715 18.5228 2 13 2Z'
+        : 'M10 1C5.02944 1 1 5.02944 1 10C1 16.5 8.8 24.2 9.4 24.8C9.75 25.1 10.25 25.1 10.6 24.8C11.2 24.2 19 16.5 19 10C19 5.02944 14.9706 1 10 1Z',
+    );
+    ctx.fillStyle = palette.fill;
+    ctx.fill(path);
+    ctx.strokeStyle = palette.stroke;
+    ctx.lineWidth = selected ? 1.8 : 1.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke(path);
+
+    if (variant === 'merchant') {
+      // Compact storefront square center glyph to distinguish partner spots from base pins.
+      ctx.fillStyle = palette.center;
+      ctx.fillRect(cx - 3.2, cy - 2.6, 6.4, 5.2);
+    } else if (variant === 'quest') {
+      // Diamond quest emblem center.
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 4);
+      ctx.lineTo(cx + 3.6, cy);
+      ctx.lineTo(cx, cy + 4);
+      ctx.lineTo(cx - 3.6, cy);
+      ctx.closePath();
+      ctx.fillStyle = palette.center;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx, cy, selected ? 3.8 : 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = palette.center;
+      ctx.fill();
+    }
+
+    const imgData = ctx.getImageData(0, 0, width, height);
+    map.addImage(name, imgData);
+  };
+
+  registerPinImage(PIN_IMAGE_IDS.spot, 20, 28, false, 'spot');
+  registerPinImage(PIN_IMAGE_IDS.merchant, 20, 28, false, 'merchant');
+  registerPinImage(PIN_IMAGE_IDS.quest, 20, 28, false, 'quest');
+  registerPinImage(PIN_IMAGE_IDS.slimmer, 20, 28, false, 'spot');
+  registerPinImage(PIN_IMAGE_IDS.selected, 26, 34, true, 'spot');
+}
 
 export interface VectorMapCanvasProps {
   selectedAreaId: string | null;
@@ -110,6 +282,7 @@ export function VectorMapCanvas({
   const pinPlacementActiveRef = useLatestRef(pinPlacementActive);
   const onDropPinRef = useLatestRef(onDropPin);
   const onCenterChangeRef = useLatestRef(onCenterChange);
+  const allSpotsRef = useLatestRef(allSpots);
 
   const [loadingShape, setLoadingShape] = useState(false);
   const moveEndTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -194,59 +367,7 @@ export function VectorMapCanvas({
         }
 
         // Synchronously draw JDQ teardrop pin icons to canvas ImageData (D9)
-        const registerPinImage = (name: string, width: number, height: number, selected: boolean) => {
-          if (map.hasImage(name)) return;
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
-
-          const cx = width / 2;
-          const cy = selected ? 12 : 10;
-          const r = selected ? 10 : 9;
-          const tipY = selected ? 29 : 25;
-
-          // Subtle ground drop shadow
-          ctx.beginPath();
-          ctx.ellipse(cx, height - 2, selected ? 6 : 5, selected ? 1.8 : 1.5, 0, 0, Math.PI * 2);
-          ctx.fillStyle = selected ? 'rgba(0, 0, 0, 0.30)' : 'rgba(0, 0, 0, 0.22)';
-          ctx.fill();
-
-          // Optional selection ring (D9)
-          if (selected) {
-            ctx.beginPath();
-            ctx.arc(cx, cy, 11.2, 0, Math.PI * 2);
-            ctx.strokeStyle = '#FFB703';
-            ctx.lineWidth = 2.2;
-            ctx.stroke();
-          }
-
-          // Teardrop body (#2D6A4F fill, #1B4332 1.5px outline)
-          const path = new Path2D(
-            selected
-              ? 'M13 2C7.47715 2 3 6.47715 3 12C3 19.2 11.6 27.8 12.3 28.5C12.7 28.9 13.3 28.9 13.7 28.5C14.4 27.8 23 19.2 23 12C23 6.47715 18.5228 2 13 2Z'
-              : 'M10 1C5.02944 1 1 5.02944 1 10C1 16.5 8.8 24.2 9.4 24.8C9.75 25.1 10.25 25.1 10.6 24.8C11.2 24.2 19 16.5 19 10C19 5.02944 14.9706 1 10 1Z'
-          );
-          ctx.fillStyle = '#2D6A4F';
-          ctx.fill(path);
-          ctx.strokeStyle = '#1B4332';
-          ctx.lineWidth = selected ? 1.8 : 1.5;
-          ctx.lineJoin = 'round';
-          ctx.stroke(path);
-
-          // White center dot
-          ctx.beginPath();
-          ctx.arc(cx, cy, selected ? 3.8 : 3.2, 0, Math.PI * 2);
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fill();
-
-          const imgData = ctx.getImageData(0, 0, width, height);
-          map.addImage(name, imgData);
-        };
-
-        registerPinImage('jdq-pin-slimmer', 20, 28, false);
-        registerPinImage('jdq-pin-selected', 26, 34, true);
+        registerHierarchicalPinImages(map);
 
         // Add places GeoJSON source for clickable towns and barangays
         if (!map.getSource('admin-places')) {
@@ -362,7 +483,7 @@ export function VectorMapCanvas({
             type: 'symbol',
             source: 'area-spots',
             layout: {
-              'icon-image': 'jdq-pin-slimmer',
+              'icon-image': SPOT_PIN_ICON_EXPRESSION as any,
               'icon-size': 1.0,
               'icon-anchor': 'bottom',
               'icon-padding': 2,
@@ -425,7 +546,7 @@ export function VectorMapCanvas({
                   x: e.point.x,
                   y: e.point.y,
                   containerWidth: map.getContainer().clientWidth,
-                  questCount: spot.questId ? 1 : 0,
+                  questCount: spot.activeQuestCount ?? (spot.questId ? 1 : 0),
                 });
               }, 150); // ~150ms delay per D8
             }
@@ -721,8 +842,9 @@ export function VectorMapCanvas({
           onAreaDetailLoadedRef.current(detailData);
         }
 
-        setActiveAreaSpots(spotsData.spots);
-        onAreaContentLoadedRef.current?.({ spotIds: spotsData.spots.map((sp) => sp.id), geometry: shapeData?.geometry ?? null });
+        const mergedSpots = mergeAreaSpotMarkerMetadata(spotsData.spots, allSpotsRef.current);
+        setActiveAreaSpots(mergedSpots);
+        onAreaContentLoadedRef.current?.({ spotIds: mergedSpots.map((sp) => sp.id), geometry: shapeData?.geometry ?? null });
 
         if (typeof window !== 'undefined') {
           (window as any).__jdqSelectArea = (areaId: string) => onSelectAreaRef.current(areaId);
@@ -733,7 +855,7 @@ export function VectorMapCanvas({
             hasMask: Boolean(shapeData?.geometry),
             isFallbackCircle: Boolean(shapeData?.properties?.is_fallback_circle),
             geomType: shapeData?.geometry?.type,
-            spotCount: spotsData.spots.length,
+            spotCount: mergedSpots.length,
           };
         }
 
@@ -769,7 +891,7 @@ export function VectorMapCanvas({
         if (spotsSource) {
           spotsSource.setData({
             type: 'FeatureCollection',
-            features: spotsData.spots.map((s) => ({
+            features: mergedSpots.map((s) => ({
               type: 'Feature',
               geometry: {
                 type: 'Point',
@@ -783,6 +905,11 @@ export function VectorMapCanvas({
                 imageUrl: s.imageUrl || '',
                 questId: s.questId || '',
                 description: s.description || '',
+                marker_kind: resolveSpotMarkerKind(s),
+                is_local_partner: Boolean(s.isLocalPartner || s.localPartner != null),
+                merchant_id: s.merchantId ?? s.localPartner?.merchantId ?? '',
+                merchant_name: s.merchantName ?? s.localPartner?.name ?? '',
+                active_quest_count: s.activeQuestCount ?? (s.questId ? 1 : 0),
                 is_focused_area: true,
               },
             })),
@@ -925,6 +1052,9 @@ export function VectorMapCanvas({
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
+      <div className="pointer-events-none absolute bottom-24 right-3 sm:bottom-4 sm:right-4 z-10">
+        <MapMarkerLegend spots={activeAreaSpots.length > 0 ? activeAreaSpots : allSpots} />
+      </div>
       {loadingShape && (
         <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-stone-900/80 text-white text-xs backdrop-blur-sm flex items-center gap-2">
           <div className="w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -960,14 +1090,28 @@ export function VectorMapCanvas({
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-1 mb-1">
+          <div className="flex flex-wrap items-center gap-1 mb-1">
             <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-[#2D6A4F] border border-emerald-200 truncate">
               {hoverCard.spot.category?.replace(/_/g, ' ') || 'Spot'}
             </span>
+            {(hoverCard.spot.isLocalPartner || hoverCard.spot.localPartner != null) && (
+              <span
+                data-testid="hover-local-partner-badge"
+                className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-[#7D5800] border border-amber-200 inline-flex items-center gap-1 max-w-full truncate"
+              >
+                <Store className="w-2.5 h-2.5 text-[#D97706] shrink-0" />
+                <span className="truncate">
+                  Local Partner{(hoverCard.spot.merchantName || hoverCard.spot.localPartner?.name) ? ` · ${hoverCard.spot.merchantName || hoverCard.spot.localPartner?.name}` : ''}
+                </span>
+              </span>
+            )}
             {hoverCard.questCount && hoverCard.questCount > 0 ? (
-              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-[#7D5800] border border-amber-200 flex items-center gap-1">
+              <span
+                data-testid="hover-active-quest-badge"
+                className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-[#7D5800] border border-amber-200 flex items-center gap-1"
+              >
                 <Award className="w-2.5 h-2.5 text-[#FFB703]" />
-                Eco-Quest
+                {hoverCard.questCount === 1 ? '1 Quest' : `${hoverCard.questCount} Quests`}
               </span>
             ) : null}
           </div>

@@ -45,6 +45,8 @@ import {
   LocateFixed,
   HelpCircle,
   PlusCircle,
+  Store,
+  Award,
 } from 'lucide-react';
 
 const PHILIPPINES_CENTER: [number, number] = [15.89, 120.30];
@@ -56,7 +58,7 @@ const REGIONAL_ZOOM = 10;
 const FOCUSED_ZOOM = 13;
 
 import { isWebGLSupported } from '@/lib/webgl';
-import { VectorMapCanvas } from '@/components/map/VectorMapCanvas';
+import { VectorMapCanvas, MapMarkerLegend } from '@/components/map/VectorMapCanvas';
 
 // One map host per browser session; retain rendered tiles and viewport state between route visits.
 let retainedMap: LeafletMap | null = null;
@@ -1223,7 +1225,12 @@ export default function QuestMapPage() {
               />
             </div>
           ) : (
-            <div ref={mapContainerRef} className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`} />
+            <>
+              <div ref={mapContainerRef} className={`absolute inset-0 w-full h-full z-0 ${pinPlacementActive ? 'jdq-pin-mode' : ''}`} />
+              <div className="pointer-events-none absolute bottom-24 right-3 sm:bottom-4 sm:right-4 z-10">
+                <MapMarkerLegend spots={spots} />
+              </div>
+            </>
           )}
 
           {/* STANDALONE FLOATING SEARCH OVERLAY */}
@@ -1256,7 +1263,17 @@ export default function QuestMapPage() {
               selectedItem
                 ? selectedItem.type === 'quest'
                   ? { label: questBadgeLabel(selectedItem.data as QuestModel), variant: 'amber' }
-                  : { label: 'Spot', variant: 'emerald' }
+                  : (() => {
+                      const spot = selectedItem.data as SpotModel;
+                      const questCount = spot.activeQuestCount ?? (spot.questId ? 1 : 0);
+                      if (questCount > 0) {
+                        return { label: questCount === 1 ? '1 Quest' : `${questCount} Quests`, variant: 'amber' as const };
+                      }
+                      if (spot.isLocalPartner || spot.localPartner != null) {
+                        return { label: 'Local Partner', variant: 'amber' as const };
+                      }
+                      return { label: 'Spot', variant: 'emerald' as const };
+                    })()
                 : activeArea
                 ? { label: activeArea.type, variant: 'emerald' }
                 : { label: 'Interactive', variant: 'emerald' }
@@ -1519,6 +1536,36 @@ export default function QuestMapPage() {
                     />
                   </button>
                 </div>
+
+                {selectedItem.type === 'spot' && (() => {
+                  const selectedSpot = selectedItem.data as SpotModel;
+                  const questCount = selectedSpot.activeQuestCount ?? (selectedSpot.questId ? 1 : 0);
+                  const isPartner = Boolean(selectedSpot.isLocalPartner || selectedSpot.localPartner != null);
+                  const partnerName = selectedSpot.merchantName || selectedSpot.localPartner?.name;
+                  if (!isPartner && questCount <= 0) return null;
+                  return (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {isPartner ? (
+                        <span
+                          data-testid="map-inspector-local-partner"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-[#7D5800] text-[11px] font-bold"
+                        >
+                          <Store className="w-3 h-3 text-[#D97706] shrink-0" />
+                          <span>Local Partner{partnerName ? ` · ${partnerName}` : ''}</span>
+                        </span>
+                      ) : null}
+                      {questCount > 0 ? (
+                        <span
+                          data-testid="map-inspector-active-quest"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-[#7D5800] text-[11px] font-bold"
+                        >
+                          <Award className="w-3 h-3 text-[#FFB703] shrink-0" />
+                          <span>Active Quest · {questCount === 1 ? '1 Quest' : `${questCount} Quests`}</span>
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })()}
 
                 {/* Description */}
                 <p className="text-xs text-[#514532] leading-relaxed line-clamp-3">

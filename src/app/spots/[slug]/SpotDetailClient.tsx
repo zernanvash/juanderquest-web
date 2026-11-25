@@ -24,6 +24,7 @@ import {
   Award,
   PlusCircle,
   Loader2,
+  Store,
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { api, normalizeSpot, SpotModel, isVideoMedia, createAuthorQuest, toggleSpotLike, getLocalLikedSpots } from '@/lib/api';
@@ -787,6 +788,18 @@ export const SpotDetailClient: React.FC<SpotDetailClientProps> = ({ slug }) => {
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
                         <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                         <span>LGU Verified Landmark</span>
+                      </span>
+                    )}
+
+                    {spot.localPartner != null && (
+                      <span
+                        data-testid="spot-local-partner-badge"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-[#7D5800] text-xs font-bold border border-amber-300"
+                      >
+                        <Store className="w-3.5 h-3.5 text-[#D97706]" />
+                        <span>
+                          Local Partner{spot.localPartner.name ? ` · ${spot.localPartner.name}` : ''}
+                        </span>
                       </span>
                     )}
 

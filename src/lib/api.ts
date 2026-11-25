@@ -236,6 +236,16 @@ export interface WalletModel {
   balanceJdq: number;
 }
 
+export type SpotMarkerKind = 'spot' | 'merchant' | 'quest';
+
+export interface SpotLocalPartner {
+  merchantId: string;
+  name: string;
+  category: string;
+  logoUrl: string | null;
+  isPublished: boolean;
+}
+
 export interface SpotModel {
   id: string;
   slug: string;
@@ -272,6 +282,13 @@ export interface SpotModel {
   crowdConfidence: string;
   crowdUpdatedAt?: string;
   isTest?: boolean;
+  markerKind?: SpotMarkerKind;
+  isLocalPartner?: boolean;
+  merchantId?: string | null;
+  merchantName?: string | null;
+  localPartner?: SpotLocalPartner | null;
+  activeQuestCount?: number;
+  activeQuestIds?: string[];
 }
 
 export interface UploadedAssetModel {
@@ -319,6 +336,62 @@ const DEFAULT_SPOT_IMAGES: Record<string, string> = {
 };
 
 export function normalizeSpot(raw: any): SpotModel {
+  const rawPartner = raw.local_partner ?? raw.localPartner ?? null;
+  const localPartner: SpotLocalPartner | null =
+    rawPartner && typeof rawPartner === 'object' && (rawPartner.merchant_id || rawPartner.merchantId)
+      ? {
+          merchantId: String(rawPartner.merchant_id ?? rawPartner.merchantId),
+          name: String(rawPartner.name ?? ''),
+          category: String(rawPartner.category ?? ''),
+          logoUrl: rawPartner.logo_url ?? rawPartner.logoUrl ?? null,
+          isPublished: Boolean(rawPartner.is_published ?? rawPartner.isPublished),
+        }
+      : null;
+
+  const activeQuestIds: string[] = Array.isArray(raw.active_quest_ids)
+    ? raw.active_quest_ids.map(String)
+    : Array.isArray(raw.activeQuestIds)
+      ? raw.activeQuestIds.map(String)
+      : raw.quest_id
+        ? [String(raw.quest_id)]
+        : [];
+
+  const activeQuestCount =
+    raw.active_quest_count != null
+      ? Number(raw.active_quest_count)
+      : raw.activeQuestCount != null
+        ? Number(raw.activeQuestCount)
+        : activeQuestIds.length;
+
+  const explicitMarkerKind = raw.marker_kind ?? raw.markerKind;
+  const markerKind: SpotMarkerKind =
+    explicitMarkerKind === 'quest' || explicitMarkerKind === 'merchant' || explicitMarkerKind === 'spot'
+      ? explicitMarkerKind
+      : explicitMarkerKind === undefined && raw.markerKind === undefined
+        ? (activeQuestCount > 0 ? 'quest' : 'spot')
+        : 'spot';
+
+  const isLocalPartner =
+    typeof raw.is_local_partner === 'boolean'
+      ? raw.is_local_partner
+      : typeof raw.isLocalPartner === 'boolean'
+        ? raw.isLocalPartner
+        : Boolean(localPartner || markerKind === 'merchant');
+
+  const merchantId =
+    raw.merchant_id != null
+      ? String(raw.merchant_id)
+      : raw.merchantId != null
+        ? String(raw.merchantId)
+        : localPartner?.merchantId ?? null;
+
+  const merchantName =
+    raw.merchant_name != null
+      ? String(raw.merchant_name)
+      : raw.merchantName != null
+        ? String(raw.merchantName)
+        : localPartner?.name || null;
+
   return {
     id: raw.id,
     slug: raw.slug,
@@ -359,6 +432,13 @@ export function normalizeSpot(raw: any): SpotModel {
     crowdConfidence: raw.crowd_confidence || 'none',
     crowdUpdatedAt: raw.crowd_updated_at || undefined,
     isTest: Boolean(raw.is_test),
+    markerKind,
+    isLocalPartner,
+    merchantId,
+    merchantName,
+    localPartner,
+    activeQuestCount,
+    activeQuestIds,
   };
 }
 

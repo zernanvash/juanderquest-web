@@ -263,5 +263,56 @@ describe('SpotDetailClient saved-place action', () => {
       expect(screen.queryByRole('button', { name: /close fullscreen view/i })).toBeNull();
     });
   });
+
+  it('renders Local Partner badge when spot.localPartner is present and omits it when null', async () => {
+    apiMock.get.mockImplementation((url: string) =>
+      Promise.resolve({
+        data: {
+          data: url.endsWith('/alternatives')
+            ? []
+            : {
+                ...spot,
+                category: 'cafe',
+                markerKind: 'merchant',
+                isLocalPartner: true,
+                localPartner: {
+                  merchantId: 'merch-1',
+                  name: 'Kape Dagupan',
+                  category: 'food_and_beverage',
+                  logoUrl: null,
+                  isPublished: true,
+                },
+              },
+        },
+      }),
+    );
+
+    const first = render(<SpotDetailClient slug="spot-1" />);
+    const badge = await screen.findByTestId('spot-local-partner-badge');
+    expect(badge.textContent).toContain('Local Partner');
+    expect(badge.textContent).toContain('Kape Dagupan');
+
+    first.unmount();
+
+    apiMock.get.mockImplementation((url: string) =>
+      Promise.resolve({
+        data: {
+          data: url.endsWith('/alternatives')
+            ? []
+            : {
+                ...spot,
+                category: 'cafe',
+                markerKind: 'spot',
+                isLocalPartner: false,
+                localPartner: null,
+              },
+        },
+      }),
+    );
+
+    render(<SpotDetailClient slug="spot-1" />);
+    await screen.findByRole('heading', { level: 1, name: 'Test Beach' });
+    expect(screen.queryByTestId('spot-local-partner-badge')).toBeNull();
+  });
 });
 
