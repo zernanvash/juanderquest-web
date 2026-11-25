@@ -5,7 +5,7 @@ import { fetchApkReleases } from './releases';
 export const metadata: Metadata = {
   title: 'Download JuanDerQuest for Android (Beta)',
   description:
-    'Turn Pangasinan into your next adventure. Download the JuanDerQuest Android Beta: pixel-art quests, AR treasure hunts, smart maps, and local Suki rewards.',
+    'Turn the Philippines into your next adventure. Download the JuanDerQuest Android Beta: pixel-art quests, AR treasure hunts, smart maps, and local Suki rewards.',
 };
 
 export default async function DownloadPage() {

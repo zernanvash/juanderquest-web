@@ -194,6 +194,46 @@
   position: relative;
 }
 
+/* Google Play "coming soon" badge (not a link until the listing exists) */
+.playSoon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  min-height: 52px;
+  margin: 12px auto 0;
+  padding: 6px 18px 6px 14px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #a6a6a6;
+  border-radius: 10px;
+  cursor: default;
+  user-select: none;
+}
+
+.playIcon {
+  flex: none;
+}
+
+.playText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  text-align: left;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.playSmall {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.playBig {
+  font-size: 20px;
+  font-weight: 600;
+}
+
 .sparklePixel {
   position: absolute;
   left: 50%;

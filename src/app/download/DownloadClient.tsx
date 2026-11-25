@@ -36,7 +36,7 @@ const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).j
 const FEATURES: { title: string; text: string; icon: string }[] = [
   {
     title: 'Real-World Quests',
-    text: 'Check in at Pangasinan landmarks, complete challenges, and level up your Traveler Passport.',
+    text: 'Check in at landmarks, complete challenges, and level up your Traveler Passport.',
     icon: '/pixel/questMarker.png',
   },
   {
@@ -51,7 +51,7 @@ const FEATURES: { title: string; text: string; icon: string }[] = [
   },
   {
     title: 'Suki Cards & Local Perks',
-    text: 'Collect stamps at partner shops and redeem traveler vouchers across Pangasinan.',
+    text: 'Collect stamps at partner shops and redeem traveler vouchers.',
     icon: '/jdq-token.png',
   },
 ];
@@ -59,7 +59,7 @@ const FEATURES: { title: string; text: string; icon: string }[] = [
 const HIGHLIGHTS = [
   'Scan Suki QR at partner shops to earn stamps',
   'Play AR Laro ng Lahi mini-games at landmarks',
-  'Discover hidden Pangasinan gems without crowds',
+  'Discover hidden gems without crowds',
   'Vote weekly in JuanChoice for top local spots',
 ];
 
@@ -259,7 +259,7 @@ export function DownloadClient({ releases = [] }: { releases?: ApkRelease[] }) {
             className={styles.logo}
             data-anim="logo-float"
           />
-          <h1 className={styles.title}>Turn Pangasinan Into Your Next Adventure</h1>
+          <h1 className={styles.title}>Turn the Philippines Into Your Next Adventure</h1>
           <p className={styles.tagline}>
             Play real-world quests, hunt AR treasures, and unlock local Suki perks — free on Android.
           </p>
@@ -358,6 +358,17 @@ export function DownloadClient({ releases = [] }: { releases?: ApkRelease[] }) {
             >
               <span className={styles.buttonText}>Download for Android</span>
             </a>
+          </div>
+
+          {/* Owner 2026-11-24: Play Store listing is coming; not a link until it exists. */}
+          <div className={styles.playSoon} role="img" aria-label="Coming soon on Google Play" data-testid="play-soon">
+            <svg className={styles.playIcon} viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+              <path d="M4 2.5v19l15.5-9.5z" fill="currentColor" />
+            </svg>
+            <span className={styles.playText}>
+              <span className={styles.playSmall}>Coming soon on</span>
+              <span className={styles.playBig}>Google Play</span>
+            </span>
           </div>
 
           <p className={styles.small}>
@@ -493,7 +504,7 @@ export function DownloadClient({ releases = [] }: { releases?: ApkRelease[] }) {
             <span aria-hidden="true">·</span>
             <Link href="/terms">Terms</Link>
           </div>
-          <span>JuanDerQuest Open Beta · Pangasinan, Philippines</span>
+          <span>JuanDerQuest Open Beta · Philippines</span>
         </footer>
       </div>
     </main>

@@ -59,6 +59,12 @@ describe('Plan 114: Commercial DownloadClient', () => {
       '/report-bug?version=v0.3.10%20BETA',
     );
 
+    // Owner 2026-11-24: Google Play "coming soon" badge under the download button, not a link; no Pangasinan copy.
+    const play = screen.getByTestId('play-soon');
+    expect(play.getAttribute('aria-label')).toBe('Coming soon on Google Play');
+    expect(play.closest('a')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Pangasinan/i);
+
     // Developer clutter must NOT appear
     expect(screen.queryByTestId('older-versions')).toBeNull();
     expect(screen.queryByText(/SHA-256/i)).toBeNull();
