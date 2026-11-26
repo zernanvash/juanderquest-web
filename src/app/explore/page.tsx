@@ -64,7 +64,7 @@ function getAuthorBadges(spotId: string, authorName: string, currentUser?: { dis
 
 export default function ExplorePage() {
   const { user } = useAuth();
-  const { spots, loading, loadingMore, error, hasMore, expired, sentinelRef, feedRef, loadSpots, handleLoadMore } = useRankedFeed(user?.id || 'guest');
+  const { spots, loading, loadingMore, error, hasMore, expired, sentinelRef, feedRef, observeCard, loadSpots, handleLoadMore } = useRankedFeed(user?.id || 'guest');
   const [likes, setLikes] = useState<Record<string, { isLiked: boolean }>>({});
   const [reportingSpot, setReportingSpot] = useState<{ id: string; name: string } | null>(null);
   const [signInReason, setSignInReason] = useState<string | null>(null);
@@ -334,6 +334,14 @@ export default function ExplorePage() {
                 <h1 className="text-lg sm:text-xl font-black text-[var(--color-brand-brown)] tracking-tight">
                   Explore the Ilocos Region
                 </h1>
+                <button
+                  type="button"
+                  onClick={() => loadSpots()}
+                  disabled={loading}
+                  className="px-2.5 py-1 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-subtle)] text-xs font-bold text-[var(--color-brand-brown)] hover:bg-white transition cursor-pointer disabled:opacity-50"
+                >
+                  Refresh
+                </button>
               </div>
 
               {(categories.length > 0 || municipalities.length > 0) && (
@@ -452,6 +460,8 @@ export default function ExplorePage() {
                   return (<React.Fragment key={spot.id}>
                     {featuredChoice && choiceInsertionIndex === index && <JuanChoiceSpotlightCard spotlight={featuredChoice} />}
                     <article
+                      ref={observeCard(spot.id)}
+                      data-spot-id={spot.id}
                       className={`${storyTarget ? 'mission-guidance-highlight ' : ''}bg-white rounded-2xl border border-[var(--color-border-default)] hover:border-[var(--color-brand-primary)]/40 shadow-xs hover:shadow-md transition-all duration-300 ease-out overflow-hidden`}
                     >
                       {storyTarget && (
